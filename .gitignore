@@ -1,0 +1,4 @@
+.DS_Store
+.claude/settings.local.json
+.claude/*.local.md
+refactor-result-*.md
