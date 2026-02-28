@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <defs>
+    <linearGradient id="bg-d" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A1A2E"/>
+      <stop offset="100%" style="stop-color:#16213E"/>
+    </linearGradient>
+    <linearGradient id="accent1-d" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF8C42"/>
+      <stop offset="100%" style="stop-color:#FF6B2B"/>
+    </linearGradient>
+    <linearGradient id="accent2-d" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4ECDC4"/>
+      <stop offset="100%" style="stop-color:#2EAF9F"/>
+    </linearGradient>
+    <linearGradient id="accent3-d" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#A78BFA"/>
+      <stop offset="100%" style="stop-color:#8B5CF6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#bg-d)"/>
+
+  <!-- Organic illustrated shapes - swarm nodes -->
+
+  <!-- Node 1: Architect (top-left cluster) -->
+  <path d="M180,160 C185,140 210,135 220,155 C230,135 255,140 260,160 C265,180 240,200 220,210 C200,200 175,180 180,160Z" fill="url(#accent1-d)" opacity="0.6"/>
+  <circle cx="220" cy="170" r="18" fill="none" stroke="#FF8C42" stroke-width="2" stroke-dasharray="4,3" opacity="0.4"/>
+
+  <!-- Node 2: Test (bottom-left) -->
+  <path d="M140,380 C150,360 175,355 180,375 C190,355 215,360 220,380 C225,400 200,420 180,430 C160,420 135,400 140,380Z" fill="url(#accent2-d)" opacity="0.5"/>
+  <circle cx="180" cy="390" r="15" fill="none" stroke="#4ECDC4" stroke-width="2" stroke-dasharray="3,4" opacity="0.35"/>
+
+  <!-- Node 3: Code (middle cluster) -->
+  <path d="M350,270 C358,248 388,243 395,268 C408,243 438,248 445,270 C452,298 425,322 398,335 C370,322 343,298 350,270Z" fill="url(#accent3-d)" opacity="0.55"/>
+  <circle cx="398" cy="285" r="22" fill="none" stroke="#A78BFA" stroke-width="2.5" stroke-dasharray="5,3" opacity="0.35"/>
+
+  <!-- Node 4: Simplifier (top-right area) -->
+  <path d="M420,130 C428,112 455,108 462,128 C472,108 498,112 505,130 C510,152 488,172 462,182 C438,172 415,152 420,130Z" fill="url(#accent1-d)" opacity="0.45"/>
+  <circle cx="462" cy="145" r="16" fill="none" stroke="#FF8C42" stroke-width="2" stroke-dasharray="4,2" opacity="0.3"/>
+
+  <!-- Connecting lines (hand-drawn style) -->
+  <path d="M238,185 C270,220 310,245 360,270" fill="none" stroke="#FF8C42" stroke-width="2" stroke-dasharray="6,4" opacity="0.3"/>
+  <path d="M200,400 C250,380 300,340 365,300" fill="none" stroke="#4ECDC4" stroke-width="2" stroke-dasharray="6,4" opacity="0.3"/>
+  <path d="M430,280 C440,220 450,180 462,170" fill="none" stroke="#A78BFA" stroke-width="2" stroke-dasharray="6,4" opacity="0.25"/>
+
+  <!-- Iteration spiral -->
+  <path d="M300,460 C340,440 380,445 390,470 C400,495 370,510 340,505 C310,500 295,480 310,465 C325,450 355,455 360,475" fill="none" stroke="#FF8C42" stroke-width="2.5" opacity="0.25"/>
+  <circle cx="360" cy="475" r="4" fill="#FF8C42" opacity="0.4"/>
+
+  <!-- Small decorative dots -->
+  <circle cx="280" cy="150" r="4" fill="#4ECDC4" opacity="0.3"/>
+  <circle cx="310" cy="180" r="3" fill="#A78BFA" opacity="0.25"/>
+  <circle cx="250" cy="320" r="3.5" fill="#FF8C42" opacity="0.25"/>
+  <circle cx="480" cy="220" r="3" fill="#4ECDC4" opacity="0.2"/>
+  <circle cx="160" cy="280" r="4" fill="#A78BFA" opacity="0.2"/>
+  <circle cx="440" cy="380" r="3" fill="#4ECDC4" opacity="0.2"/>
+
+  <!-- Wavy underlines -->
+  <path d="M100,510 C120,505 140,515 160,510 C180,505 200,515 220,510" fill="none" stroke="#FF8C42" stroke-width="2" opacity="0.15"/>
+  <path d="M130,530 C150,525 170,535 190,530 C210,525 230,535 250,530" fill="none" stroke="#4ECDC4" stroke-width="1.5" opacity="0.1"/>
+
+  <!-- Title text -->
+  <text x="640" y="240" font-family="Georgia, 'Times New Roman', serif" font-size="72" font-weight="bold" fill="#E2E8F0" text-anchor="middle" letter-spacing="-1">Refactor</text>
+  <text x="640" y="310" font-family="Georgia, 'Times New Roman', serif" font-size="32" fill="#94A3B8" text-anchor="middle" letter-spacing="1">Plugin for Claude Code</text>
+
+  <!-- Subtitle -->
+  <text x="640" y="380" font-family="'Segoe UI', system-ui, sans-serif" font-size="22" fill="#64748B" text-anchor="middle">Swarm-orchestrated iterative code refactoring</text>
+
+  <!-- Agent labels (hand-drawn feel) -->
+  <text x="640" y="440" font-family="'Segoe UI', system-ui, sans-serif" font-size="16" fill="#475569" text-anchor="middle" letter-spacing="3">
+    <tspan fill="#FF8C42">architect</tspan>
+    <tspan fill="#475569" dx="12">/</tspan>
+    <tspan fill="#4ECDC4" dx="12">test</tspan>
+    <tspan fill="#475569" dx="12">/</tspan>
+    <tspan fill="#A78BFA" dx="12">code</tspan>
+    <tspan fill="#475569" dx="12">/</tspan>
+    <tspan fill="#FF8C42" dx="12">simplifier</tspan>
+  </text>
+
+  <!-- Version pill -->
+  <rect x="590" y="480" width="100" height="28" rx="14" fill="none" stroke="#475569" stroke-width="1.5"/>
+  <text x="640" y="499" font-family="'SF Mono', 'Fira Code', monospace" font-size="13" fill="#64748B" text-anchor="middle">v2.1.0</text>
+
+  <!-- Corner organic accents -->
+  <path d="M0,640 C40,620 60,580 80,560 C60,590 30,620 0,640Z" fill="#4ECDC4" opacity="0.1"/>
+  <path d="M1280,0 C1240,20 1220,60 1200,80 C1220,50 1250,20 1280,0Z" fill="#FF8C42" opacity="0.1"/>
+  <path d="M1280,640 C1250,625 1230,600 1210,580 C1235,600 1260,625 1280,640Z" fill="#A78BFA" opacity="0.08"/>
+</svg>
