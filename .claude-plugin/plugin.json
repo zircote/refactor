@@ -1,5 +1,5 @@
 {
   "name": "refactor",
-  "version": "2.1.0",
-  "description": "Swarm-orchestrated iterative code refactoring with specialized architect, test, code, and simplifier agents. Uses parallel execution for analysis phases, iterative improvement cycles with code simplification, and comprehensive quality scoring."
+  "version": "2.3.0",
+  "description": "Swarm-orchestrated iterative code refactoring with specialized architect, test, code, simplifier, and security review agents. Uses parallel execution for analysis phases, iterative improvement cycles with code simplification and security gate enforcement, and comprehensive quality scoring including Security Posture."
 }
