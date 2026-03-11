@@ -16,6 +16,10 @@
       <stop offset="0%" style="stop-color:#A78BFA"/>
       <stop offset="100%" style="stop-color:#8B5CF6"/>
     </linearGradient>
+    <linearGradient id="accent4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F87171"/>
+      <stop offset="100%" style="stop-color:#EF4444"/>
+    </linearGradient>
   </defs>
 
   <!-- Background -->
@@ -39,10 +43,15 @@
   <path d="M420,130 C428,112 455,108 462,128 C472,108 498,112 505,130 C510,152 488,172 462,182 C438,172 415,152 420,130Z" fill="url(#accent1)" opacity="0.6"/>
   <circle cx="462" cy="145" r="16" fill="none" stroke="#FF8C42" stroke-width="2" stroke-dasharray="4,2" opacity="0.4"/>
 
+  <!-- Node 5: Security (bottom-right area) -->
+  <path d="M440,400 C448,382 475,378 482,398 C492,378 518,382 525,400 C530,422 508,442 482,452 C458,442 435,422 440,400Z" fill="url(#accent4)" opacity="0.65"/>
+  <circle cx="482" cy="415" r="16" fill="none" stroke="#EF4444" stroke-width="2" stroke-dasharray="4,3" opacity="0.45"/>
+
   <!-- Connecting lines (hand-drawn style) -->
   <path d="M238,185 C270,220 310,245 360,270" fill="none" stroke="#FF8C42" stroke-width="2" stroke-dasharray="6,4" opacity="0.4"/>
   <path d="M200,400 C250,380 300,340 365,300" fill="none" stroke="#4ECDC4" stroke-width="2" stroke-dasharray="6,4" opacity="0.4"/>
   <path d="M430,280 C440,220 450,180 462,170" fill="none" stroke="#A78BFA" stroke-width="2" stroke-dasharray="6,4" opacity="0.35"/>
+  <path d="M430,300 C445,340 460,370 475,400" fill="none" stroke="#EF4444" stroke-width="2" stroke-dasharray="6,4" opacity="0.35"/>
 
   <!-- Iteration spiral -->
   <path d="M300,460 C340,440 380,445 390,470 C400,495 370,510 340,505 C310,500 295,480 310,465 C325,450 355,455 360,475" fill="none" stroke="#FF8C42" stroke-width="2.5" opacity="0.35"/>
@@ -54,7 +63,7 @@
   <circle cx="250" cy="320" r="3.5" fill="#FF8C42" opacity="0.35"/>
   <circle cx="480" cy="220" r="3" fill="#4ECDC4" opacity="0.3"/>
   <circle cx="160" cy="280" r="4" fill="#A78BFA" opacity="0.25"/>
-  <circle cx="440" cy="380" r="3" fill="#4ECDC4" opacity="0.3"/>
+  <circle cx="520" cy="350" r="3" fill="#EF4444" opacity="0.3"/>
 
   <!-- Wavy underlines -->
   <path d="M100,510 C120,505 140,515 160,510 C180,505 200,515 220,510" fill="none" stroke="#FF8C42" stroke-width="2" opacity="0.2"/>
@@ -70,17 +79,15 @@
   <!-- Agent labels (hand-drawn feel) -->
   <text x="640" y="440" font-family="'Segoe UI', system-ui, sans-serif" font-size="16" fill="#CBD5E0" text-anchor="middle" letter-spacing="3">
     <tspan fill="#FF8C42">architect</tspan>
-    <tspan fill="#CBD5E0" dx="12">/</tspan>
-    <tspan fill="#4ECDC4" dx="12">test</tspan>
-    <tspan fill="#CBD5E0" dx="12">/</tspan>
-    <tspan fill="#8B5CF6" dx="12">code</tspan>
-    <tspan fill="#CBD5E0" dx="12">/</tspan>
-    <tspan fill="#FF8C42" dx="12">simplifier</tspan>
+    <tspan fill="#CBD5E0" dx="8">/</tspan>
+    <tspan fill="#4ECDC4" dx="8">test</tspan>
+    <tspan fill="#CBD5E0" dx="8">/</tspan>
+    <tspan fill="#8B5CF6" dx="8">code</tspan>
+    <tspan fill="#CBD5E0" dx="8">/</tspan>
+    <tspan fill="#FF8C42" dx="8">simplifier</tspan>
+    <tspan fill="#CBD5E0" dx="8">/</tspan>
+    <tspan fill="#EF4444" dx="8">security</tspan>
   </text>
-
-  <!-- Version pill -->
-  <rect x="590" y="480" width="100" height="28" rx="14" fill="none" stroke="#CBD5E0" stroke-width="1.5"/>
-  <text x="640" y="499" font-family="'SF Mono', 'Fira Code', monospace" font-size="13" fill="#A0AEC0" text-anchor="middle">v2.1.0</text>
 
   <!-- Corner organic accents -->
   <path d="M0,640 C40,620 60,580 80,560 C60,590 30,620 0,640Z" fill="#4ECDC4" opacity="0.15"/>

@@ -44,44 +44,53 @@
   <!-- Divider -->
   <line x1="60" y1="210" x2="740" y2="210" stroke="#E2E8F0" stroke-width="1"/>
 
-  <!-- Four Agents section -->
-  <text x="400" y="240" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#4A5568" text-anchor="middle" letter-spacing="2">FOUR SPECIALIST AGENTS</text>
+  <!-- Five Agents section -->
+  <text x="400" y="240" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#4A5568" text-anchor="middle" letter-spacing="2">FIVE SPECIALIST AGENTS</text>
 
   <!-- Agent 1: Architect -->
-  <rect x="60" y="260" width="155" height="100" rx="8" fill="#FFF" stroke="#FF8C42" stroke-width="1.5"/>
-  <circle cx="90" cy="285" r="10" fill="#FF8C42" opacity="0.2"/>
-  <text x="90" y="289" font-family="system-ui, sans-serif" font-size="12" fill="#FF8C42" text-anchor="middle" font-weight="bold">A</text>
-  <text x="150" y="289" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="#2D3748" text-anchor="middle">Architect</text>
-  <text x="137" y="310" font-family="system-ui, sans-serif" font-size="10" fill="#718096" text-anchor="middle">Reviews architecture</text>
-  <text x="137" y="325" font-family="system-ui, sans-serif" font-size="10" fill="#718096" text-anchor="middle">Plans optimizations</text>
-  <text x="137" y="340" font-family="system-ui, sans-serif" font-size="10" fill="#718096" text-anchor="middle">Scores quality (1-10)</text>
+  <rect x="60" y="260" width="128" height="100" rx="8" fill="#FFF" stroke="#FF8C42" stroke-width="1.5"/>
+  <circle cx="86" cy="285" r="10" fill="#FF8C42" opacity="0.2"/>
+  <text x="86" y="289" font-family="system-ui, sans-serif" font-size="12" fill="#FF8C42" text-anchor="middle" font-weight="bold">A</text>
+  <text x="136" y="289" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#2D3748" text-anchor="middle">Architect</text>
+  <text x="124" y="310" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Reviews architecture</text>
+  <text x="124" y="324" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Plans optimizations</text>
+  <text x="124" y="338" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Scores quality (1-10)</text>
 
   <!-- Agent 2: Test -->
-  <rect x="230" y="260" width="155" height="100" rx="8" fill="#FFF" stroke="#4ECDC4" stroke-width="1.5"/>
-  <circle cx="260" cy="285" r="10" fill="#4ECDC4" opacity="0.2"/>
-  <text x="260" y="289" font-family="system-ui, sans-serif" font-size="12" fill="#2EAF9F" text-anchor="middle" font-weight="bold">T</text>
-  <text x="320" y="289" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="#2D3748" text-anchor="middle">Test</text>
-  <text x="307" y="310" font-family="system-ui, sans-serif" font-size="10" fill="#718096" text-anchor="middle">Analyzes coverage</text>
-  <text x="307" y="325" font-family="system-ui, sans-serif" font-size="10" fill="#718096" text-anchor="middle">Generates test cases</text>
-  <text x="307" y="340" font-family="system-ui, sans-serif" font-size="10" fill="#718096" text-anchor="middle">Verifies all passing</text>
+  <rect x="198" y="260" width="128" height="100" rx="8" fill="#FFF" stroke="#4ECDC4" stroke-width="1.5"/>
+  <circle cx="224" cy="285" r="10" fill="#4ECDC4" opacity="0.2"/>
+  <text x="224" y="289" font-family="system-ui, sans-serif" font-size="12" fill="#2EAF9F" text-anchor="middle" font-weight="bold">T</text>
+  <text x="274" y="289" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#2D3748" text-anchor="middle">Test</text>
+  <text x="262" y="310" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Analyzes coverage</text>
+  <text x="262" y="324" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Generates test cases</text>
+  <text x="262" y="338" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Verifies all passing</text>
 
   <!-- Agent 3: Code -->
-  <rect x="400" y="260" width="155" height="100" rx="8" fill="#FFF" stroke="#8B5CF6" stroke-width="1.5"/>
-  <circle cx="430" cy="285" r="10" fill="#8B5CF6" opacity="0.2"/>
-  <text x="430" y="289" font-family="system-ui, sans-serif" font-size="12" fill="#8B5CF6" text-anchor="middle" font-weight="bold">C</text>
-  <text x="490" y="289" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="#2D3748" text-anchor="middle">Code</text>
-  <text x="477" y="310" font-family="system-ui, sans-serif" font-size="10" fill="#718096" text-anchor="middle">Implements changes</text>
-  <text x="477" y="325" font-family="system-ui, sans-serif" font-size="10" fill="#718096" text-anchor="middle">Clean code principles</text>
-  <text x="477" y="340" font-family="system-ui, sans-serif" font-size="10" fill="#718096" text-anchor="middle">Fixes test failures</text>
+  <rect x="336" y="260" width="128" height="100" rx="8" fill="#FFF" stroke="#8B5CF6" stroke-width="1.5"/>
+  <circle cx="362" cy="285" r="10" fill="#8B5CF6" opacity="0.2"/>
+  <text x="362" y="289" font-family="system-ui, sans-serif" font-size="12" fill="#8B5CF6" text-anchor="middle" font-weight="bold">C</text>
+  <text x="412" y="289" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#2D3748" text-anchor="middle">Code</text>
+  <text x="400" y="310" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Implements changes</text>
+  <text x="400" y="324" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Clean code principles</text>
+  <text x="400" y="338" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Fixes test failures</text>
 
   <!-- Agent 4: Simplifier -->
-  <rect x="570" y="260" width="155" height="100" rx="8" fill="#FFF" stroke="#F59E0B" stroke-width="1.5"/>
-  <circle cx="600" cy="285" r="10" fill="#F59E0B" opacity="0.2"/>
-  <text x="600" y="289" font-family="system-ui, sans-serif" font-size="12" fill="#D97706" text-anchor="middle" font-weight="bold">S</text>
-  <text x="660" y="289" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="#2D3748" text-anchor="middle">Simplifier</text>
-  <text x="647" y="310" font-family="system-ui, sans-serif" font-size="10" fill="#718096" text-anchor="middle">Naming clarity</text>
-  <text x="647" y="325" font-family="system-ui, sans-serif" font-size="10" fill="#718096" text-anchor="middle">Flow simplification</text>
-  <text x="647" y="340" font-family="system-ui, sans-serif" font-size="10" fill="#718096" text-anchor="middle">Cross-file consistency</text>
+  <rect x="474" y="260" width="128" height="100" rx="8" fill="#FFF" stroke="#F59E0B" stroke-width="1.5"/>
+  <circle cx="500" cy="285" r="10" fill="#F59E0B" opacity="0.2"/>
+  <text x="500" y="289" font-family="system-ui, sans-serif" font-size="12" fill="#D97706" text-anchor="middle" font-weight="bold">S</text>
+  <text x="550" y="289" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#2D3748" text-anchor="middle">Simplifier</text>
+  <text x="538" y="310" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Naming clarity</text>
+  <text x="538" y="324" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Flow simplification</text>
+  <text x="538" y="338" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Cross-file consistency</text>
+
+  <!-- Agent 5: Security -->
+  <rect x="612" y="260" width="128" height="100" rx="8" fill="#FFF" stroke="#EF4444" stroke-width="1.5"/>
+  <circle cx="638" cy="285" r="10" fill="#EF4444" opacity="0.2"/>
+  <text x="638" y="289" font-family="system-ui, sans-serif" font-size="12" fill="#EF4444" text-anchor="middle" font-weight="bold">R</text>
+  <text x="690" y="289" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#2D3748" text-anchor="middle">Security</text>
+  <text x="676" y="310" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Regression detection</text>
+  <text x="676" y="324" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Vulnerability scanning</text>
+  <text x="676" y="338" font-family="system-ui, sans-serif" font-size="9" fill="#718096" text-anchor="middle">Security scoring</text>
 
   <!-- Divider -->
   <line x1="60" y1="380" x2="740" y2="380" stroke="#E2E8F0" stroke-width="1"/>
@@ -89,19 +98,22 @@
   <!-- Key Features row -->
   <text x="400" y="410" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#4A5568" text-anchor="middle" letter-spacing="2">KEY FEATURES</text>
 
-  <!-- Feature pills -->
-  <rect x="60" y="425" width="140" height="30" rx="15" fill="#FF8C42" opacity="0.1" stroke="#FF8C42" stroke-width="1"/>
-  <text x="130" y="445" font-family="system-ui, sans-serif" font-size="11" fill="#FF8C42" text-anchor="middle">Safety First</text>
+  <!-- Feature pills (5) -->
+  <rect x="60" y="425" width="120" height="30" rx="15" fill="#FF8C42" opacity="0.1" stroke="#FF8C42" stroke-width="1"/>
+  <text x="120" y="445" font-family="system-ui, sans-serif" font-size="11" fill="#FF8C42" text-anchor="middle">Safety First</text>
 
-  <rect x="215" y="425" width="140" height="30" rx="15" fill="#4ECDC4" opacity="0.1" stroke="#4ECDC4" stroke-width="1"/>
-  <text x="285" y="445" font-family="system-ui, sans-serif" font-size="11" fill="#2EAF9F" text-anchor="middle">Auto Test Gen</text>
+  <rect x="195" y="425" width="120" height="30" rx="15" fill="#4ECDC4" opacity="0.1" stroke="#4ECDC4" stroke-width="1"/>
+  <text x="255" y="445" font-family="system-ui, sans-serif" font-size="11" fill="#2EAF9F" text-anchor="middle">Auto Test Gen</text>
 
-  <rect x="370" y="425" width="140" height="30" rx="15" fill="#8B5CF6" opacity="0.1" stroke="#8B5CF6" stroke-width="1"/>
-  <text x="440" y="445" font-family="system-ui, sans-serif" font-size="11" fill="#8B5CF6" text-anchor="middle">Parallel Execution</text>
+  <rect x="330" y="425" width="120" height="30" rx="15" fill="#8B5CF6" opacity="0.1" stroke="#8B5CF6" stroke-width="1"/>
+  <text x="390" y="445" font-family="system-ui, sans-serif" font-size="11" fill="#8B5CF6" text-anchor="middle">Parallel Exec</text>
 
-  <rect x="525" y="425" width="140" height="30" rx="15" fill="#F59E0B" opacity="0.1" stroke="#F59E0B" stroke-width="1"/>
-  <text x="595" y="445" font-family="system-ui, sans-serif" font-size="11" fill="#D97706" text-anchor="middle">Quality Scoring</text>
+  <rect x="465" y="425" width="120" height="30" rx="15" fill="#F59E0B" opacity="0.1" stroke="#F59E0B" stroke-width="1"/>
+  <text x="525" y="445" font-family="system-ui, sans-serif" font-size="11" fill="#D97706" text-anchor="middle">Quality Scoring</text>
+
+  <rect x="600" y="425" width="120" height="30" rx="15" fill="#EF4444" opacity="0.1" stroke="#EF4444" stroke-width="1"/>
+  <text x="660" y="445" font-family="system-ui, sans-serif" font-size="11" fill="#EF4444" text-anchor="middle">Focus Mode</text>
 
   <!-- Footer -->
-  <text x="400" y="495" font-family="'SF Mono', monospace" font-size="12" fill="#CBD5E0" text-anchor="middle">v2.1.0  |  All languages  |  Claude Code plugin</text>
+  <text x="400" y="495" font-family="'SF Mono', monospace" font-size="12" fill="#CBD5E0" text-anchor="middle">v2.2.0  |  All languages  |  Claude Code plugin</text>
 </svg>
