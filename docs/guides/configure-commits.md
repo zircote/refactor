@@ -41,6 +41,8 @@ Each iteration produces a commit: `refactor(iteration 1/3): {summary}`
 ```
 One commit at the end: `refactor: {scope} — clean code 8/10, architecture 9/10`
 
+When using `--focus`, commit messages include the focus area: `refactor(security): {scope} — security posture 8/10`
+
 ### 2. Enable pull request creation
 
 Set `createPR` to `true`. Use `prDraft` to control whether the PR opens as a draft:

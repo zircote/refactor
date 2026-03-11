@@ -87,7 +87,7 @@ To override the iteration default in focused mode:
 
 After configuration, the plugin creates a swarm team and begins working. You will see progress messages as each phase completes:
 
-**Phase 1 (Foundation)** runs two agents in parallel:
+**Phase 1 (Foundation)** runs agents in parallel:
 - The refactor-test agent analyzes test coverage and adds missing tests
 - The architect agent reviews your code's architecture
 - The security-review agent establishes a security baseline

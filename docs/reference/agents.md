@@ -106,7 +106,7 @@ The refactor plugin orchestrates five specialized agents as a swarm team. Each a
 
 **Capabilities:** Security baseline establishment, regression detection against baseline, secrets/PII scanning, dependency vulnerability audit, severity classification (Critical/High = blocking, Medium/Low = advisory), remediation guidance, Security Posture Score assignment
 
-**Tools:** Read, Glob, Grep, Bash, Skill
+**Tools:** Read, Glob, Grep, Bash, TodoWrite
 
 **Invoked during:**
 - Phase 1: Establish security baseline
