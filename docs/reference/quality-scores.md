@@ -5,7 +5,7 @@ diataxis_describes: refactor plugin quality scoring rubrics
 
 # Quality Score Reference
 
-The architect agent assigns two scores at the end of every refactoring run. Both use a 1--10 scale.
+The refactoring process produces up to four scores depending on active agents. In a full (unfocused) run, three scores are always produced: Clean Code, Architecture, and Security Posture. In focused runs, only scores relevant to the active agents are produced.
 
 ## Clean Code Score (1--10)
 
@@ -52,6 +52,58 @@ Evaluates: SOLID principles, coupling/cohesion, abstraction levels, testability,
 - **Extensibility** — Easy to add new features without modifying existing code
 - **Pattern Usage** — Appropriate use of design patterns (not over-patterned)
 
+## Security Posture Score (1--10)
+
+Evaluates: input validation, authentication, authorization, secrets handling, error information exposure, dependency vulnerabilities, injection resistance.
+
+| Score | Level | Description |
+|-------|-------|-------------|
+| 9--10 | Excellent | Strong security controls, no findings |
+| 7--8 | Good | Minor advisory findings only |
+| 5--6 | Acceptable | Some medium-severity findings to address |
+| 3--4 | Poor | High-severity findings present |
+| 1--2 | Very poor | Critical vulnerabilities detected |
+
+### Criteria
+
+- **Input Validation** — All user inputs validated and sanitized
+- **Authentication** — Auth checks present and correctly implemented
+- **Authorization** — Access controls enforce least privilege
+- **Secrets Handling** — No hardcoded secrets, credentials, or PII exposure
+- **Error Handling** — Errors do not leak internal details to users
+- **Dependencies** — No known vulnerable dependencies
+- **Injection Resistance** — Protection against SQL injection, XSS, command injection, and other OWASP top 10
+
+### Produced by
+
+- Full (unfocused) runs: always
+- `--focus=security`: yes
+- Other focus modes: no
+
+## Simplification Score (1--10)
+
+Evaluates: naming clarity, control flow simplicity, redundancy, style consistency. Produced only in `--focus=simplification` runs.
+
+| Score | Level | Description |
+|-------|-------|-------------|
+| 9--10 | Exemplary | Clear, simple, consistent code throughout |
+| 7--8 | Good | Minor clarity improvements possible |
+| 5--6 | Acceptable | Notable simplification opportunities remain |
+| 3--4 | Poor | Significant clarity and consistency issues |
+| 1--2 | Very poor | Requires major simplification effort |
+
+### Criteria
+
+- **Naming Clarity** — Variables, functions, and types have clear, intention-revealing names
+- **Control Flow** — Simple, linear control flow; minimal nesting
+- **Redundancy** — No unnecessary duplication or dead code
+- **Style Consistency** — Consistent patterns and conventions across files
+
+### Produced by
+
+- `--focus=simplification`: yes
+- All other modes: no (simplifier runs but does not produce a standalone score)
+
 ## Report Output
 
 Scores appear in the generated `refactor-result-{timestamp}.md` report, which includes:
@@ -60,6 +112,8 @@ Scores appear in the generated `refactor-result-{timestamp}.md` report, which in
 - Strengths identified
 - Remaining concerns
 - Recommendations for future improvements
+
+In focused runs, the report includes only scores from active agents. See [Configuration Reference](../reference/configuration.md) for focus mode details.
 
 ## See Also
 

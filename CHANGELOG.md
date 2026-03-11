@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-03-11
+
+### Added
+
+- `--focus=<area>[,area...]` CLI flag to constrain refactoring runs to specific disciplines
+- Valid focus areas: `security`, `architecture`, `simplification`, `code`
+- Union model for multi-focus: `--focus=security,architecture` spawns both discipline agents
+- Focused runs default to 1 iteration (overridable with `--iterations=N`)
+- Security Posture Score (1--10) rubric in quality scores reference
+- Simplification Score (1--10) for simplification-focused runs
+- Security-Review Agent section in agent reference
+- Focus mode how-to guide (`docs/guides/focus-refactoring.md`)
+- Focus mode troubleshooting entries
+- CLI-Only Flags section in configuration reference
+- Focus mode architecture explanation
+
+### Changed
+
+- Agent spawning is now conditional based on `active_agents` derived from `--focus`
+- Phase tasks are gated on agent membership (skip steps for inactive agents)
+- Commit messages and PR bodies include focus mode label when applicable
+- Reports include only scores from active agents
+- Updated agent count from "four" to "five" across documentation
+- refactor-test and refactor-code always spawn as a safety invariant
+
 ## [2.1.0] - 2026-02-28
 
 ### Added
@@ -53,6 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release with sequential 7-step workflow
 - Three agents: architect, refactor-test, refactor-code
 
+[2.2.0]: https://github.com/zircote/refactor/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/zircote/refactor/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/zircote/refactor/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/zircote/refactor/releases/tag/v1.0.0

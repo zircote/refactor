@@ -83,6 +83,24 @@ diataxis_goal: Diagnose and resolve common problems during refactoring
 4. If publishing to a different repository (`reportRepository`), verify the `owner/repo` format is correct
 5. Publishing failures are non-blocking — the report is always saved locally as `refactor-result-{timestamp}.md`
 
+## Focused run still spawns unexpected agents
+
+**Problem:** You used `--focus=security` but see refactor-test and refactor-code agents running.
+
+**Explanation:** This is by design. The refactor-test and refactor-code agents always spawn regardless of `--focus` value. They provide the safety net (tests must pass after any changes) and fix capability (resolve test failures or security findings). Only the discipline-specific agents (architect, simplifier, security-review) are gated by `--focus`.
+
+## Focused run defaults to 1 iteration
+
+**Problem:** A focused refactor completes after only 1 iteration when you expected more.
+
+**Explanation:** Focused runs default to 1 iteration to optimize for speed. Override with `--iterations=N`:
+
+```bash
+/refactor --focus=security --iterations=3 src/auth/
+```
+
+The full iteration default from your config file (typically 3) only applies to unfocused runs.
+
 ## Related
 
 - [Configuration Reference](../reference/configuration.md) — config options affecting behavior

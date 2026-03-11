@@ -155,6 +155,33 @@ All GitHub operations are non-blocking. If any operation fails (e.g., `gh` not a
 | Max iterations | 3 |
 | Optimizations per iteration | Top 3 |
 | Test coverage target | Production quality (typically 80%+) |
+| Focused iteration default | 1 |
+
+## CLI-Only Flags
+
+These flags are available only on the command line and are not stored in the config file.
+
+| Flag | Values | Default | Description |
+|------|--------|---------|-------------|
+| `--iterations=N` | `1`--`10` | Config value (3) | Override iteration count for this run |
+| `--focus=<area>[,area...]` | `security`, `architecture`, `simplification`, `code` | (none — full run) | Constrain run to specific disciplines. Comma-separated for multiple areas. |
+
+### --focus details
+
+Valid focus values and their effect on agent spawning:
+
+| Focus value | Additional agents spawned |
+|-------------|--------------------------|
+| `security` | security-review |
+| `architecture` | architect |
+| `simplification` | simplifier |
+| `code` | architect |
+
+The refactor-test and refactor-code agents always spawn regardless of focus.
+
+When `--focus` is provided, the default iteration count changes to **1** (overridable with `--iterations=N`).
+
+Multiple focus values are combined as a union: `--focus=security,architecture` spawns both security-review and architect in addition to the always-present pair.
 
 ## See Also
 

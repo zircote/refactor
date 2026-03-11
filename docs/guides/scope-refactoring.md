@@ -60,7 +60,21 @@ For large scopes (entire modules), use the default 3 or increase to 5:
 /refactor --iterations=5 src/
 ```
 
-### 5. Refactor incrementally for large codebases
+### 5. Use --focus for discipline-specific runs
+
+If you only need a specific type of analysis, use `--focus` to skip unnecessary agents:
+
+```bash
+/refactor --focus=security src/auth/
+/refactor --focus=architecture src/api/
+/refactor --focus=simplification src/utils/
+```
+
+Focus mode pairs well with scope narrowing — a focused, narrow run completes much faster than a full-scope, full-discipline run.
+
+For detailed guidance on all focus options, see [How to Run Focused Refactoring](focus-refactoring.md).
+
+### 6. Refactor incrementally for large codebases
 
 For a monorepo or large project, run multiple focused refactors rather than one broad pass:
 

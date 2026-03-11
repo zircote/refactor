@@ -1,7 +1,7 @@
 ---
 name: refactor
 description: Automated iterative code refactoring with swarm-orchestrated specialist agents
-argument-hint: "[--iterations=N] [path or description]"
+argument-hint: "[--iterations=N] [--focus=<area>[,area...]] [path or description]"
 ---
 
 # Refactor Command (Swarm Orchestration)
@@ -26,6 +26,20 @@ The workflow uses parallel execution where possible and iterates `max_iterations
 Parse `$ARGUMENTS` for the following **before** any other processing:
 
 - `--iterations=N` — Override the configured iteration count for this run. `N` must be a positive integer (1–10). If present, extract and remove it from `$ARGUMENTS` and store as `cli_iterations`. The remaining text is the refactoring scope.
+
+- `--focus=<area>[,area...]` — Constrain the run to specific disciplines. If present, extract and remove it from `$ARGUMENTS` and process as follows:
+  1. Split the value on commas to get a list of focus areas
+  2. Validate each value against the allowed set: `{security, architecture, simplification, code}`
+  3. If any value is invalid, report the error to the user and stop: "Invalid focus area '{value}'. Valid values: security, architecture, simplification, code"
+  4. Derive `active_agents` from the focus areas using the spawn matrix:
+     - `security` → adds `security-review`
+     - `architecture` → adds `architect`
+     - `simplification` → adds `simplifier`
+     - `code` → adds `architect` (architecture review informs code changes)
+     - `refactor-test` and `refactor-code` are **always** included regardless of focus
+  5. For multi-focus (e.g., `--focus=security,architecture`), take the **union** of all focus-specific agents plus the always-included pair
+  6. Set `is_focused = true`
+  7. If `--focus` is not provided: set `is_focused = false` and `active_agents = {architect, refactor-test, refactor-code, simplifier, security-review}` (all 5)
 
 After extracting flags, the remaining arguments are interpreted as:
 - If empty: refactor the entire codebase
@@ -118,7 +132,7 @@ Run the following **AskUserQuestion** prompts sequentially:
 1. Parse $ARGUMENTS to determine refactoring scope (flags already extracted in Arguments section)
 2. If unclear, ask user to clarify what should be refactored
 3. Set `scope` variable to the determined scope
-4. Set `max_iterations = cli_iterations ?? config.iterations ?? 3` (CLI flag takes precedence over config, config takes precedence over default)
+4. Set `max_iterations = cli_iterations ?? (is_focused ? 1 : config.iterations) ?? 3` (CLI flag takes precedence; focused runs default to 1 iteration; unfocused uses config, then default of 3)
 5. Set `refactoring_iteration = 0`
 
 ### Step 0.2: Create Swarm Team
@@ -136,7 +150,7 @@ Run the following **AskUserQuestion** prompts sequentially:
 
 ### Step 0.3: Spawn Teammates
 
-Spawn all 5 teammates using the **Agent tool** with `team_name: "refactor-team"`. Launch all 5 in parallel:
+Spawn only agents in `active_agents` using the **Agent tool** with `team_name: "refactor-team"`. Launch all selected agents in parallel:
 
 Each teammate receives the same task-discovery protocol in their spawn prompt. This is critical for preventing stuck agents:
 
@@ -150,7 +164,7 @@ TASK DISCOVERY PROTOCOL:
 6. NEVER commit code via git — only the team lead commits.
 ```
 
-1. **architect** teammate:
+1. **architect** teammate (**If "architect" in active_agents**):
    ```
    Agent tool with:
      subagent_type: "refactor:architect"
@@ -167,7 +181,7 @@ TASK DISCOVERY PROTOCOL:
      6. NEVER commit code via git — only the team lead commits."
    ```
 
-2. **refactor-test** teammate:
+2. **refactor-test** teammate (**Always spawned**):
    ```
    Agent tool with:
      subagent_type: "refactor:refactor-test"
@@ -184,7 +198,7 @@ TASK DISCOVERY PROTOCOL:
      6. NEVER commit code via git — only the team lead commits."
    ```
 
-3. **refactor-code** teammate:
+3. **refactor-code** teammate (**Always spawned**):
    ```
    Agent tool with:
      subagent_type: "refactor:refactor-code"
@@ -201,7 +215,7 @@ TASK DISCOVERY PROTOCOL:
      6. NEVER commit code via git — only the team lead commits."
    ```
 
-4. **simplifier** teammate:
+4. **simplifier** teammate (**If "simplifier" in active_agents**):
    ```
    Agent tool with:
      subagent_type: "refactor:simplifier"
@@ -218,7 +232,7 @@ TASK DISCOVERY PROTOCOL:
      6. NEVER commit code via git — only the team lead commits."
    ```
 
-5. **security-review** teammate:
+5. **security-review** teammate (**If "security-review" in active_agents**):
    ```
    Agent tool with:
      subagent_type: "refactor:security-review"
@@ -241,30 +255,32 @@ TASK DISCOVERY PROTOCOL:
 
 ### Step 1.1: Create and Assign Parallel Tasks
 
-Create three tasks and assign them in parallel:
+Create tasks for active agents and assign them in parallel:
 
-1. **TaskCreate**: "Analyze test coverage for [scope]. Identify gaps, add comprehensive test cases for critical paths/edge cases/error handling, run all tests, verify passing, report coverage status."
+1. **TaskCreate** (**Always**): "Analyze test coverage for [scope]. Identify gaps, add comprehensive test cases for critical paths/edge cases/error handling, run all tests, verify passing, report coverage status."
    - **TaskUpdate**: assign owner to "refactor-test"
    - **SendMessage** to "refactor-test": "Task #{id} assigned: analyze test coverage. Start now."
 
-2. **TaskCreate**: "Review code architecture for [scope]. Analyze structure, patterns, quality. Identify all optimization opportunities (structural, duplication, naming, organization, complexity, dependencies). Create initial prioritized optimization plan."
+2. **TaskCreate** (**If "architect" in active_agents**): "Review code architecture for [scope]. Analyze structure, patterns, quality. Identify all optimization opportunities (structural, duplication, naming, organization, complexity, dependencies). Create initial prioritized optimization plan."
    - **TaskUpdate**: assign owner to "architect"
    - **SendMessage** to "architect": "Task #{id} assigned: review architecture. Start now."
 
-3. **TaskCreate**: "Establish security baseline for [scope]. Catalog existing security controls (input validation, auth checks, output encoding, error handling, access controls). Scan for pre-existing secrets exposure. Audit current dependency vulnerability status. Record baseline for regression detection in subsequent iterations."
+3. **TaskCreate** (**If "security-review" in active_agents**): "Establish security baseline for [scope]. Catalog existing security controls (input validation, auth checks, output encoding, error handling, access controls). Scan for pre-existing secrets exposure. Audit current dependency vulnerability status. Record baseline for regression detection in subsequent iterations."
    - **TaskUpdate**: assign owner to "security-review"
    - **SendMessage** to "security-review": "Task #{id} assigned: establish security baseline. Start now."
 
-### Step 1.2: Wait for All Three to Complete
+### Step 1.2: Wait for All Created Phase 1 Tasks to Complete
 
-- Monitor TaskList until all three Phase 1 tasks show status: completed
-- Read the results from messages received from refactor-test, architect, and security-review teammates
+- Monitor TaskList until all created Phase 1 tasks show status: completed
+- Read the results from messages received from active teammates
 - Verify refactor-test agent confirms all tests are passing before proceeding
-- Record security-review agent's baseline for use in iteration reviews
+- If "security-review" in active_agents: record security-review agent's baseline for use in iteration reviews
 
 ### Step 1.3: Checkpoint
 
-- Inform user: "Phase 1 complete. Test coverage established. Architecture reviewed. Security baseline recorded. Starting iteration loop."
+- Inform user with a message reflecting which agents ran:
+  - Full run: "Phase 1 complete. Test coverage established. Architecture reviewed. Security baseline recorded. Starting iteration loop."
+  - Focused run: "Phase 1 complete. Test coverage established.{' Architecture reviewed.' if architect active}{' Security baseline recorded.' if security-review active} Starting iteration loop ({max_iterations} iteration{s})."
 
 ## Phase 2: Iteration Loop
 
@@ -274,7 +290,7 @@ Repeat the following for `max_iterations` times:
 
 ### Step 2.A: Architecture Review
 
-**Skip on iteration 1** if architect's Phase 1 review is still current. Otherwise:
+**Skip if "architect" not in active_agents.** Also skip on iteration 1 if architect's Phase 1 review is still current. Otherwise:
 
 1. **TaskCreate**: "Iteration {iteration+1}: Review code architecture for [scope]. Create prioritized optimization plan. Provide top 3 high-priority optimizations to implement. Focus on improvements not yet addressed in previous iterations."
    - **TaskUpdate**: assign owner to "architect"
@@ -284,6 +300,10 @@ Repeat the following for `max_iterations` times:
 
 ### Step 2.B: Implement Optimizations
 
+**Skip if Step 2.A was skipped** (no architect plan to implement). For simplification-only focus, skip straight to Step 2.E (simplifier operates on scope directly).
+
+If not skipped:
+
 1. **TaskCreate**: "Implement the top 3 optimizations from the architect's plan: [paste architect's top 3]. Preserve all existing functionality. Apply clean code principles. Make incremental, safe changes. Report all files modified. Do NOT commit via git."
    - **TaskUpdate**: assign owner to "refactor-code"
    - **SendMessage** to "refactor-code": "Task #{id} assigned: implement top 3 optimizations. Start now."
@@ -292,12 +312,16 @@ Repeat the following for `max_iterations` times:
 
 ### Step 2.C: Test Verification
 
+**Skip if Step 2.B was skipped** (no implementation changes to verify).
+
 1. **TaskCreate**: "Run the complete test suite. Report pass/fail status. If failures: provide detailed failure report with causes and suggestions."
    - **TaskUpdate**: assign owner to "refactor-test"
    - **SendMessage** to "refactor-test": "Task #{id} assigned: run tests after implementation. Start now."
 2. Wait for completion
 
 ### Step 2.D: Fix Failures (If Any)
+
+**Skip if Step 2.C was skipped.**
 
 If refactor-test agent reported failures:
 
@@ -313,21 +337,23 @@ If refactor-test agent reported failures:
 
 ### Step 2.E: Simplify + Security Review (Parallel)
 
-Launch simplification and security review in parallel:
+Launch active agents' tasks in parallel. If Step 2.B was skipped (no implementation changes), adjust task descriptions to operate on `scope` directly instead of "files modified by refactor-code."
 
-1. **TaskCreate**: "Simplify all code changed in this iteration. Files modified: [list from refactor-code agent's report]. Focus on naming clarity, control flow simplification, redundancy removal, and style consistency. Do not change functionality. Do NOT commit via git."
+1. **TaskCreate** (**If "simplifier" in active_agents**): "Simplify {if 2.B ran: 'all code changed in this iteration. Files modified: [list from refactor-code agent's report].' else: 'code in [scope].'} Focus on naming clarity, control flow simplification, redundancy removal, and style consistency. Do not change functionality. Do NOT commit via git."
    - **TaskUpdate**: assign owner to "simplifier"
-   - **SendMessage** to "simplifier": "Task #{id} assigned: simplify iteration changes. Start now."
+   - **SendMessage** to "simplifier": "Task #{id} assigned: simplify {if 2.B ran: 'iteration changes' else: 'scope'}. Start now."
 
-2. **TaskCreate**: "Iteration {iteration+1} security review. Files modified: [list from refactor-code agent's report]. Review all changes against the Phase 1 security baseline. Check for: security regressions (weakened validation, broken auth, exposed internals), secrets/PII exposure, unsafe error handling, new injection vectors, dependency changes. Classify findings by severity (Critical/High = blocking, Medium/Low = advisory). Provide remediation guidance for any blocking findings."
+2. **TaskCreate** (**If "security-review" in active_agents**): "Iteration {iteration+1} security review. {if 2.B ran: 'Files modified: [list from refactor-code agent's report]. Review all changes against the Phase 1 security baseline.' else: 'Review [scope] for security issues.'} Check for: security regressions (weakened validation, broken auth, exposed internals), secrets/PII exposure, unsafe error handling, new injection vectors, dependency changes. Classify findings by severity (Critical/High = blocking, Medium/Low = advisory). Provide remediation guidance for any blocking findings."
    - **TaskUpdate**: assign owner to "security-review"
    - **SendMessage** to "security-review": "Task #{id} assigned: iteration {iteration+1} security review. Start now."
 
-3. Wait for both to complete
+3. Wait for all created tasks to complete
 
-4. Record simplification report and security review results
+4. Record simplification report and/or security review results as applicable
 
 ### Step 2.E.1: Resolve Security Findings (If Blocking)
+
+**Skip if "security-review" not in active_agents.**
 
 If security-review agent reported **FAIL** (Critical or High severity findings):
 
@@ -342,6 +368,8 @@ If security-review agent reported **FAIL** (Critical or High severity findings):
 5. If still FAIL, repeat Step 2.E.1 (max 3 attempts, then ask user for guidance)
 
 ### Step 2.F: Verify Simplification + Security Fixes
+
+**Skip if neither simplifier nor security-review ran in Step 2.E** (no changes to verify).
 
 1. **TaskCreate**: "Run full test suite to verify simplification and any security fixes preserved all functionality."
    - **TaskUpdate**: assign owner to "refactor-test"
@@ -373,23 +401,23 @@ If security-review agent reported **FAIL** (Critical or High severity findings):
 
 ### Step 3.1: Launch Final Tasks (Parallel)
 
-Create three tasks and assign in parallel:
+Create tasks for active agents and assign in parallel:
 
-1. **TaskCreate**: "Final simplification pass over entire [scope]. Review all files for cross-file consistency in naming, patterns, and style. Apply final polish. Report all changes. Do NOT commit via git."
+1. **TaskCreate** (**If "simplifier" in active_agents**): "Final simplification pass over entire [scope]. Review all files for cross-file consistency in naming, patterns, and style. Apply final polish. Report all changes. Do NOT commit via git."
    - **TaskUpdate**: assign owner to "simplifier"
    - **SendMessage** to "simplifier": "Task #{id} assigned: final simplification pass. Start now."
 
-2. **TaskCreate**: "Prepare comprehensive final quality assessment of [scope]. Review architecture, code quality, SOLID principles. Prepare scoring framework. Note: final scores will be assigned after simplifier completes and tests pass."
+2. **TaskCreate** (**If "architect" in active_agents**): "Prepare comprehensive final quality assessment of [scope]. Review architecture, code quality, SOLID principles. Prepare scoring framework. Note: final scores will be assigned after simplifier completes and tests pass."
    - **TaskUpdate**: assign owner to "architect"
    - **SendMessage** to "architect": "Task #{id} assigned: prepare final quality assessment. Start now."
 
-3. **TaskCreate**: "Final security assessment of [scope]. Compare full refactoring scope against Phase 1 security baseline. Verify all blocking findings from iterations were resolved. Check for cross-file security issues missed in per-iteration reviews. Prepare Security Posture Score (1-10) with justification and baseline comparison table."
+3. **TaskCreate** (**If "security-review" in active_agents**): "Final security assessment of [scope]. Compare full refactoring scope against Phase 1 security baseline. Verify all blocking findings from iterations were resolved. Check for cross-file security issues missed in per-iteration reviews. Prepare Security Posture Score (1-10) with justification and baseline comparison table."
    - **TaskUpdate**: assign owner to "security-review"
    - **SendMessage** to "security-review": "Task #{id} assigned: final security assessment. Start now."
 
-### Step 3.2: Wait for All Three to Complete
+### Step 3.2: Wait for All Created Phase 3 Tasks to Complete
 
-Monitor TaskList until all three tasks show completed.
+Monitor TaskList until all created Phase 3 tasks show completed.
 
 ### Step 3.3: Final Test Run
 
@@ -401,17 +429,24 @@ Monitor TaskList until all three tasks show completed.
 
 ### Step 3.4: Final Scoring
 
-1. **TaskCreate**: "Assign final quality scores based on completed refactoring. Provide: Clean Code Score (1-10) with justification, Architecture Perfection Score (1-10) with justification, summary of improvements across all iterations, remaining potential issues, future recommendations. Include the Security Posture Score ({security_score}/10) from the security-review agent's final assessment in the report. Create detailed markdown report."
+**If "architect" in active_agents:**
+
+1. **TaskCreate**: "Assign final quality scores based on completed refactoring. Provide: Clean Code Score (1-10) with justification{if 'architect' in active_agents: ', Architecture Perfection Score (1-10) with justification'}, summary of improvements across all iterations, remaining potential issues, future recommendations.{if 'security-review' in active_agents: ' Include the Security Posture Score ({security_score}/10) from the security-review agent.'}{if 'simplifier' in active_agents and is_focused: ' Include the Simplification Score (1-10) with justification.'} Create detailed markdown report."
    - **TaskUpdate**: assign owner to "architect"
-   - **SendMessage** to "architect": "Task #{id} assigned: final scoring. Security Posture Score from security-review: {security_score}/10. Include this in the final report alongside Clean Code and Architecture scores. Start now."
+   - **SendMessage** to "architect": "Task #{id} assigned: final scoring.{if security_score: ' Security Posture Score from security-review: {security_score}/10.'} Include only scores for active agents in the report. Start now."
 2. Wait for completion
+
+**If "architect" not in active_agents** (focused run without architect): The team lead compiles the final report directly, including only scores from active agents:
+- If "security-review" in active_agents: include Security Posture Score from security-review's final assessment
+- If "simplifier" in active_agents: include Simplification Score (1-10) based on simplifier's report
+- Always include Clean Code Score based on test agent's coverage and code quality observations
 
 ## Phase 4: Report and Cleanup
 
 ### Step 4.1: Generate Report
 
 1. Generate timestamp
-2. Create `refactor-result-{timestamp}.md` with architect's final assessment report (which includes all three scores: Clean Code, Architecture, and Security Posture)
+2. Create `refactor-result-{timestamp}.md` with the final assessment report. If `is_focused`, add a "Focus Mode: {focus_areas joined by ', '}" header at the top of the report. Include only scores from active agents.
 3. Use Write tool to save the report
 
 ### Step 4.1.5: Commit Final Changes (Conditional)
@@ -423,7 +458,7 @@ Monitor TaskList until all three tasks show completed.
 3. Commit using Bash with a HEREDOC message:
    ```bash
    git commit -m "$(cat <<'EOF'
-   refactor: {scope} — clean code {clean_code_score}/10, architecture {architecture_score}/10, security {security_score}/10
+   refactor{if is_focused: '(' + focus_areas joined by ',' + ')'}: {scope} — {active scores as 'name score/10' joined by ', '}
    EOF
    )"
    ```
@@ -474,7 +509,7 @@ Monitor TaskList until all three tasks show completed.
    - Commit via Bash with HEREDOC:
      ```bash
      git commit -m "$(cat <<'EOF'
-     refactor: {scope} — clean code {clean_code_score}/10, architecture {architecture_score}/10
+     refactor{if is_focused: '(' + focus_areas joined by ',' + ')'}: {scope} — {active scores as 'name score/10' joined by ', '}
      EOF
      )"
      ```
@@ -485,26 +520,29 @@ Monitor TaskList until all three tasks show completed.
 4. **Create the PR** using Bash with `gh pr create`:
    - Build the command:
      ```bash
-     gh pr create --title "refactor: {scope}" --body "$(cat <<'EOF'
+     gh pr create --title "refactor{if is_focused: '(' + focus_areas joined by ',' + ')'}: {scope}" --body "$(cat <<'EOF'
      ## Refactor Summary
 
      **Scope**: {scope}
      **Iterations**: {max_iterations}
+     {if is_focused: '**Focus**: ' + focus_areas joined by ', '}
 
      ## Quality Scores
-     - Clean Code: {clean_code_score}/10
-     - Architecture: {architecture_score}/10
-     - Security Posture: {security_score}/10
+     {only include scores from active agents, e.g.:}
+     {if 'architect' in active_agents: '- Clean Code: {clean_code_score}/10'}
+     {if 'architect' in active_agents: '- Architecture: {architecture_score}/10'}
+     {if 'security-review' in active_agents: '- Security Posture: {security_score}/10'}
+     {if 'simplifier' in active_agents and is_focused: '- Simplification: {simplification_score}/10'}
 
      ## Changes
-     {brief summary of improvements from architect's report}
+     {brief summary of improvements from report}
 
      {if published_url: "Related: {published_url}"}
 
      ---
      *Generated by refactor plugin v2.3.0*
      EOF
-     )" {if prDraft: "--draft"}
+     )" {if prDraft: "--draft"} {if is_focused: '--label "focus:' + focus_areas[0] + '"'}
      ```
    - Store the created PR URL as `pr_url`
 
@@ -513,23 +551,24 @@ Monitor TaskList until all three tasks show completed.
 ### Step 4.2: Report to User
 
 ```
-Refactoring complete!
+Refactoring complete!{if is_focused: ' (Focus: ' + focus_areas joined by ', ' + ')'}
 
 Summary:
 - Iterations: {max_iterations}
 - Tests: All passing
-- Security: All blocking findings resolved
+{if 'security-review' in active_agents: '- Security: All blocking findings resolved'}
 - Report: refactor-result-{timestamp}.md
 
 Quality Scores:
-- Clean Code: X/10
-- Architecture: Y/10
-- Security Posture: Z/10
+{if 'architect' in active_agents: '- Clean Code: X/10'}
+{if 'architect' in active_agents: '- Architecture: Y/10'}
+{if 'security-review' in active_agents: '- Security Posture: Z/10'}
+{if 'simplifier' in active_agents and is_focused: '- Simplification: W/10'}
 ```
 
 ### Step 4.3: Shutdown Team
 
-1. Send **shutdown_request** to all 5 teammates via SendMessage
+1. Send **shutdown_request** to all spawned teammates (those in `active_agents`) via SendMessage
 2. Wait for shutdown confirmations
 3. Use **TeamDelete** to clean up the team
 
@@ -543,10 +582,11 @@ Quality Scores:
 - Only the team lead commits code via git — teammates must never run git commit
 
 ### Parallel Execution Points
-- **Phase 1**: refactor-test + architect + security-review run simultaneously (all read-only analysis)
-- **Phase 2.E**: simplifier + security-review run simultaneously (both reviewing code agent's changes)
-- **Phase 3.1**: simplifier + architect + security-review run simultaneously
+- **Phase 1**: Active subset of {refactor-test, architect, security-review} run simultaneously (all read-only analysis)
+- **Phase 2.E**: Active subset of {simplifier, security-review} run simultaneously (both reviewing code agent's changes or scope)
+- **Phase 3.1**: Active subset of {simplifier, architect, security-review} run simultaneously
 - All other steps are sequential due to data dependencies
+- In focused mode, some parallel phases may have only one agent — they still execute correctly as a single-task phase
 
 ### Error Handling
 - If a teammate goes idle without completing their task: re-send the assignment via SendMessage with the task ID and explicit "start now" instruction
@@ -573,14 +613,14 @@ Quality Scores:
 
 Refactoring is complete when:
 - All tests pass
-- All blocking security findings (Critical/High) resolved
+- If "security-review" in active_agents: all blocking security findings (Critical/High) resolved
 - `max_iterations` refactoring iterations completed
-- Simplification pass completed per iteration + final pass
-- Security review completed per iteration + final assessment
-- Code quality scores assigned (Clean Code, Architecture, Security Posture)
+- If "simplifier" in active_agents: simplification pass completed per iteration + final pass
+- If "security-review" in active_agents: security review completed per iteration + final assessment
+- Quality scores assigned for active agents (full run: Clean Code, Architecture, Security Posture; focused run: subset)
 - Final assessment report generated
 - No functionality changes (only quality improvements)
-- Team gracefully shut down
+- Only spawned agents shut down; team gracefully cleaned up
 
 ---
 

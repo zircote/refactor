@@ -5,7 +5,7 @@ diataxis_describes: refactor plugin agent specifications
 
 # Agent Reference
 
-The refactor plugin orchestrates four specialized agents as a swarm team. Each agent has a defined role, tool set, and model assignment.
+The refactor plugin orchestrates five specialized agents as a swarm team. Each agent has a defined role, tool set, and model assignment.
 
 ## Architect Agent
 
@@ -26,6 +26,8 @@ The refactor plugin orchestrates four specialized agents as a swarm team. Each a
 - Phase 2 Step A: Prioritized optimization plan (top 3)
 - Phase 3: Final quality assessment framework
 - Phase 4: Final scoring (Clean Code + Architecture, 1--10 each)
+
+**Focus mode:** Activated by `--focus=architecture` or `--focus=code`
 
 ## Refactor-Test Agent
 
@@ -48,6 +50,8 @@ The refactor plugin orchestrates four specialized agents as a swarm team. Each a
 - Phase 2 Step F: Verify simplification preserved functionality
 - Phase 3: Final test suite run
 
+**Focus mode:** Always active regardless of `--focus` value
+
 ## Refactor-Code Agent
 
 | Property | Value |
@@ -65,6 +69,8 @@ The refactor plugin orchestrates four specialized agents as a swarm team. Each a
 **Invoked during:**
 - Phase 2 Step B: Implement top 3 optimizations
 - Phase 2 Step D: Fix test failures
+
+**Focus mode:** Always active regardless of `--focus` value
 
 ## Simplifier Agent
 
@@ -85,6 +91,30 @@ The refactor plugin orchestrates four specialized agents as a swarm team. Each a
 **Invoked during:**
 - Phase 2 Step E: Simplify all code changed in iteration
 - Phase 3: Final whole-scope simplification pass
+
+**Focus mode:** Activated by `--focus=simplification`
+
+## Security-Review Agent
+
+| Property | Value |
+|----------|-------|
+| Name | `security-review` |
+| Model | `sonnet` |
+| Color | red |
+
+**Role:** Security regression detection and posture scoring
+
+**Capabilities:** Security baseline establishment, regression detection against baseline, secrets/PII scanning, dependency vulnerability audit, severity classification (Critical/High = blocking, Medium/Low = advisory), remediation guidance, Security Posture Score assignment
+
+**Tools:** Read, Glob, Grep, Bash, Skill
+
+**Invoked during:**
+- Phase 1: Establish security baseline
+- Phase 2 Step E: Per-iteration security review of changes
+- Phase 2 Step E.1: Verify security fix effectiveness
+- Phase 3: Final security assessment and Security Posture Score
+
+**Focus mode:** Activated by `--focus=security`
 
 ## See Also
 

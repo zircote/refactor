@@ -15,7 +15,7 @@ In this tutorial, we will install the refactor plugin, run it against a codebase
 
 - How to install the refactor plugin
 - How to run a refactor with different scopes
-- How the four agents collaborate through the iteration cycle
+- How the five agents collaborate through the iteration cycle
 - How to read the final quality report
 
 ## Prerequisites
@@ -65,6 +65,24 @@ The plugin will ask you configuration questions on first run:
 
 Your answers are saved to `.claude/refactor.config.json` and reused on future runs.
 
+### Step 3b: Try a focused refactor
+
+Now run a focused refactor to see how `--focus` constrains the agents:
+
+```bash
+/refactor --focus=security src/utils/
+```
+
+This time, only three agents spawn: refactor-test (always), refactor-code (always), and security-review (the focused discipline). The run defaults to 1 iteration instead of 3.
+
+You will see the same phase structure, but steps that require inactive agents are skipped. The final report includes only a Security Posture Score — no Architecture or Clean Code scores are produced.
+
+To override the iteration default in focused mode:
+
+```bash
+/refactor --focus=security --iterations=3 src/utils/
+```
+
 ### Step 4: Watch the phases
 
 After configuration, the plugin creates a swarm team and begins working. You will see progress messages as each phase completes:
@@ -72,6 +90,7 @@ After configuration, the plugin creates a swarm team and begins working. You wil
 **Phase 1 (Foundation)** runs two agents in parallel:
 - The refactor-test agent analyzes test coverage and adds missing tests
 - The architect agent reviews your code's architecture
+- The security-review agent establishes a security baseline
 
 You will see a message like: "Phase 1 complete. Test coverage established. Architecture reviewed."
 
@@ -134,7 +153,8 @@ git checkout -- .
 You have:
 - Installed the refactor plugin and configured it for your project
 - Run a scoped refactor with the default 3-iteration cycle
-- Observed four agents collaborating through parallel and sequential phases
+- Observed five agents collaborating through parallel and sequential phases
+- Run a focused refactor constrained to a single discipline
 - Read a quality assessment report with Clean Code and Architecture scores
 - Reviewed and committed (or discarded) the changes
 
@@ -142,5 +162,6 @@ You have:
 
 - [How to Configure Commit Strategies](guides/configure-commits.md) — automate commits and PRs
 - [How to Scope Refactoring Effectively](guides/scope-refactoring.md) — strategies for large codebases
+- [How to Run Focused Refactoring](guides/focus-refactoring.md) — constrain runs to specific disciplines
 - [Configuration Reference](reference/configuration.md) — all config options
 - [Architecture: Swarm Orchestration Design](explanation/architecture.md) — understand why the plugin works this way
