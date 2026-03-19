@@ -15,7 +15,7 @@ In this tutorial, we will install the refactor plugin, run it against a codebase
 
 - How to install the refactor plugin
 - How to run a refactor with different scopes
-- How the five agents collaborate through the iteration cycle
+- How the six agents collaborate through the iteration cycle (plus the `/feature-dev` skill)
 - How to read the final quality report
 
 ## Prerequisites
@@ -73,7 +73,7 @@ Now run a focused refactor to see how `--focus` constrains the agents:
 /refactor --focus=security src/utils/
 ```
 
-This time, only three agents spawn: refactor-test (always), refactor-code (always), and security-review (the focused discipline). The run defaults to 1 iteration instead of 3.
+This time, only three agents spawn: refactor-test (always), refactor-code (always), and code-reviewer (the focused discipline for security). The run defaults to 1 iteration instead of 3.
 
 You will see the same phase structure, but steps that require inactive agents are skipped. The final report includes only a Security Posture Score — no Architecture or Clean Code scores are produced.
 
@@ -87,12 +87,16 @@ To override the iteration default in focused mode:
 
 After configuration, the plugin creates a swarm team and begins working. You will see progress messages as each phase completes:
 
+**Phase 0.5 (Discovery)** runs the code-explorer agent first. It traces entry points, maps execution flows, catalogs dependencies, and produces a structured codebase map. This map is shared with all downstream agents via the blackboard so they start with full context rather than each independently exploring.
+
+You will see: "Phase 0.5 complete. Codebase discovery finished."
+
 **Phase 1 (Foundation)** runs agents in parallel:
 - The refactor-test agent analyzes test coverage and adds missing tests
 - The architect agent reviews your code's architecture
-- The security-review agent establishes a security baseline
+- The code-reviewer agent establishes a quality + security baseline
 
-You will see a message like: "Phase 1 complete. Test coverage established. Architecture reviewed."
+All three read the code-explorer's codebase map from the blackboard. You will see: "Phase 1 complete. Test coverage established. Architecture reviewed. Quality + security baseline recorded."
 
 **Phase 2 (Iteration Loop)** runs three times by default. Each iteration:
 1. The architect creates an optimization plan (top 3 priorities)
@@ -153,15 +157,17 @@ git checkout -- .
 You have:
 - Installed the refactor plugin and configured it for your project
 - Run a scoped refactor with the default 3-iteration cycle
-- Observed five agents collaborating through parallel and sequential phases
+- Observed six agents collaborating through parallel and sequential phases
 - Run a focused refactor constrained to a single discipline
-- Read a quality assessment report with Clean Code and Architecture scores
+- Read a quality assessment report with Clean Code, Architecture, and Security Posture scores
 - Reviewed and committed (or discarded) the changes
 
 ## Next steps
 
+- [Tutorial: Your First Feature Development](tutorial-feature-dev.md) — build a new feature with `/feature-dev`
 - [How to Configure Commit Strategies](guides/configure-commits.md) — automate commits and PRs
 - [How to Scope Refactoring Effectively](guides/scope-refactoring.md) — strategies for large codebases
 - [How to Run Focused Refactoring](guides/focus-refactoring.md) — constrain runs to specific disciplines
+- [How to Develop Features](guides/use-feature-dev.md) — practical guide to `/feature-dev` scenarios
 - [Configuration Reference](reference/configuration.md) — all config options
 - [Architecture: Swarm Orchestration Design](explanation/architecture.md) — understand why the plugin works this way

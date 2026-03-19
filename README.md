@@ -128,9 +128,11 @@ claude --plugin-dir /path/to/refactor
 | Document | Quadrant | Description |
 |----------|----------|-------------|
 | [Tutorial: Your First Refactor](docs/tutorial.md) | Tutorial | Guided walkthrough from install to report review |
+| [Tutorial: Your First Feature Development](docs/tutorial-feature-dev.md) | Tutorial | Build a new feature with /feature-dev |
 | [How to Configure Commit Strategies](docs/guides/configure-commits.md) | How-to | Set up commits, PRs, and report publishing |
 | [How to Scope Refactoring](docs/guides/scope-refactoring.md) | How-to | Choose effective scopes for different project sizes |
 | [How to Run Focused Refactoring](docs/guides/focus-refactoring.md) | How-to | Constrain runs to specific disciplines with --focus |
+| [How to Develop Features](docs/guides/use-feature-dev.md) | How-to | Practical guide to /feature-dev scenarios |
 | [Troubleshooting](docs/guides/troubleshooting.md) | How-to | Diagnose and resolve common problems |
 | [Configuration Reference](docs/reference/configuration.md) | Reference | Full config schema, fields, and examples |
 | [Agent Reference](docs/reference/agents.md) | Reference | Agent specifications, tools, and invocation points |

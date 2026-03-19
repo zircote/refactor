@@ -25,9 +25,9 @@ The refactoring process has a natural structure: some tasks are independent (tes
 
 The alternative — a linear pipeline where each agent waits for the previous one — wastes time during independent phases. In the swarm model, Phase 1 and Phase 3 each run up to three agents in parallel, reducing wall-clock time for those phases.
 
-## The six agents and their roles
+## The seven agents and their roles
 
-The decision to use six specialized agents rather than a single general-purpose agent reflects a separation of concerns:
+The decision to use seven specialized agents (six for /refactor, five+ for /feature-dev) rather than a single general-purpose agent reflects a separation of concerns:
 
 - **Code-Explorer** — Runs first (Phase 0.5). Deep codebase analysis producing a structured map consumed by all downstream agents. This eliminates redundant discovery work — agents start with shared understanding rather than each independently exploring the codebase.
 - **Architect** — Read-only analysis. Cannot modify files. This constraint prevents the planning agent from making changes that bypass the test-verify cycle.
@@ -36,7 +36,9 @@ The decision to use six specialized agents rather than a single general-purpose 
 - **Refactor-Code** — Implements changes. Has Write and Edit access. Fixes both test failures and blocking code review findings.
 - **Simplifier** — Post-implementation polish. Reviews code changed by refactor-code for clarity improvements.
 
-This separation ensures that no single agent can both make changes and verify them. The explorer maps, the architect plans, the code agent implements, the reviewer gates, the test agent verifies, and the simplifier polishes — each with only the tools appropriate to its role.
+- **Feature-Code** — New feature implementation (feature-dev only). Reads architecture blueprints from the blackboard and creates code following codebase conventions. Distinct from refactor-code: feature-code *creates* new functionality while refactor-code *restructures* existing code.
+
+This separation ensures that no single agent can both make changes and verify them. The explorer maps, the architect plans, the code agents implement (refactor-code for restructuring, feature-code for new features), the reviewer gates, the test agent verifies, and the simplifier polishes — each with only the tools appropriate to its role.
 
 ## Phase 0.5: Discovery-first design
 
@@ -98,6 +100,47 @@ Focus mode (`--focus`) constrains a run to specific disciplines by spawning only
 ## Error handling philosophy
 
 The plugin treats test failures and blocking code review findings as hard gates (the refactor stops and retries up to 3 times) but treats all GitHub operations (commits, PRs, issues, discussions) as non-blocking best-effort. A broken test or security regression means the refactoring damaged the codebase, which is critical. A failed PR creation is an inconvenience but not a correctness issue.
+
+## v3.1.0: Feature development and multi-instance spawning
+
+**v3.1.0** added the `/feature-dev` skill — a second workflow sharing agents with `/refactor` — and introduced multi-instance parallel agent spawning.
+
+### Why add feature development to a refactoring plugin?
+
+The agents developed for refactoring (code-explorer, architect, code-reviewer) are equally valuable for building new features. Rather than maintaining two separate plugins with duplicated agent definitions, v3.1.0 merges both workflows into one plugin where agents are DRY:
+
+- **Code-explorer** maps the codebase for refactoring *and* explores integration points for new features
+- **Architect** creates optimization plans *and* designs feature architecture blueprints
+- **Code-reviewer** gates refactoring quality *and* reviews new feature implementations with focus-area specialization
+
+The key difference is a new **feature-code** agent that *creates* code (vs refactor-code which *restructures* existing code).
+
+### Multi-instance spawning
+
+Feature development benefits from multiple perspectives — three architects with different design philosophies (minimal, clean, pragmatic) produce more options than one. The same applies to exploration (different focuses) and review (different quality dimensions).
+
+Multi-instance spawning means the same agent definition (e.g., `refactor:code-explorer`) can be spawned N times with unique names (`code-explorer-1`, `code-explorer-2`, `code-explorer-3`) and different prompts. Instance counts are configurable and scaled by feature complexity:
+
+- **Simple features** (single endpoint, trivial logic): 1 instance each
+- **Complex features** (cross-cutting, multiple systems): full configured count (default: 3)
+
+### Blackboard as shared context layer
+
+All agents use the Atlatl blackboard for context sharing. This is a key architectural decision: instead of the team lead relaying context in task descriptions (which bloats prompts and risks information loss), agents write findings to named keys and other agents read them directly.
+
+The blackboard enables a write-once, read-many pattern: the code-explorer writes `codebase_context` once and every downstream agent reads it on demand. The team lead writes `feature_spec` and `chosen_architecture`; all implementation and review agents consume them.
+
+### Interactive approval gates
+
+Feature development is inherently more uncertain than refactoring (which preserves behavior). The `/feature-dev` skill includes 5 interactive gates where the user must approve before proceeding:
+
+1. **Elicitation** — 95% confidence before exploration begins
+2. **Clarification** — post-exploration ambiguities resolved
+3. **Architecture selection** — user picks from competing designs
+4. **Implementation approval** — user confirms readiness to build
+5. **Review disposition** — user decides what to fix
+
+These gates prevent the skill from building the wrong thing. The 95% confidence protocol uses graduated elicitation — detailed requests skip quickly (0-1 questions) while vague requests get thorough questioning (8-15 questions across multiple rounds).
 
 ## Further reading
 

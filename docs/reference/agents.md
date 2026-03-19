@@ -5,7 +5,10 @@ diataxis_describes: refactor plugin agent specifications
 
 # Agent Reference
 
-The refactor plugin orchestrates six specialized agents as a swarm team. Each agent has a defined role, tool set, and model assignment.
+The refactor plugin provides seven specialized agents shared between the `/refactor` and `/feature-dev` skills. Each agent has a defined role, tool set, and model assignment.
+
+The `/refactor` skill uses 6 agents: code-explorer, architect, code-reviewer, refactor-test, refactor-code, simplifier.
+The `/feature-dev` skill uses 5 agents: code-explorer, architect, code-reviewer, feature-code, refactor-test (plus simplifier and refactor-code for fix-ups).
 
 ## Code-Explorer Agent
 
@@ -36,17 +39,22 @@ The refactor plugin orchestrates six specialized agents as a swarm team. Each ag
 | Model | `sonnet` |
 | Color | green |
 
-**Role:** Design and architecture analysis
+**Role:** Design and architecture analysis (refactoring) + feature architecture design (feature-dev)
 
-**Capabilities:** Code structure review, pattern identification, optimization planning, quality scoring
+**Capabilities:** Code structure review, pattern identification, optimization planning, quality scoring, feature architecture blueprints with implementation maps
 
-**Tools:** Glob, Grep, Read, TodoWrite, WebFetch
+**Tools:** Bash, Glob, Grep, Read, TodoWrite
 
-**Invoked during:**
+**Invoked during (/refactor):**
 - Phase 1: Initial architecture review (uses code-explorer's codebase map)
 - Phase 2 Step A: Prioritized optimization plan (top 3)
 - Phase 3: Final quality assessment framework
 - Phase 3 Step 4: Final scoring (Clean Code + Architecture, 1--10 each)
+
+**Invoked during (/feature-dev):**
+- Phase 4: Architecture design (spawned as N parallel instances with different design philosophies)
+
+**Blackboard protocol:** Reads `codebase_context`, `feature_spec`, `clarifications`. Writes `architect_plan` (refactor) or `architect_{i}_design` (feature-dev).
 
 **Focus mode:** Activated by `--focus=architecture` or `--focus=code`
 
@@ -106,13 +114,15 @@ The refactor plugin orchestrates six specialized agents as a swarm team. Each ag
 |----------|-------|
 | Name | `refactor-code` |
 | Model | `sonnet` |
-| Color | yellow |
+| Color | magenta |
 
 **Role:** Implementation of refactoring optimizations
 
 **Capabilities:** Clean code refactoring, safe incremental changes, test failure fixing, blocking finding remediation, best practice application
 
-**Tools:** Glob, Grep, Read, Write, Edit, TodoWrite
+**Tools:** Bash, Glob, Grep, Read, Write, Edit, TodoWrite
+
+**Blackboard protocol:** Reads `codebase_context`, `architect_plan`. Writes `implementation_report`.
 
 **Invoked during:**
 - Phase 2 Step B: Implement top 3 optimizations
@@ -141,7 +151,62 @@ The refactor plugin orchestrates six specialized agents as a swarm team. Each ag
 
 **Focus mode:** Activated by `--focus=simplification`
 
+## Feature-Code Agent
+
+| Property | Value |
+|----------|-------|
+| Name | `feature-code` |
+| Model | `sonnet` |
+| Color | white |
+
+**Role:** Implementation of new features from architecture blueprints
+
+**Capabilities:** Feature implementation from blueprints, codebase convention matching, clean code creation, integration point wiring, implementation reporting
+
+**Tools:** Bash, Glob, Grep, Read, Write, Edit, TodoWrite
+
+**Invoked during (/feature-dev only):**
+- Phase 5: Implement the chosen architecture blueprint
+- Phase 5 (fix-up): Address issues from quality review
+
+**Not used by /refactor.** The refactor workflow uses refactor-code instead (which restructures existing code rather than creating new functionality).
+
+**Blackboard protocol:** Reads `codebase_context`, `chosen_architecture`, `clarifications`, `feature_spec`. Writes `implementation_report`.
+
+## Multi-Instance Spawning
+
+Some agents support multi-instance parallel spawning, where the same agent definition is spawned multiple times with unique names and different focus areas. This enables parallel exploration, design, and review.
+
+| Agent | Multi-Instance? | Naming Pattern | Used By |
+|-------|----------------|----------------|---------|
+| code-explorer | Yes | `code-explorer-1`, `code-explorer-2`, ... | /feature-dev Phase 2 |
+| architect | Yes | `architect-1`, `architect-2`, ... | /feature-dev Phase 4 |
+| code-reviewer | Yes | `code-reviewer-1`, `code-reviewer-2`, ... | /feature-dev Phase 6 |
+| feature-code | No | `feature-code` | /feature-dev Phase 5 |
+| refactor-code | No | `refactor-code` | /refactor Phase 2 |
+| refactor-test | No | `refactor-test` | Both skills |
+| simplifier | No | `simplifier` | /refactor Phase 2-3 |
+
+Instance counts are configurable via `config.featureDev.explorerCount`, `.architectCount`, `.reviewerCount` (default: 3 each). The skill scales counts based on feature complexity — simple features may use 1 instance instead of 3.
+
+## Blackboard Protocol
+
+All agents share context through the Atlatl blackboard. Each agent has documented read/write keys:
+
+| Agent | Reads | Writes |
+|-------|-------|--------|
+| code-explorer | `feature_spec` | `codebase_context`, `explorer_{i}_findings` |
+| architect | `codebase_context`, `feature_spec`, `clarifications` | `architect_plan`, `architect_{i}_design` |
+| code-reviewer | `codebase_context`, `feature_spec`, `chosen_architecture` | `reviewer_baseline`, `reviewer_{i}_findings` |
+| feature-code | `codebase_context`, `chosen_architecture`, `clarifications`, `feature_spec` | `implementation_report` |
+| refactor-code | `codebase_context`, `architect_plan` | `implementation_report` |
+| refactor-test | `codebase_context` | `test_report` |
+| simplifier | `codebase_context` | `simplification_report` |
+
+The blackboard enables write-once, read-many context sharing — the code-explorer writes the codebase map once and all downstream agents read it as needed.
+
 ## See Also
 
 - [Architecture: Swarm Orchestration Design](../explanation/architecture.md)
 - [Quality Score Reference](quality-scores.md)
+- [How to Develop Features](../guides/use-feature-dev.md)

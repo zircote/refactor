@@ -18,11 +18,12 @@ The `--focus` flag constrains a refactoring run to specific disciplines, spawnin
 
 | Value | Agents spawned | Scores produced |
 |-------|---------------|-----------------|
-| `security` | refactor-test, refactor-code, security-review | Security Posture |
+| `security` | refactor-test, refactor-code, code-reviewer | Security Posture |
 | `architecture` | refactor-test, refactor-code, architect | Clean Code, Architecture |
 | `simplification` | refactor-test, refactor-code, simplifier | Simplification |
-| `code` | refactor-test, refactor-code, architect | Clean Code, Architecture |
-| (none) | all 5 | Clean Code, Architecture, Security Posture |
+| `code` | refactor-test, refactor-code, architect, code-reviewer | Clean Code, Architecture, Security Posture |
+| `discovery` | refactor-test, refactor-code, code-explorer | (Discovery only — codebase map) |
+| (none) | all 6 | Clean Code, Architecture, Security Posture |
 
 The refactor-test and refactor-code agents always spawn regardless of focus. They provide the safety net (tests must pass) and fix capability (resolve failures).
 
@@ -34,7 +35,7 @@ The refactor-test and refactor-code agents always spawn regardless of focus. The
 /refactor --focus=security src/auth/
 ```
 
-Only the security-review agent analyzes your code. The run defaults to 1 iteration. The final report includes a Security Posture Score.
+Only the code-reviewer agent analyzes your code (quality + security). The run defaults to 1 iteration. The final report includes a Security Posture Score.
 
 ### 2. Run an architecture-only refactor
 
@@ -66,7 +67,7 @@ Equivalent to `--focus=architecture` — the architect provides the optimization
 /refactor --focus=security,architecture src/
 ```
 
-Multiple values are comma-separated. The agent set is the **union** of each focus area's agents. This example spawns: refactor-test, refactor-code, architect, and security-review (4 of 5 agents).
+Multiple values are comma-separated. The agent set is the **union** of each focus area's agents. This example spawns: refactor-test, refactor-code, architect, and code-reviewer (4 of 6 agents).
 
 ### 6. Override iteration count in focused mode
 

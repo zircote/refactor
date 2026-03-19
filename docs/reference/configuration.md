@@ -17,7 +17,7 @@ On subsequent runs, the config file is loaded silently.
 
 ```json
 {
-  "version": "1.1",
+  "version": "3.1",
   "iterations": 3,
   "postRefactor": {
     "commitStrategy": "none",
@@ -26,15 +26,25 @@ On subsequent runs, the config file is loaded silently.
     "publishReport": "none",
     "discussionCategory": "General",
     "reportRepository": null
+  },
+  "featureDev": {
+    "explorerCount": 3,
+    "architectCount": 3,
+    "reviewerCount": 3,
+    "commitStrategy": "single-final",
+    "createPR": false,
+    "prDraft": true
   }
 }
 ```
+
+The `featureDev` section is optional. If missing, all defaults are applied silently. Existing config files without `featureDev` continue to work — the key is merged in-memory at runtime.
 
 ## Field Reference
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `version` | `string` | `"1.1"` | Config schema version |
+| `version` | `string` | `"3.1"` | Config schema version |
 | `iterations` | `integer` | `3` | Number of refactoring iterations (1--10, overridable with `--iterations=N`) |
 | `commitStrategy` | `"none"` \| `"per-iteration"` \| `"single-final"` | `"none"` | Controls when/if git commits happen |
 | `createPR` | `boolean` | `false` | Whether to open a PR after refactoring |
@@ -144,6 +154,38 @@ Creates a GitHub Discussion in the configured category.
 }
 ```
 
+## Feature-Dev Configuration (`featureDev`)
+
+These fields configure the `/feature-dev` skill. They live under the `featureDev` key and are entirely independent of the `/refactor` settings above.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `explorerCount` | `integer` | `3` | Number of parallel code-explorer instances in Phase 2 (scaled by complexity) |
+| `architectCount` | `integer` | `3` | Number of parallel architect instances in Phase 4 (scaled by complexity) |
+| `reviewerCount` | `integer` | `3` | Number of parallel code-reviewer instances in Phase 6 (scaled by complexity) |
+| `commitStrategy` | `"none"` \| `"single-final"` | `"single-final"` | When to commit feature changes |
+| `createPR` | `boolean` | `false` | Whether to open a PR after feature development |
+| `prDraft` | `boolean` | `true` | If PR is created, make it a draft |
+
+**Complexity-based scaling:** The skill may reduce instance counts for simple features (e.g., 1 explorer instead of 3 for a trivial endpoint). The configured values are maximums.
+
+**Example — feature-dev with PR creation:**
+```json
+{
+  "version": "3.1",
+  "iterations": 3,
+  "postRefactor": { "..." },
+  "featureDev": {
+    "explorerCount": 3,
+    "architectCount": 3,
+    "reviewerCount": 3,
+    "commitStrategy": "single-final",
+    "createPR": true,
+    "prDraft": true
+  }
+}
+```
+
 ## Error Handling
 
 All GitHub operations are non-blocking. If any operation fails (e.g., `gh` not authenticated, no remote configured), the plugin logs a warning and continues. The refactor workflow is never blocked by a publishing or PR creation failure.
@@ -164,7 +206,7 @@ These flags are available only on the command line and are not stored in the con
 | Flag | Values | Default | Description |
 |------|--------|---------|-------------|
 | `--iterations=N` | `1`--`10` | Config value (3) | Override iteration count for this run |
-| `--focus=<area>[,area...]` | `security`, `architecture`, `simplification`, `code` | (none — full run) | Constrain run to specific disciplines. Comma-separated for multiple areas. |
+| `--focus=<area>[,area...]` | `security`, `architecture`, `simplification`, `code`, `discovery` | (none — full run) | Constrain run to specific disciplines. Comma-separated for multiple areas. |
 
 ### --focus details
 
@@ -172,16 +214,17 @@ Valid focus values and their effect on agent spawning:
 
 | Focus value | Additional agents spawned |
 |-------------|--------------------------|
-| `security` | security-review |
+| `security` | code-reviewer |
 | `architecture` | architect |
 | `simplification` | simplifier |
-| `code` | architect |
+| `code` | architect + code-reviewer |
+| `discovery` | code-explorer |
 
 The refactor-test and refactor-code agents always spawn regardless of focus.
 
 When `--focus` is provided, the default iteration count changes to **1** (overridable with `--iterations=N`).
 
-Multiple focus values are combined as a union: `--focus=security,architecture` spawns both security-review and architect in addition to the always-present pair.
+Multiple focus values are combined as a union: `--focus=security,architecture` spawns both code-reviewer and architect in addition to the always-present pair.
 
 ## See Also
 
