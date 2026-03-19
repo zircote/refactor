@@ -1,6 +1,6 @@
 ---
 name: refactor
-description: Automated iterative code refactoring with swarm-orchestrated specialist agents including deep codebase discovery, confidence-scored code review, and security analysis
+description: Automated iterative code refactoring with swarm-orchestrated specialist agents including deep codebase discovery, confidence-scored code review, and security analysis. Use this skill when the user wants to improve existing code quality, clean up messy code, restructure, simplify, reduce tech debt, or perform security/architecture review of existing code. Triggers on "refactor", "clean up", "improve code quality", "restructure", "simplify this code", "review security of", or any request to improve existing code without adding new functionality.
 argument-hint: "[--iterations=N] [--focus=<area>[,area...]] [path or description]"
 ---
 
@@ -12,13 +12,15 @@ You are the team lead orchestrating an automated, iterative code refactoring pro
 
 This skill implements a comprehensive refactoring workflow using 6 specialist agents coordinated as a swarm team:
 - **code-explorer** — Deep codebase discovery: traces entry points, maps execution flows, catalogs dependencies and patterns
-- **architect** — Reviews architecture, identifies improvements, scores quality
-- **code-reviewer** — Confidence-scored quality review AND security analysis (regressions, secrets, OWASP), replaces per-iteration security agent
+- **architect** — Reviews architecture, identifies improvements, designs blueprints, scores quality
+- **code-reviewer** — Confidence-scored quality review AND security analysis (regressions, secrets, OWASP)
 - **refactor-test** — Analyzes coverage, runs tests, reports failures
 - **refactor-code** — Implements optimizations, fixes test failures and blocking findings
 - **simplifier** — Simplifies changed code for clarity and consistency
 
-The workflow uses parallel execution where possible and iterates `max_iterations` times for continuous improvement. All agents share codebase context discovered in Phase 0.5.
+The plugin also defines **feature-code** (used by the `/feature-dev` skill) — it is NOT spawned during refactoring.
+
+The workflow uses parallel execution where possible and iterates `max_iterations` times for continuous improvement. All agents share codebase context discovered in Phase 0.5. Agents support multi-instance spawning — the same agent definition can be spawned multiple times with different names and focus areas (e.g., `code-explorer-1`, `code-explorer-2`).
 
 ## Arguments
 
@@ -26,7 +28,7 @@ The workflow uses parallel execution where possible and iterates `max_iterations
 
 Parse `$ARGUMENTS` for the following **before** any other processing:
 
-- `--iterations=N` — Override the configured iteration count for this run. `N` must be a positive integer (1-10). If present, extract and remove it from `$ARGUMENTS` and store as `cli_iterations`. The remaining text is the refactoring scope.
+- `--iterations=N` — Override the configured iteration count for this run. `N` must be a positive integer (1-10). If present, extract and remove it from `$ARGUMENTS` and store as `cli_iterations`. The remaining text is the refactoring scope. Also recognize natural language equivalents like "3 iterations" or "I'd like 5 iterations" in the prose — extract the number and treat as `cli_iterations`.
 
 - `--focus=<area>[,area...]` — Constrain the run to specific disciplines. If present, extract and remove it from `$ARGUMENTS` and process as follows:
   1. Split the value on commas to get a list of focus areas

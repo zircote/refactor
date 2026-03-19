@@ -1,5 +1,5 @@
 {
   "name": "refactor",
-  "version": "3.0.0",
-  "description": "Swarm-orchestrated iterative code refactoring with 6 specialist agents: code-explorer for deep codebase discovery, architect for optimization planning, code-reviewer for confidence-scored quality and security analysis, refactor-test for coverage enforcement, refactor-code for implementation, and simplifier for clarity. Uses Phase 0.5 discovery, blackboard context sharing, and parallel execution."
+  "version": "3.1.0",
+  "description": "Swarm-orchestrated code refactoring and feature development with specialist agents. Supports multi-instance parallel agent spawning, blackboard context sharing, and interactive development gates."
 }
