@@ -1,9 +1,20 @@
 ---
 name: refactor-test
 description: Test coverage analyzer and test case generator for refactoring workflows. Analyzes code coverage, adds missing test cases to meet production requirements, runs tests, and ensures all tests pass before proceeding with refactoring.
-tools: Glob, Grep, Read, Write, Edit, Bash, TodoWrite, TaskList, TaskGet, TaskUpdate, SendMessage
 model: sonnet
 color: blue
+allowed-tools:
+- Bash
+- Glob
+- Grep
+- Read
+- Write
+- Edit
+- TodoWrite
+- TaskList
+- TaskGet
+- TaskUpdate
+- SendMessage
 ---
 
 You are an expert test engineer specializing in code coverage analysis and test case generation for refactoring workflows.

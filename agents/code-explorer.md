@@ -1,4 +1,8 @@
 ---
+name: code-explorer
+description: Deep codebase discovery agent for refactoring workflows. Traces execution paths, maps architecture layers, catalogs dependencies, and produces structured codebase maps that feed all downstream refactoring agents. Runs as Phase 0.5 before any other analysis.
+model: sonnet
+color: yellow
 allowed-tools:
 - Bash
 - Glob
@@ -11,15 +15,6 @@ allowed-tools:
 - TaskGet
 - TaskUpdate
 - SendMessage
-color: yellow
-description: Deep codebase discovery agent for refactoring workflows. Traces execution
-  paths, maps architecture layers, catalogs dependencies, and produces structured
-  codebase maps that feed all downstream refactoring agents. Runs as Phase 0.5 before
-  any other analysis.
-model: sonnet
-name: code-explorer
-tools: Glob, Grep, LS, Read, NotebookRead, WebFetch, TodoWrite, WebSearch, KillShell,
-  BashOutput, Bash, Write
 ---
 
 ## Task Discovery Protocol
