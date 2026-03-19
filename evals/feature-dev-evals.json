@@ -44,6 +44,49 @@
         "The skill does NOT over-elicit — it respects that the user has already provided detailed requirements",
         "Phase 2 exploration focuses are tailored to the specific feature: one explorer for existing middleware patterns, one for Redis usage patterns, one for route configuration patterns"
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "/feature-dev --autonomous add a REST endpoint for user preferences that supports GET, PUT, and DELETE with validation and proper error responses",
+      "expected_output": "The skill should parse --autonomous, go through normal Phases 1-4 (elicitation, exploration, clarification, architecture), then use the autonomous convergence loop for Phase 5 implementation. Tests should be MUTABLE (not frozen).",
+      "files": [],
+      "expectations": [
+        "The --autonomous flag is parsed and autonomous_mode is set to true",
+        "Phase 1 elicitation proceeds normally (95% confidence protocol)",
+        "Phase 2 codebase exploration proceeds normally with multiple explorer instances",
+        "Phase 4 architecture design proceeds normally with user selection",
+        "Phase 5 uses the autonomous convergence loop (not standard implementation)",
+        "Tests are MUTABLE: refactor-test MAY create and modify tests during iterations",
+        "Baseline snapshot is created after Phase 4 (architecture chosen) before implementation",
+        "Convergence-reporter is spawned at loop finalization"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "/feature-dev --autonomous --iterations=15 implement OAuth2 PKCE flow for our SPA with token refresh and session management",
+      "expected_output": "The skill should parse both flags, set max_iterations to 15, and use the autonomous convergence loop for Phase 5. Phases 1-4 should proceed with interactive gates.",
+      "files": [],
+      "expectations": [
+        "autonomous_mode is true, max_iterations is 15",
+        "Interactive gates are preserved: Phase 1 elicitation, Phase 3 clarification, Phase 4 architecture selection",
+        "Phase 5 approval gate asks about autonomous mode specifically",
+        "Score weights are loaded from config.autonomous.scoreWeights",
+        "The convergence loop includes keep/discard gating with git branch snapshots"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "/feature-dev --autonomous add a simple health check endpoint that returns {\"status\": \"ok\"}",
+      "expected_output": "The skill should handle autonomous mode with a trivially simple feature. Tests should be mutable (can be created during iterations), unlike refactor mode where they are frozen.",
+      "files": [],
+      "expectations": [
+        "The skill correctly identifies this as a simple feature and scales instance counts down",
+        "Phase 5 autonomous mode explicitly allows test creation: 'tests are MUTABLE'",
+        "refactor-test tasks include permission to create new test files",
+        "This contrasts with refactor autonomous mode where tests are FROZEN",
+        "The convergence loop may reach perfect score quickly on a simple feature",
+        "User approval is requested before starting autonomous implementation"
+      ]
     }
   ]
 }

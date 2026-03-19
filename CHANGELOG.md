@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-03-19
+
+### Added
+
+- **`--autonomous` flag**: Karpathy autoresearch-style convergence loop for both `/refactor` and `/feature-dev` skills — replaces fixed iteration loop with keep/discard gating, composite scoring, and automatic convergence detection
+- **Composite scoring system**: Weighted score from test pass rate (50%), code quality (25%), and security posture (25%) — configurable weights via `autonomous.scoreWeights`
+- **Git branch snapshots**: `autoresearch/v0`, `v1`, ... branches for keep/discard state management — automatically cleaned up at finalization
+- **Convergence detection**: Stop on perfect score (1.0), 3 consecutive reverts (stuck), score plateau (delta < 0.01 for 3 iterations), or max iterations (20)
+- **convergence-reporter agent**: New specialist that analyzes loop results, computes score trajectories, generates diffs, and produces convergence reports with recommendations
+- **code-reviewer Mode 5** (Autonomous Scoring): Structured JSON output (`review-scores.json`) with quality_score, security_score, and blocking_findings for the composite scoring system
+- **refactor-test autonomous output**: Standardized `test-results.json` format for composite scoring regardless of test runner
+- **Test freeze for refactor**: Tests frozen during autonomous refactor loop (run only, no creation) — prevents moving goalposts
+- **Mutable tests for feature-dev**: Tests can be created/modified during autonomous feature-dev loop — new functionality needs new tests
+- **Config `autonomous` section**: maxIterations, scoreWeights, and convergence thresholds
+- **scripts/**: `git_snapshot.sh`, `score.sh`, `results_log.sh` — utility scripts for the convergence loop
+- **references/autonomous-algorithm.md**: Formal algorithm specification
+- **docs/explanation/autonomous-convergence.md**: Pattern explanation
+- **docs/guides/use-autonomous-mode.md**: How-to guide
+- 6 new eval cases (3 per skill) for autonomous mode
+
+### Changed
+
+- **8-agent architecture**: Added convergence-reporter to the roster (was 7 agents)
+- **Config schema version**: Bumped to `"4.0"` with backward-compatible `autonomous` key (defaults applied when missing)
+- **Plugin version**: 4.0.0
+- **`--iterations` range**: Expanded to 1-20 when used with `--autonomous` (was 1-10)
+
 ## [3.1.0] - 2026-03-19
 
 ### Added
@@ -133,7 +160,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release with sequential 7-step workflow
 - Three agents: architect, refactor-test, refactor-code
 
-[Unreleased]: https://github.com/zircote/refactor/compare/v3.1.0...HEAD
+[Unreleased]: https://github.com/zircote/refactor/compare/v4.0.0...HEAD
+[4.0.0]: https://github.com/zircote/refactor/compare/v3.1.0...v4.0.0
 [3.1.0]: https://github.com/zircote/refactor/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/zircote/refactor/compare/v2.2.0...v3.0.0
 [2.2.0]: https://github.com/zircote/refactor/compare/v2.1.0...v2.2.0

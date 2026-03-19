@@ -1,7 +1,7 @@
 ---
 name: feature-dev
 description: Guided feature development with swarm-orchestrated codebase exploration, multi-perspective architecture design, implementation, and quality review. Use this skill when the user wants to build a new feature, add new functionality, implement a capability, or create something that doesn't exist yet. Triggers on requests like "add X", "implement Y", "build Z", "create a new W", "I need a feature for...", or any request to develop new functionality (not refactor existing code).
-argument-hint: "<feature description or requirement>"
+argument-hint: "[--autonomous] [--iterations=N] <feature description or requirement>"
 ---
 
 # Feature Development Skill (Swarm Orchestration)
@@ -19,13 +19,23 @@ This skill implements a comprehensive feature development workflow using special
 - **refactor-test** — Runs tests to verify implementation correctness
 - **simplifier** — Available for post-implementation polish if needed
 
-The workflow uses interactive approval gates at key decision points and parallel multi-instance agent spawning for exploration, architecture, and review phases.
+- **convergence-reporter** — Analyzes autonomous loop results and produces convergence reports (autonomous mode only)
+
+The workflow uses interactive approval gates at key decision points and parallel multi-instance agent spawning for exploration, architecture, and review phases. In **autonomous mode** (`--autonomous`), Phase 5 (Implementation) is replaced by a Karpathy autoresearch-style convergence loop with keep/discard gating, composite scoring, and automatic convergence detection.
 
 ## Arguments
 
-**$ARGUMENTS**: Feature description or requirement to implement.
+**$ARGUMENTS**: Optional flags and feature description or requirement to implement.
 
-Parse `$ARGUMENTS` as the initial feature description. This will be refined through the elicitation protocol in Phase 1.
+Parse `$ARGUMENTS` for the following **before** any other processing:
+
+- `--autonomous` — Enable autonomous convergence mode. When present, extract and remove from `$ARGUMENTS` and set `autonomous_mode = true`. Phase 5 is replaced by the autonomous convergence loop (see `references/autonomous-algorithm.md`). If not present, set `autonomous_mode = false`.
+
+- `--iterations=N` — Override the max iteration count for autonomous mode. `N` must be a positive integer (1-20). If present, extract and remove from `$ARGUMENTS` and store as `cli_iterations`. Only meaningful when combined with `--autonomous`.
+
+After extracting flags, the remaining `$ARGUMENTS` is the feature description. This will be refined through the elicitation protocol in Phase 1.
+
+**Autonomous mode settings**: `max_iterations = cli_iterations ?? config.autonomous.maxIterations ?? 20`. Load convergence config: `convergence = config.autonomous.convergence`. Load score weights: `score_weights = config.autonomous.scoreWeights`.
 
 ## Phase 0.0: Configuration Check
 
@@ -35,10 +45,10 @@ Parse `$ARGUMENTS` as the initial feature description. This will be refined thro
 2. **If file exists**: Parse the JSON silently. Merge with defaults (any missing fields use defaults). Store as `config`. Proceed to Phase 0.1.
 3. **If file does NOT exist**: Create with defaults and proceed.
 
-**Config schema v3.1** — feature-dev uses the `featureDev` section:
+**Config schema v4.0** — feature-dev uses the `featureDev` and (if autonomous) `autonomous` sections:
 ```json
 {
-  "version": "3.1",
+  "version": "4.0",
   "iterations": 3,
   "postRefactor": { "..." },
   "featureDev": {
@@ -289,7 +299,102 @@ SendMessage to "architect-{i}": "Task #{id} assigned: architecture design. Start
    blackboard_write(task_id="{blackboard_id}", key="chosen_architecture", value="{selected blueprint}")
    ```
 
-## Phase 5: Implementation
+## Phase 5: Autonomous Convergence Implementation (when `autonomous_mode = true`)
+
+**Replaces the standard Phase 5 when `--autonomous` is active. All other phases (0-4, 6, 7) execute identically, including all interactive gates (elicitation, clarification, architecture selection).**
+
+**Goal**: Iteratively implement the feature with composite scoring, keep/discard gating, and automatic convergence detection. Unlike refactor mode, tests are **mutable** — new functionality needs new tests.
+
+### Step 5.0-auto: Spawn Agents and Initialize
+
+1. Spawn `feature-code`, `refactor-test`, `code-reviewer`, and `convergence-reporter` (same spawn templates as standard mode, plus convergence-reporter):
+   - feature-code: reads codebase_context, chosen_architecture, clarifications, feature_spec from blackboard
+   - refactor-test: reads codebase_context from blackboard
+   - code-reviewer: reads codebase_context from blackboard
+   - convergence-reporter: reads convergence_data from blackboard (spawned deferred at finalization)
+
+2. Get user approval: Use **AskUserQuestion**: "Ready to implement using the {chosen approach} architecture in autonomous mode (max {max_iterations} iterations)? The system will iterate until convergence — you'll review the final result."
+
+3. Create workspace: `mkdir -p {scope-slug}-autonomous`
+4. Set `workspace = {scope-slug}-autonomous`
+5. Initialize results log: `bash scripts/results_log.sh append {workspace}/results.tsv 0 0 0 "baseline" "Pending evaluation"`
+6. Detect and clean stale branches: `bash scripts/git_snapshot.sh detect-stale`
+7. Create baseline snapshot: `bash scripts/git_snapshot.sh baseline`
+
+### Step 5.1-auto: Baseline Score
+
+1. Create `{workspace}/iteration-0/` directory
+2. Run tests (there may be no feature-specific tests yet — that's expected for baseline):
+   - **TaskCreate**: "Run the test suite and write results to {workspace}/iteration-0/test-results.json in autonomous mode format. You MAY create tests if none exist yet for this feature area."
+     - Assign to "refactor-test", send message
+     - Wait for completion
+3. Run Mode 5 scoring:
+   - **TaskCreate**: "Mode 5 autonomous scoring of [{scope}]. Write scores to {workspace}/iteration-0/review-scores.json."
+     - Assign to "code-reviewer", send message
+     - Wait for completion
+4. Compute baseline: `bash scripts/score.sh {workspace} 0 {score_weights.tests} {score_weights.quality} {score_weights.security}`
+5. Store as `score_0`, set `best = {version: 0, score: score_0}`
+6. Update log: `bash scripts/results_log.sh append {workspace}/results.tsv 0 {score_0} {score_0} "baseline" "Initial evaluation"`
+
+### Step 5.2-auto: Convergence Loop
+
+For `i = 1` to `max_iterations`:
+
+#### 5.2.A: MODIFY — Implement Iteration
+
+1. **TaskCreate**: "Iteration {i}: Implement the feature [{feature}] following the chosen architecture. Read codebase_context, chosen_architecture, clarifications, and feature_spec from blackboard. {If i > 1: 'Build on previous iteration. Focus on addressing weaknesses from prior scoring.'} Write clean, well-integrated code."
+   - Assign to "feature-code", send message, wait for completion
+2. **TaskCreate**: "Iteration {i}: Write and run tests for [{feature}]. You MAY create new tests and modify existing feature tests (tests are MUTABLE in feature-dev autonomous mode). Write results to {workspace}/iteration-{i}/test-results.json."
+   - Assign to "refactor-test", send message, wait for completion
+3. If test failures: coordinate fix with feature-code, re-test (max 3 attempts)
+4. Track `changelog` from agent reports
+
+#### 5.2.B: EVALUATE — Score the Iteration
+
+1. Create `{workspace}/iteration-{i}/` directory (if not already created by test agent)
+2. Ensure test-results.json exists in workspace
+3. **TaskCreate**: "Mode 5 autonomous scoring. Review all changes for [{feature}]. Write to {workspace}/iteration-{i}/review-scores.json."
+   - Assign to "code-reviewer", send message, wait for completion
+4. Compute: `bash scripts/score.sh {workspace} {i} {score_weights.tests} {score_weights.quality} {score_weights.security}`
+5. Store as `score_i`
+
+#### 5.2.C: KEEP or DISCARD
+
+- **If `score_i > best.score`**:
+  - `bash scripts/git_snapshot.sh create {i}`
+  - `best = {version: i, score: score_i}`, `action = "kept"`
+  - Inform user: "Iteration {i}: score {score_i} (improved). KEPT."
+
+- **If `score_i <= best.score`**:
+  - `bash scripts/git_snapshot.sh restore {best.version}`
+  - `action = "reverted"`
+  - Inform user: "Iteration {i}: score {score_i} (no improvement). REVERTED to v{best.version}."
+
+#### 5.2.D: LOG
+
+`bash scripts/results_log.sh append {workspace}/results.tsv {i} {score_i} {best.score} {action} "{changelog}"`
+
+#### 5.2.E: CONVERGENCE CHECK
+
+Same conditions as refactor autonomous mode (see refactor SKILL.md Phase 2 Step 2.1.E):
+1. Perfect: `best.score >= convergence.perfectScore` → STOP
+2. Stuck: `bash scripts/results_log.sh check-stuck {workspace}/results.tsv {convergence.maxConsecutiveReverts}` → STOP
+3. Plateau: `bash scripts/results_log.sh check-plateau {workspace}/results.tsv {convergence.plateauWindow} {convergence.plateauDelta}` → STOP
+4. Max iterations → STOP
+5. Otherwise: continue
+
+### Step 5.3-auto: Finalize
+
+1. Restore best: `bash scripts/git_snapshot.sh restore {best.version}`
+2. Write convergence data to blackboard (workspace, best_version, best_score, total_iterations, convergence_reason)
+3. Spawn convergence-reporter, create task, wait for report
+4. Clean up: `bash scripts/git_snapshot.sh cleanup`
+5. Inform user: "Autonomous implementation complete. {i} iterations, best score: {best.score}. Proceeding to quality review."
+6. **Proceed to Phase 6** (Quality Review) as normal.
+
+---
+
+## Phase 5: Standard Implementation (when `autonomous_mode = false`)
 
 **Goal**: Build the feature following the chosen architecture.
 
@@ -443,7 +548,7 @@ SendMessage to "code-reviewer-{i}": "Task #{id} assigned: feature review. Start 
    {consolidated reviewer findings and resolutions}
 
    ---
-   *Generated by refactor plugin v3.1.0 — feature-dev skill*
+   *Generated by refactor plugin v4.0.0 — feature-dev skill*
    EOF
    )" {if prDraft: "--draft"}
    ```
@@ -461,6 +566,8 @@ Summary:
 - Files modified: {count}
 - Tests: All passing
 - Review: {issues found / resolved}
+{if autonomous_mode: '- Autonomous: {total_iterations} iterations, {kept_count} kept, {reverted_count} reverted, final score {best.score}'}
+{if autonomous_mode: '- Convergence: {convergence_reason}'}
 {if pr_url: '- PR: {pr_url}'}
 
 Key decisions made:

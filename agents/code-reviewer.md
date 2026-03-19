@@ -350,6 +350,57 @@ Use the same confidence scoring as Mode 2 — only report issues with confidence
 
 ---
 
+### Mode 5 — Autonomous Scoring (Autonomous Convergence Loop)
+
+When invoked with "Mode 5" or "autonomous scoring" in the task description, perform a combined quality + security assessment and output **structured JSON scores** for the convergence loop's composite scoring system.
+
+This mode is used during each iteration of the `--autonomous` convergence loop. Unlike Mode 2 (which produces narrative), Mode 5 produces machine-readable output consumed by `scripts/score.sh`.
+
+#### Process
+
+1. Review all changed files (same scope as Mode 2 iteration review)
+2. Assess code quality using the **Clean Code Score rubric** (same 1–10 scale as the architect's final assessment):
+   - **9–10**: Exemplary — clean, readable, well-structured, follows all conventions
+   - **7–8**: Good — minor issues, generally clean and maintainable
+   - **5–6**: Adequate — functional but with notable quality concerns
+   - **3–4**: Poor — significant issues affecting readability or maintainability
+   - **1–2**: Critical — major quality problems, difficult to understand or maintain
+3. Assess security posture using the **Security Posture Score rubric** (same 1–10 scale as Mode 3):
+   - **9–10**: Security controls strengthened; no regressions; follows security best practices
+   - **7–8**: No security regressions; existing controls preserved; minor improvements possible
+   - **5–6**: Minor security concerns; some controls weakened but not exploitable
+   - **3–4**: Security regressions detected; controls weakened; remediation needed
+   - **1–2**: Critical security issues; exploitable vulnerabilities introduced
+4. Detect blocking findings (Critical/High severity)
+5. If blocking findings exist: cap both scores at 5.0
+
+#### Output
+
+Write a JSON file to the path specified in the task description (typically `{workspace}/iteration-{N}/review-scores.json`):
+
+```json
+{
+  "quality_score": 7.5,
+  "security_score": 8.0,
+  "quality_findings_count": 2,
+  "security_findings_count": 0,
+  "blocking_findings": false,
+  "summary": "Code quality is good with minor naming inconsistencies. Security posture maintained — no regressions detected."
+}
+```
+
+**Field definitions**:
+- `quality_score`: 0.0–10.0, Clean Code rubric
+- `security_score`: 0.0–10.0, Security Posture rubric
+- `quality_findings_count`: Number of quality findings with confidence >= 80
+- `security_findings_count`: Number of security findings at any severity
+- `blocking_findings`: `true` if any Critical or High severity findings exist
+- `summary`: 1–2 sentence narrative summary
+
+**Important**: This mode outputs JSON only — no markdown report. The narrative review is handled separately by Mode 2 within the same iteration.
+
+---
+
 ## Key Principles
 
 - **Quality issues use confidence scoring** (≥ 80 to report) — focus on real issues that matter

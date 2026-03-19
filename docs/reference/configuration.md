@@ -17,7 +17,7 @@ On subsequent runs, the config file is loaded silently.
 
 ```json
 {
-  "version": "3.1",
+  "version": "4.0",
   "iterations": 3,
   "postRefactor": {
     "commitStrategy": "none",
@@ -172,7 +172,7 @@ These fields configure the `/feature-dev` skill. They live under the `featureDev
 **Example — feature-dev with PR creation:**
 ```json
 {
-  "version": "3.1",
+  "version": "4.0",
   "iterations": 3,
   "postRefactor": { "..." },
   "featureDev": {
@@ -226,7 +226,65 @@ When `--focus` is provided, the default iteration count changes to **1** (overri
 
 Multiple focus values are combined as a union: `--focus=security,architecture` spawns both code-reviewer and architect in addition to the always-present pair.
 
+## Autonomous Mode Configuration (`autonomous`)
+
+These fields configure the `--autonomous` convergence loop. They live under the `autonomous` key and apply to both `/refactor --autonomous` and `/feature-dev --autonomous`.
+
+```json
+{
+  "autonomous": {
+    "maxIterations": 20,
+    "scoreWeights": {
+      "tests": 0.50,
+      "quality": 0.25,
+      "security": 0.25
+    },
+    "convergence": {
+      "perfectScore": 1.0,
+      "plateauDelta": 0.01,
+      "plateauWindow": 3,
+      "maxConsecutiveReverts": 3
+    }
+  }
+}
+```
+
+### Score Weights
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `tests` | `float` | `0.50` | Weight for test pass rate in composite score |
+| `quality` | `float` | `0.25` | Weight for code quality score (from code-reviewer Mode 5) |
+| `security` | `float` | `0.25` | Weight for security posture score (from code-reviewer Mode 5) |
+
+Weights must sum to 1.0.
+
+### Convergence Thresholds
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `perfectScore` | `float` | `1.0` | Score at which the loop stops (perfect convergence) |
+| `plateauDelta` | `float` | `0.01` | Minimum score improvement to count as progress |
+| `plateauWindow` | `integer` | `3` | Number of iterations with delta < plateauDelta before declaring plateau |
+| `maxConsecutiveReverts` | `integer` | `3` | Number of consecutive reverts before declaring stuck |
+
+### Other
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `maxIterations` | `integer` | `20` | Default max iterations for autonomous mode (overridable with `--iterations=N`) |
+
+## CLI-Only Flags (updated)
+
+| Flag | Values | Default | Description |
+|------|--------|---------|-------------|
+| `--autonomous` | (boolean flag) | off | Enable autonomous convergence mode |
+| `--iterations=N` | `1`--`10` (standard) or `1`--`20` (autonomous) | Config value | Override iteration count for this run |
+| `--focus=<area>[,area...]` | `security`, `architecture`, `simplification`, `code`, `discovery` | (none — full run) | Constrain run to specific disciplines |
+
 ## See Also
 
+- [How to Use Autonomous Mode](../guides/use-autonomous-mode.md)
+- [Understanding Autonomous Convergence](../explanation/autonomous-convergence.md)
 - [How to Configure Commit Strategies](../guides/configure-commits.md)
 - [Tutorial: Your First Refactor](../tutorial.md)

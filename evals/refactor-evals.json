@@ -48,6 +48,53 @@
         "Phase 0.5 IS executed because code-explorer is in active_agents",
         "Phase 1 foundation analysis only creates tasks for active agents"
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "/refactor --autonomous src/services/",
+      "expected_output": "The skill should parse --autonomous flag, set autonomous_mode=true, default max_iterations to 20 (from config.autonomous.maxIterations), create workspace directory, initialize the autonomous convergence loop structure instead of the standard Phase 2 iteration loop.",
+      "files": [],
+      "expectations": [
+        "The --autonomous flag is parsed and autonomous_mode is set to true",
+        "max_iterations is set to 20 (from config.autonomous.maxIterations default)",
+        "The scope is identified as src/services/",
+        "All 6 standard agents plus convergence-reporter are planned for spawning",
+        "Phase task creation includes 'Autonomous convergence loop' instead of individual iteration tasks",
+        "A workspace directory ({scope-slug}-autonomous/) is created or planned",
+        "The autonomous Phase 2 is initiated (not the standard iteration loop)",
+        "Baseline snapshot creation (git_snapshot.sh baseline) is planned in Phase 2 Step 2.0"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "/refactor --autonomous --iterations=10 --focus=security,code src/api/",
+      "expected_output": "The skill should parse all three flags: autonomous mode, 10 iterations cap, and focus on security+code. Active agents should be derived from focus, max_iterations should be 10 (overriding default 20), and the autonomous convergence loop should activate.",
+      "files": [],
+      "expectations": [
+        "autonomous_mode is set to true",
+        "max_iterations is set to 10 (--iterations=10 overrides config default of 20)",
+        "active_agents includes code-reviewer (security) + architect + code-reviewer (code) + refactor-test + refactor-code",
+        "The scope is src/api/",
+        "The autonomous convergence loop is used (not standard Phase 2)",
+        "Score weights are loaded from config.autonomous.scoreWeights",
+        "Convergence thresholds are loaded from config.autonomous.convergence"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "/refactor --autonomous src/utils/parser.ts",
+      "expected_output": "The skill should handle autonomous mode on a single file. Tests are frozen during the autonomous loop (refactor-test runs only, no creation). The convergence loop should include stuck detection (3 consecutive reverts = stop).",
+      "files": [],
+      "expectations": [
+        "autonomous_mode is set to true",
+        "The scope is a single file: src/utils/parser.ts",
+        "Phase 2 autonomous loop specifies that tests are FROZEN (run only, no creation)",
+        "The convergence check includes stuck detection (maxConsecutiveReverts = 3)",
+        "The convergence check includes plateau detection (plateauDelta and plateauWindow)",
+        "Each iteration includes Mode 5 autonomous scoring by code-reviewer",
+        "Keep/discard decisions compare score_i against best.score",
+        "Convergence-reporter is spawned at finalization (not upfront)"
+      ]
     }
   ]
 }

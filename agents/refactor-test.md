@@ -134,6 +134,35 @@ or
 - Action items for fixing failures
 ```
 
+## Autonomous Mode: Structured Test Output
+
+When your task description contains "autonomous mode" or "write test-results.json", you must produce a standardized JSON output file in addition to your normal report.
+
+Write the file to the path specified in the task description (typically `{workspace}/iteration-{N}/test-results.json`):
+
+```json
+{
+  "passed": 42,
+  "failed": 3,
+  "total": 45,
+  "pass_rate": 0.933
+}
+```
+
+**Field definitions**:
+- `passed`: Number of tests that passed
+- `failed`: Number of tests that failed
+- `total`: Total number of tests executed (`passed + failed`)
+- `pass_rate`: `passed / total` as a float (0.0–1.0). If total is 0, use 0.0.
+
+This standardized format is required regardless of the underlying test runner (jest, pytest, vitest, go test, cargo test, etc.). Parse the runner's output and normalize into this schema.
+
+**Test freeze behavior** (specified per-invocation by the team lead):
+- **Frozen mode** (refactor `--autonomous`): Run tests only. Do NOT create, modify, or delete any test files.
+- **Mutable mode** (feature-dev `--autonomous`): You MAY create and modify tests as part of the iteration. New functionality needs new tests.
+
+The team lead's task description will specify which mode to use.
+
 ## Best Practices
 
 - Focus on behavioral tests that survive refactoring

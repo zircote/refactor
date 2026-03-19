@@ -1,7 +1,7 @@
 ---
 name: refactor
 description: Automated iterative code refactoring with swarm-orchestrated specialist agents including deep codebase discovery, confidence-scored code review, and security analysis. Use this skill when the user wants to improve existing code quality, clean up messy code, restructure, simplify, reduce tech debt, or perform security/architecture review of existing code. Triggers on "refactor", "clean up", "improve code quality", "restructure", "simplify this code", "review security of", or any request to improve existing code without adding new functionality.
-argument-hint: "[--iterations=N] [--focus=<area>[,area...]] [path or description]"
+argument-hint: "[--autonomous] [--iterations=N] [--focus=<area>[,area...]] [path or description]"
 ---
 
 # Refactor Skill (Swarm Orchestration)
@@ -10,17 +10,18 @@ You are the team lead orchestrating an automated, iterative code refactoring pro
 
 ## Overview
 
-This skill implements a comprehensive refactoring workflow using 6 specialist agents coordinated as a swarm team:
+This skill implements a comprehensive refactoring workflow using 7 specialist agents coordinated as a swarm team:
 - **code-explorer** — Deep codebase discovery: traces entry points, maps execution flows, catalogs dependencies and patterns
 - **architect** — Reviews architecture, identifies improvements, designs blueprints, scores quality
 - **code-reviewer** — Confidence-scored quality review AND security analysis (regressions, secrets, OWASP)
 - **refactor-test** — Analyzes coverage, runs tests, reports failures
 - **refactor-code** — Implements optimizations, fixes test failures and blocking findings
 - **simplifier** — Simplifies changed code for clarity and consistency
+- **convergence-reporter** — Analyzes autonomous loop results and produces convergence reports (autonomous mode only)
 
 The plugin also defines **feature-code** (used by the `/feature-dev` skill) — it is NOT spawned during refactoring.
 
-The workflow uses parallel execution where possible and iterates `max_iterations` times for continuous improvement. All agents share codebase context discovered in Phase 0.5. Agents support multi-instance spawning — the same agent definition can be spawned multiple times with different names and focus areas (e.g., `code-explorer-1`, `code-explorer-2`).
+The workflow uses parallel execution where possible. In standard mode, it iterates `max_iterations` times. In **autonomous mode** (`--autonomous`), it uses a Karpathy autoresearch-style convergence loop with keep/discard gating, composite scoring, and automatic convergence detection. All agents share codebase context discovered in Phase 0.5. Agents support multi-instance spawning — the same agent definition can be spawned multiple times with different names and focus areas (e.g., `code-explorer-1`, `code-explorer-2`).
 
 ## Arguments
 
@@ -28,7 +29,9 @@ The workflow uses parallel execution where possible and iterates `max_iterations
 
 Parse `$ARGUMENTS` for the following **before** any other processing:
 
-- `--iterations=N` — Override the configured iteration count for this run. `N` must be a positive integer (1-10). If present, extract and remove it from `$ARGUMENTS` and store as `cli_iterations`. The remaining text is the refactoring scope. Also recognize natural language equivalents like "3 iterations" or "I'd like 5 iterations" in the prose — extract the number and treat as `cli_iterations`.
+- `--autonomous` — Enable autonomous convergence mode. When present, extract and remove from `$ARGUMENTS` and set `autonomous_mode = true`. Phase 2 is replaced by the autonomous convergence loop (see `references/autonomous-algorithm.md`). When autonomous: `max_iterations = cli_iterations ?? config.autonomous.maxIterations ?? 20`. Iteration range expands to 1-20 (not 1-10). If `--autonomous` is not present, set `autonomous_mode = false`.
+
+- `--iterations=N` — Override the configured iteration count for this run. `N` must be a positive integer (1-10 standard, 1-20 autonomous). If present, extract and remove it from `$ARGUMENTS` and store as `cli_iterations`. The remaining text is the refactoring scope. Also recognize natural language equivalents like "3 iterations" or "I'd like 5 iterations" in the prose — extract the number and treat as `cli_iterations`.
 
 - `--focus=<area>[,area...]` — Constrain the run to specific disciplines. If present, extract and remove it from `$ARGUMENTS` and process as follows:
   1. Split the value on commas to get a list of focus areas
@@ -98,7 +101,7 @@ Run the following **AskUserQuestion** prompts sequentially:
 1. Map all answers to the config JSON schema:
    ```json
    {
-     "version": "2.0",
+     "version": "4.0",
      "iterations": <from Q0>,
      "postRefactor": {
        "commitStrategy": "<from Q1>",
@@ -116,7 +119,7 @@ Run the following **AskUserQuestion** prompts sequentially:
 **Default config** (equivalent to zero-config behavior):
 ```json
 {
-  "version": "2.0",
+  "version": "4.0",
   "iterations": 3,
   "postRefactor": {
     "commitStrategy": "none",
@@ -136,8 +139,11 @@ Run the following **AskUserQuestion** prompts sequentially:
 1. Parse $ARGUMENTS to determine refactoring scope (flags already extracted in Arguments section)
 2. If unclear, ask user to clarify what should be refactored
 3. Set `scope` variable to the determined scope
-4. Set `max_iterations = cli_iterations ?? (is_focused ? 1 : config.iterations) ?? 3` (CLI flag takes precedence; focused runs default to 1 iteration; unfocused uses config, then default of 3)
+4. Set `max_iterations`:
+   - If `autonomous_mode`: `max_iterations = cli_iterations ?? config.autonomous.maxIterations ?? 20`
+   - Else: `max_iterations = cli_iterations ?? (is_focused ? 1 : config.iterations) ?? 3`
 5. Set `refactoring_iteration = 0`
+6. If `autonomous_mode`: load convergence config: `convergence = config.autonomous.convergence` (defaults: `{perfectScore: 1.0, plateauDelta: 0.01, plateauWindow: 3, maxConsecutiveReverts: 3}`); load score weights: `score_weights = config.autonomous.scoreWeights` (defaults: `{tests: 0.50, quality: 0.25, security: 0.25}`)
 
 ### Step 0.2: Create Swarm Team and Blackboard
 
@@ -155,9 +161,11 @@ Run the following **AskUserQuestion** prompts sequentially:
 3. Use **TaskCreate** to create the high-level phase tasks:
    - "Phase 0.5: Deep codebase discovery" (if code-explorer in active_agents)
    - "Phase 1: Foundation analysis (parallel)"
-   - For i in 1..max_iterations: "Phase 2: Iteration {i} of {max_iterations}"
+   - **If autonomous_mode**: "Phase 2: Autonomous convergence loop (max {max_iterations} iterations)"
+   - **If NOT autonomous_mode**: For i in 1..max_iterations: "Phase 2: Iteration {i} of {max_iterations}"
    - "Phase 3: Final assessment"
    - "Phase 4: Report and cleanup"
+   - **If autonomous_mode**: Create workspace directory: `{scope-slug}-autonomous/`
 
 ### Step 0.3: Spawn Teammates
 
@@ -304,6 +312,28 @@ TASK DISCOVERY PROTOCOL:
      6. NEVER commit code via git — only the team lead commits."
    ```
 
+7. **convergence-reporter** teammate (**If autonomous_mode is true** — spawned deferred, at finalization):
+   ```
+   Agent tool with:
+     subagent_type: "refactor:convergence-reporter"
+     team_name: "refactor-team"
+     name: "convergence-reporter"
+     prompt: "You are the convergence reporter agent. Analyze the autonomous loop results and produce a convergence report.
+
+     BLACKBOARD: {blackboard_id}
+     Read convergence data from blackboard key 'convergence_data'.
+     Write your report to blackboard key 'convergence_report'.
+
+     TASK DISCOVERY PROTOCOL:
+     1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
+     2. Call TaskGet on your assigned task to read the full description.
+     3. Work on the task.
+     4. When done: (a) mark it completed via TaskUpdate, (b) send results to team lead via SendMessage, (c) call TaskList for more work.
+     5. If no tasks assigned, wait for next message.
+     6. NEVER commit code via git — only the team lead commits."
+   ```
+   **Note**: Do NOT spawn this agent in Phase 0.3. Spawn it in Phase 2 Step 2.2 (Finalization) when the convergence loop completes.
+
 ## Phase 0.5: Discovery
 
 **Skip if "code-explorer" not in active_agents.**
@@ -366,7 +396,143 @@ Create tasks for active agents and assign them in parallel. **Include `codebase_
   - Full run: "Phase 1 complete. Test coverage established. Architecture reviewed. Quality + security baseline recorded. Starting iteration loop."
   - Focused run: "Phase 1 complete. Test coverage established.{' Architecture reviewed.' if architect active}{' Quality + security baseline recorded.' if code-reviewer active} Starting iteration loop ({max_iterations} iteration{s})."
 
-## Phase 2: Iteration Loop
+## Phase 2: Autonomous Convergence Loop (when `autonomous_mode = true`)
+
+**Replaces the standard Phase 2 when `--autonomous` is active. All other phases (0, 0.5, 1, 3, 4) execute identically.**
+
+**Goal**: Iteratively improve code quality through the same agent sub-steps, but with composite scoring, keep/discard gating, and automatic convergence detection. See `references/autonomous-algorithm.md` for the formal specification.
+
+### Step 2.0: Initialize Workspace
+
+1. Create workspace directory using Bash: `mkdir -p {scope-slug}-autonomous`
+2. Set `workspace = {scope-slug}-autonomous`
+3. Initialize results log: Run via Bash: `bash scripts/results_log.sh append {workspace}/results.tsv 0 0 0 "baseline" "Pending evaluation"`
+4. Detect stale snapshot branches: Run via Bash: `bash scripts/git_snapshot.sh detect-stale`
+   - If stale branches detected: warn user, run `bash scripts/git_snapshot.sh cleanup` to remove them
+5. Create baseline snapshot: Run via Bash: `bash scripts/git_snapshot.sh baseline`
+   - Creates branch `autoresearch/v0` from current HEAD
+6. Score baseline:
+   - Create `{workspace}/iteration-0/` directory
+   - **TaskCreate**: "Run the test suite and write results to {workspace}/iteration-0/test-results.json in autonomous mode format: {\"passed\": N, \"failed\": M, \"total\": T, \"pass_rate\": F}. Run tests ONLY — do not create or modify tests."
+     - **TaskUpdate**: assign owner to "refactor-test"
+     - **SendMessage** to "refactor-test": "Task #{id} assigned: baseline test run for autonomous scoring. Start now."
+     - Wait for completion
+   - **TaskCreate**: "Mode 5 autonomous scoring. Review [{scope}] and write scores to {workspace}/iteration-0/review-scores.json. Output format: {\"quality_score\": Q, \"security_score\": S, \"quality_findings_count\": N, \"security_findings_count\": M, \"blocking_findings\": bool, \"summary\": \"text\"}."
+     - **TaskUpdate**: assign owner to "code-reviewer"
+     - **SendMessage** to "code-reviewer": "Task #{id} assigned: baseline autonomous scoring (Mode 5). Start now."
+     - Wait for completion
+   - Compute baseline score: Run via Bash: `bash scripts/score.sh {workspace} 0 {score_weights.tests} {score_weights.quality} {score_weights.security}`
+   - Store result as `score_0`
+7. Update results log: Run via Bash: `bash scripts/results_log.sh append {workspace}/results.tsv 0 {score_0} {score_0} "baseline" "Initial evaluation"`
+8. Set `best = {version: 0, score: score_0}`
+9. Inform user: "Autonomous mode initialized. Baseline score: {score_0}. Starting convergence loop (max {max_iterations} iterations)."
+
+### Step 2.1: Convergence Loop
+
+For `i = 1` to `max_iterations`:
+
+#### 2.1.A: MODIFY — Execute One Iteration
+
+Run the standard Phase 2 sub-steps (2.A through 2.G) with these constraints:
+- **Tests are FROZEN**: When assigning tasks to refactor-test, always include: "Run tests ONLY — do NOT create, modify, or delete any test files. Tests are frozen during autonomous mode."
+- All other sub-steps (architect review, implement optimizations, code review, simplify) execute normally
+- Track `changelog` = summary of changes made in this iteration (from agent reports)
+
+#### 2.1.B: EVALUATE — Score the Iteration
+
+After sub-steps complete:
+
+1. Create `{workspace}/iteration-{i}/` directory
+2. **TaskCreate**: "Run the test suite and write results to {workspace}/iteration-{i}/test-results.json in autonomous mode format. Run tests ONLY — tests are FROZEN."
+   - **TaskUpdate**: assign owner to "refactor-test"
+   - **SendMessage** to "refactor-test": "Task #{id} assigned: iteration {i} test run for autonomous scoring. Start now."
+   - Wait for completion
+3. **TaskCreate**: "Mode 5 autonomous scoring. Review all changes in [{scope}] and write scores to {workspace}/iteration-{i}/review-scores.json."
+   - **TaskUpdate**: assign owner to "code-reviewer"
+   - **SendMessage** to "code-reviewer": "Task #{id} assigned: iteration {i} autonomous scoring (Mode 5). Start now."
+   - Wait for completion
+4. Compute score: Run via Bash: `bash scripts/score.sh {workspace} {i} {score_weights.tests} {score_weights.quality} {score_weights.security}`
+5. Store result as `score_i`
+
+#### 2.1.C: KEEP or DISCARD
+
+- **If `score_i > best.score`**:
+  - Snapshot: Run via Bash: `bash scripts/git_snapshot.sh create {i}`
+  - Update: `best = {version: i, score: score_i}`
+  - Set `action = "kept"`
+  - Inform user: "Iteration {i}: score {score_i} (improved from {previous best.score}). KEPT — snapshot v{i} created."
+
+- **If `score_i <= best.score`**:
+  - Revert: Run via Bash: `bash scripts/git_snapshot.sh restore {best.version}`
+  - Set `action = "reverted"`
+  - Inform user: "Iteration {i}: score {score_i} (no improvement over {best.score}). REVERTED to v{best.version}."
+
+#### 2.1.D: LOG
+
+Run via Bash: `bash scripts/results_log.sh append {workspace}/results.tsv {i} {score_i} {best.score} {action} "{changelog}"`
+
+#### 2.1.E: CONVERGENCE CHECK
+
+Check conditions in order. First match stops the loop:
+
+1. **Perfect**: `best.score >= {convergence.perfectScore}`
+   - Inform user: "Convergence: Perfect score achieved ({best.score}). Stopping loop."
+   - Set `convergence_reason = "perfect"`
+   - BREAK
+
+2. **Stuck**: Run via Bash: `bash scripts/results_log.sh check-stuck {workspace}/results.tsv {convergence.maxConsecutiveReverts}`
+   - If exit code 0 (stuck):
+     - Inform user: "Convergence: {convergence.maxConsecutiveReverts} consecutive reverts — stuck. Stopping loop."
+     - Set `convergence_reason = "stuck"`
+     - BREAK
+
+3. **Plateau**: Run via Bash: `bash scripts/results_log.sh check-plateau {workspace}/results.tsv {convergence.plateauWindow} {convergence.plateauDelta}`
+   - If exit code 0 (plateau):
+     - Inform user: "Convergence: Score plateau detected (delta < {convergence.plateauDelta} for {convergence.plateauWindow} iterations). Stopping loop."
+     - Set `convergence_reason = "plateau"`
+     - BREAK
+
+4. **Max iterations**: `i >= max_iterations`
+   - Set `convergence_reason = "max_iterations"`
+   - BREAK (implicit — loop ends naturally)
+
+5. Otherwise: continue to iteration `i + 1`
+
+### Step 2.2: Finalize Autonomous Loop
+
+1. Ensure best version is on the working tree: Run via Bash: `bash scripts/git_snapshot.sh restore {best.version}`
+
+2. Write convergence data to blackboard:
+   ```
+   blackboard_write(task_id="{blackboard_id}", key="convergence_data", value=JSON.stringify({
+     workspace: workspace,
+     best_version: best.version,
+     best_score: best.score,
+     total_iterations: i,
+     convergence_reason: convergence_reason
+   }))
+   ```
+
+3. Spawn convergence-reporter (deferred from Phase 0.3):
+   - Use Agent tool to spawn the convergence-reporter teammate (see spawn template #7 above)
+   - **TaskCreate**: "Analyze the autonomous convergence loop results. Workspace: {workspace}. Best version: v{best.version} (score {best.score}). Total iterations: {i}. Convergence reason: {convergence_reason}. Read results.tsv, compute trajectory, generate diff via `git diff autoresearch/v0..autoresearch/v{best.version} -- .`, analyze remaining weaknesses, write convergence report to {workspace}/convergence-report.md and blackboard key 'convergence_report'."
+     - **TaskUpdate**: assign owner to "convergence-reporter"
+     - **SendMessage** to "convergence-reporter": "Task #{id} assigned: generate convergence report. Start now."
+   - Wait for completion
+
+4. Clean up snapshot branches: Run via Bash: `bash scripts/git_snapshot.sh cleanup`
+
+5. Store convergence report for inclusion in Phase 4 report
+
+6. Inform user: "Autonomous convergence loop complete. {i} iterations, {kept_count} kept, {reverted_count} reverted. Best score: {best.score}. Reason: {convergence_reason}. Proceeding to final assessment."
+
+7. Set `refactoring_iteration = i` (for Phase 3/4 compatibility)
+
+8. **Proceed to Phase 3** (Final Assessment) as normal.
+
+---
+
+## Phase 2: Standard Iteration Loop (when `autonomous_mode = false`)
 
 **Goal**: Iteratively improve code quality through architect -> code -> test -> review -> simplify cycles.
 
@@ -547,7 +713,8 @@ Monitor TaskList until all created Phase 3 tasks show completed.
 
 1. Generate timestamp
 2. Create `refactor-result-{timestamp}.md` with the final assessment report. If `is_focused`, add a "Focus Mode: {focus_areas joined by ', '}" header at the top of the report. Include only scores from active agents.
-3. Use Write tool to save the report
+3. **If `autonomous_mode`**: Include a "## Convergence Summary" section in the report with: score trajectory table (from results.tsv), convergence reason, iterations run vs max, kept/reverted counts, and a link to the full convergence report at `{workspace}/convergence-report.md`.
+4. Use Write tool to save the report
 
 ### Step 4.1.5: Commit Final Changes (Conditional)
 
@@ -640,7 +807,7 @@ Monitor TaskList until all created Phase 3 tasks show completed.
      {if published_url: "Related: {published_url}"}
 
      ---
-     *Generated by refactor plugin v3.0.0*
+     *Generated by refactor plugin v4.0.0*
      EOF
      )" {if prDraft: "--draft"} {if is_focused: '--label "focus:' + focus_areas[0] + '"'}
      ```

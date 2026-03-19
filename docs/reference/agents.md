@@ -5,10 +5,10 @@ diataxis_describes: refactor plugin agent specifications
 
 # Agent Reference
 
-The refactor plugin provides seven specialized agents shared between the `/refactor` and `/feature-dev` skills. Each agent has a defined role, tool set, and model assignment.
+The refactor plugin provides eight specialized agents shared between the `/refactor` and `/feature-dev` skills. Each agent has a defined role, tool set, and model assignment.
 
-The `/refactor` skill uses 6 agents: code-explorer, architect, code-reviewer, refactor-test, refactor-code, simplifier.
-The `/feature-dev` skill uses 5 agents: code-explorer, architect, code-reviewer, feature-code, refactor-test (plus simplifier and refactor-code for fix-ups).
+The `/refactor` skill uses 6 agents (+ convergence-reporter in autonomous mode): code-explorer, architect, code-reviewer, refactor-test, refactor-code, simplifier.
+The `/feature-dev` skill uses 5 agents (+ convergence-reporter in autonomous mode): code-explorer, architect, code-reviewer, feature-code, refactor-test (plus simplifier and refactor-code for fix-ups).
 
 ## Code-Explorer Agent
 
@@ -186,6 +186,7 @@ Some agents support multi-instance parallel spawning, where the same agent defin
 | refactor-code | No | `refactor-code` | /refactor Phase 2 |
 | refactor-test | No | `refactor-test` | Both skills |
 | simplifier | No | `simplifier` | /refactor Phase 2-3 |
+| convergence-reporter | No | `convergence-reporter` | Both skills (autonomous mode) |
 
 Instance counts are configurable via `config.featureDev.explorerCount`, `.architectCount`, `.reviewerCount` (default: 3 each). The skill scales counts based on feature complexity — simple features may use 1 instance instead of 3.
 
@@ -202,8 +203,59 @@ All agents share context through the Atlatl blackboard. Each agent has documente
 | refactor-code | `codebase_context`, `architect_plan` | `implementation_report` |
 | refactor-test | `codebase_context` | `test_report` |
 | simplifier | `codebase_context` | `simplification_report` |
+| convergence-reporter | `convergence_data` | `convergence_report` |
 
 The blackboard enables write-once, read-many context sharing — the code-explorer writes the codebase map once and all downstream agents read it as needed.
+
+## Convergence-Reporter Agent
+
+| Property | Value |
+|----------|-------|
+| Name | `convergence-reporter` |
+| Model | `sonnet` |
+| Color | cyan |
+
+**Role:** Analyzes autonomous convergence loop results and produces reports
+
+**Capabilities:** Score trajectory computation, git diff generation, weakness analysis, convergence pattern classification, recommendation generation
+
+**Tools:** Bash, Glob, Grep, Read
+
+**Invoked during:**
+- Autonomous loop finalization (Phase 2 Step 2.2 in refactor, Phase 5 Step 5.3-auto in feature-dev)
+- Only when `--autonomous` flag is active
+
+**Output:** Convergence report (score trajectory, diff, weaknesses, recommendation) written to workspace and blackboard
+
+**Spawn timing:** Deferred — not spawned with the initial team, only when the convergence loop completes
+
+## Code-Reviewer Mode 5: Autonomous Scoring
+
+In addition to Modes 1-4, the code-reviewer supports Mode 5 for the autonomous convergence loop.
+
+**Trigger:** Task description contains "Mode 5" or "autonomous scoring"
+
+**Purpose:** Produce machine-readable quality and security scores consumed by the composite scoring system
+
+**Output:** JSON file (`review-scores.json`) with:
+- `quality_score` (0-10): Clean Code rubric
+- `security_score` (0-10): Security Posture rubric
+- `quality_findings_count`: Issues with confidence >= 80
+- `security_findings_count`: All severity levels
+- `blocking_findings`: true if Critical/High exist
+- `summary`: 1-2 sentence narrative
+
+**Blocking penalty:** If `blocking_findings` is true, both scores are capped at 5.0
+
+## Refactor-Test: Autonomous Mode Output
+
+When running in autonomous mode, refactor-test writes a standardized `test-results.json`:
+- `passed`, `failed`, `total` (integers)
+- `pass_rate` (float 0.0-1.0)
+
+**Test freeze behavior:**
+- Refactor `--autonomous`: Tests are frozen (run only)
+- Feature-dev `--autonomous`: Tests are mutable (create + run)
 
 ## See Also
 
