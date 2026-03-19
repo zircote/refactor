@@ -155,9 +155,18 @@ TASK DISCOVERY PROTOCOL:
 
 **Goal**: Understand relevant existing code and patterns deeply.
 
+### Step 2.0: Scale Instance Counts to Feature Complexity
+
+Before spawning, assess whether the feature warrants the configured number of instances. For simple, fully-specified features (confidence was 90%+ with zero elicitation), reduce counts:
+- **Simple features** (single endpoint, trivial logic, clear integration): 1 explorer, 1 architect, 1-2 reviewers
+- **Medium features** (multiple components, some integration complexity): 2 explorers, 2 architects, 2-3 reviewers
+- **Complex features** (cross-cutting, multiple systems, significant design decisions): use full configured counts
+
+Store the effective counts as `effective_explorerCount`, `effective_architectCount`, `effective_reviewerCount`.
+
 ### Step 2.1: Spawn Explorer Instances
 
-Spawn `config.featureDev.explorerCount` (default: 3) code-explorer instances in parallel, each with a different focus:
+Spawn `effective_explorerCount` (default from config: 3, scaled in Step 2.0) code-explorer instances in parallel, each with a different focus:
 
 ```
 For i in 1..explorerCount:
@@ -231,7 +240,7 @@ SendMessage to "code-explorer-{i}": "Task #{id} assigned: codebase exploration. 
 
 ### Step 4.1: Spawn Architect Instances
 
-Spawn `config.featureDev.architectCount` (default: 3) architect instances in parallel, each with a different design philosophy:
+Spawn `effective_architectCount` (default from config: 3, scaled in Phase 2 Step 2.0) architect instances in parallel, each with a different design philosophy:
 
 ```
 For i in 1..architectCount:
@@ -351,7 +360,7 @@ Use **AskUserQuestion**: "Ready to implement using the {chosen approach} archite
 
 ### Step 6.1: Spawn Reviewer Instances
 
-Spawn `config.featureDev.reviewerCount` (default: 3) code-reviewer instances in parallel, each with a different focus:
+Spawn `effective_reviewerCount` (default from config: 3, scaled in Phase 2 Step 2.0) code-reviewer instances in parallel, each with a different focus:
 
 ```
 For i in 1..reviewerCount:
