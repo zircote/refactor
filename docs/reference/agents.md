@@ -5,7 +5,28 @@ diataxis_describes: refactor plugin agent specifications
 
 # Agent Reference
 
-The refactor plugin orchestrates five specialized agents as a swarm team. Each agent has a defined role, tool set, and model assignment.
+The refactor plugin orchestrates six specialized agents as a swarm team. Each agent has a defined role, tool set, and model assignment.
+
+## Code-Explorer Agent
+
+| Property | Value |
+|----------|-------|
+| Name | `code-explorer` |
+| Model | `sonnet` |
+| Color | yellow |
+
+**Role:** Deep codebase discovery (Phase 0.5)
+
+**Capabilities:** Entry point tracing, execution flow mapping, architecture layer identification, dependency cataloging, pattern recognition, structured codebase map generation
+
+**Tools:** Glob, Grep, Read, Write, Edit, Bash, TodoWrite
+
+**Invoked during:**
+- Phase 0.5: Deep codebase discovery (runs first, before all other agents)
+
+**Output:** Structured codebase map distributed via blackboard (or inline) to all downstream agents
+
+**Focus mode:** Activated by `--focus=discovery`
 
 ## Architect Agent
 
@@ -22,12 +43,39 @@ The refactor plugin orchestrates five specialized agents as a swarm team. Each a
 **Tools:** Glob, Grep, Read, TodoWrite, WebFetch
 
 **Invoked during:**
-- Phase 1: Initial architecture review
+- Phase 1: Initial architecture review (uses code-explorer's codebase map)
 - Phase 2 Step A: Prioritized optimization plan (top 3)
 - Phase 3: Final quality assessment framework
-- Phase 4: Final scoring (Clean Code + Architecture, 1--10 each)
+- Phase 3 Step 4: Final scoring (Clean Code + Architecture, 1--10 each)
 
 **Focus mode:** Activated by `--focus=architecture` or `--focus=code`
+
+## Code-Reviewer Agent
+
+| Property | Value |
+|----------|-------|
+| Name | `code-reviewer` |
+| Model | `sonnet` |
+| Color | red |
+
+**Role:** Unified quality and security review gate
+
+**Capabilities:** Bug detection with confidence scoring (>=80 threshold), project guidelines compliance, security regression detection, OWASP pattern validation, secrets/PII scanning, dependency vulnerability audit, severity classification (Critical/High = blocking), Security Posture Score assignment
+
+**Tools:** Glob, Grep, Read, Write, Edit, Bash, TodoWrite
+
+**Review modes:**
+1. **Combined Baseline** (Phase 1): Establishes quality + security baseline for regression detection
+2. **Iteration Review** (Phase 2): Confidence-scored quality review + severity-classified security review of changed files
+3. **Final Assessment** (Phase 3): Comprehensive review with Security Posture Score (1-10)
+
+**Invoked during:**
+- Phase 1: Establish quality + security baseline
+- Phase 2 Step E: Per-iteration quality + security review of changes
+- Phase 2 Step E.1: Verify fix effectiveness for blocking findings
+- Phase 3: Final comprehensive review and Security Posture Score
+
+**Focus mode:** Activated by `--focus=security` or `--focus=code`
 
 ## Refactor-Test Agent
 
@@ -47,7 +95,7 @@ The refactor plugin orchestrates five specialized agents as a swarm team. Each a
 - Phase 1: Coverage analysis and test generation
 - Phase 2 Step C: Full test suite run
 - Phase 2 Step D: Re-run after failure fixes
-- Phase 2 Step F: Verify simplification preserved functionality
+- Phase 2 Step G: Verify simplification preserved functionality
 - Phase 3: Final test suite run
 
 **Focus mode:** Always active regardless of `--focus` value
@@ -62,13 +110,14 @@ The refactor plugin orchestrates five specialized agents as a swarm team. Each a
 
 **Role:** Implementation of refactoring optimizations
 
-**Capabilities:** Clean code refactoring, safe incremental changes, test failure fixing, best practice application
+**Capabilities:** Clean code refactoring, safe incremental changes, test failure fixing, blocking finding remediation, best practice application
 
 **Tools:** Glob, Grep, Read, Write, Edit, TodoWrite
 
 **Invoked during:**
 - Phase 2 Step B: Implement top 3 optimizations
 - Phase 2 Step D: Fix test failures
+- Phase 2 Step E.1: Fix blocking code review findings
 
 **Focus mode:** Always active regardless of `--focus` value
 
@@ -77,7 +126,7 @@ The refactor plugin orchestrates five specialized agents as a swarm team. Each a
 | Property | Value |
 |----------|-------|
 | Name | `simplifier` |
-| Model | `opus` |
+| Model | `sonnet` |
 | Color | cyan |
 
 **Role:** Code clarity and consistency
@@ -86,35 +135,11 @@ The refactor plugin orchestrates five specialized agents as a swarm team. Each a
 
 **Tools:** Read, Write, Edit, Glob, Grep, Bash
 
-**Note:** Uses the `opus` model because nuanced clarity decisions benefit from the most capable model.
-
 **Invoked during:**
-- Phase 2 Step E: Simplify all code changed in iteration
+- Phase 2 Step F: Simplify all code changed in iteration
 - Phase 3: Final whole-scope simplification pass
 
 **Focus mode:** Activated by `--focus=simplification`
-
-## Security-Review Agent
-
-| Property | Value |
-|----------|-------|
-| Name | `security-review` |
-| Model | `sonnet` |
-| Color | red |
-
-**Role:** Security regression detection and posture scoring
-
-**Capabilities:** Security baseline establishment, regression detection against baseline, secrets/PII scanning, dependency vulnerability audit, severity classification (Critical/High = blocking, Medium/Low = advisory), remediation guidance, Security Posture Score assignment
-
-**Tools:** Read, Glob, Grep, Bash, TodoWrite
-
-**Invoked during:**
-- Phase 1: Establish security baseline
-- Phase 2 Step E: Per-iteration security review of changes
-- Phase 2 Step E.1: Verify security fix effectiveness
-- Phase 3: Final security assessment and Security Posture Score
-
-**Focus mode:** Activated by `--focus=security`
 
 ## See Also
 

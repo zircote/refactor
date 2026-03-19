@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [3.0.0] - 2026-03-18
+
+### BREAKING CHANGES
+
+- **Command removed**: `commands/refactor.md` deleted — use `skills/refactor.md` instead. The `/refactor` slash command is replaced by the `refactor` skill interface.
+- **security-review agent removed**: Capabilities merged into `code-reviewer`. Any `--focus=security` runs now activate `code-reviewer` instead of `security-review`.
+- **Config schema version**: Bumped to `"2.0"`. Existing `refactor.config.json` files will be auto-merged with new defaults, but the `version` field should be updated.
+- **Focus flag values changed**: `security` now maps to `code-reviewer` (was `security-review`). New `discovery` value added. `code` now maps to `architect` + `code-reviewer` (was `architect` only).
+
+### Added
+
+- **code-explorer agent** (Phase 0.5): Deep codebase discovery runs first, producing structured codebase maps consumed by all downstream agents
+- **Blackboard context sharing**: Explorer output distributed via Atlatl blackboard with inline fallback when MCP unavailable
+- `--focus=discovery` focus area for code-explorer-only runs
+- `skills/refactor.md` — new skill-based interface with full workflow rewrite
+
+### Changed
+
+- **6-agent architecture**: code-explorer, architect, code-reviewer, refactor-test, refactor-code, simplifier (was 5 agents)
+- **Unified code-reviewer**: Merges quality review (confidence-scored, >=80 threshold) with security review (severity-classified, Critical/High = blocking) into single agent
+- **All agents now use `sonnet` model** (Sonnet 4.6 1M context) — simplifier changed from `opus` to `sonnet`
+- Phase 2 iteration cycle restructured: code review gate (Step 2.E) now precedes simplification (Step 2.F)
+- Updated all documentation for 6-agent architecture
+
+### Removed
+
+- `agents/security-review.md` — capabilities merged into `code-reviewer`
+- `commands/refactor.md` — replaced by `skills/refactor.md`
+- `commands/` directory — removed (empty after command deletion)
+
 ## [2.2.0] - 2026-03-11
 
 ### Added
@@ -78,6 +110,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release with sequential 7-step workflow
 - Three agents: architect, refactor-test, refactor-code
 
+[Unreleased]: https://github.com/zircote/refactor/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/zircote/refactor/compare/v2.2.0...v3.0.0
 [2.2.0]: https://github.com/zircote/refactor/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/zircote/refactor/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/zircote/refactor/compare/v1.0.0...v2.0.0
