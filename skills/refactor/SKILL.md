@@ -137,14 +137,20 @@ Run the following **AskUserQuestion** prompts sequentially:
 4. Set `max_iterations = cli_iterations ?? (is_focused ? 1 : config.iterations) ?? 3` (CLI flag takes precedence; focused runs default to 1 iteration; unfocused uses config, then default of 3)
 5. Set `refactoring_iteration = 0`
 
-### Step 0.2: Create Swarm Team
+### Step 0.2: Create Swarm Team and Blackboard
 
 1. Use **TeamCreate** to create the refactoring team:
    ```
    TeamCreate with team_name: "refactor-team"
    ```
 
-2. Use **TaskCreate** to create the high-level phase tasks:
+2. Create a shared blackboard for cross-agent context:
+   ```
+   blackboard_create with task_id: "refactor-{scope-slug}" and TTL appropriate for the session
+   ```
+   Store the returned blackboard ID as `blackboard_id`. This will be passed to all teammates at spawn time so they can read/write shared context (codebase maps, baseline data, iteration results).
+
+3. Use **TaskCreate** to create the high-level phase tasks:
    - "Phase 0.5: Deep codebase discovery" (if code-explorer in active_agents)
    - "Phase 1: Foundation analysis (parallel)"
    - For i in 1..max_iterations: "Phase 2: Iteration {i} of {max_iterations}"
@@ -155,9 +161,13 @@ Run the following **AskUserQuestion** prompts sequentially:
 
 Spawn only agents in `active_agents` using the **Agent tool** with `team_name: "refactor-team"`. Launch all selected agents in parallel.
 
-Each teammate receives the same task-discovery protocol in their spawn prompt. This is critical for preventing stuck agents:
+Each teammate receives the same task-discovery protocol and blackboard ID in their spawn prompt. This is critical for preventing stuck agents:
 
 ```
+BLACKBOARD: {blackboard_id}
+Use blackboard_read(task_id="{blackboard_id}", key="...") to read shared context written by other agents.
+Use blackboard_write(task_id="{blackboard_id}", key="...", value="...") to share your findings.
+
 TASK DISCOVERY PROTOCOL:
 1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you (owner = your name).
 2. Call TaskGet on your assigned task to read the full description.
@@ -175,6 +185,10 @@ TASK DISCOVERY PROTOCOL:
      name: "code-explorer"
      prompt: "You are the code explorer agent on a refactoring swarm team. The scope is: {scope}.
 
+     BLACKBOARD: {blackboard_id}
+     Use blackboard_read/blackboard_write with task_id='{blackboard_id}' to share context with other agents.
+     After discovery, write your codebase map to the blackboard with key 'codebase_context'.
+
      TASK DISCOVERY PROTOCOL:
      1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
      2. Call TaskGet on your assigned task to read the full description.
@@ -191,6 +205,10 @@ TASK DISCOVERY PROTOCOL:
      team_name: "refactor-team"
      name: "architect"
      prompt: "You are the architect agent on a refactoring swarm team. The scope is: {scope}.
+
+     BLACKBOARD: {blackboard_id}
+     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
+     Use blackboard_write to share your optimization plans with key 'architect_plan'.
 
      TASK DISCOVERY PROTOCOL:
      1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
@@ -210,6 +228,10 @@ TASK DISCOVERY PROTOCOL:
      prompt: "You are the code reviewer agent on a refactoring swarm team. The scope is: {scope}.
      You handle BOTH quality review (bugs, logic, conventions with confidence scoring) AND security review (regressions, secrets, OWASP with severity classification).
 
+     BLACKBOARD: {blackboard_id}
+     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
+     Use blackboard_write to share your baseline with key 'reviewer_baseline'.
+
      TASK DISCOVERY PROTOCOL:
      1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
      2. Call TaskGet on your assigned task to read the full description.
@@ -226,6 +248,9 @@ TASK DISCOVERY PROTOCOL:
      team_name: "refactor-team"
      name: "refactor-test"
      prompt: "You are the test agent on a refactoring swarm team. The scope is: {scope}.
+
+     BLACKBOARD: {blackboard_id}
+     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
 
      TASK DISCOVERY PROTOCOL:
      1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
@@ -244,6 +269,10 @@ TASK DISCOVERY PROTOCOL:
      name: "refactor-code"
      prompt: "You are the code agent on a refactoring swarm team. The scope is: {scope}.
 
+     BLACKBOARD: {blackboard_id}
+     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map.
+     Use blackboard_read(task_id='{blackboard_id}', key='architect_plan') to read the optimization plan.
+
      TASK DISCOVERY PROTOCOL:
      1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
      2. Call TaskGet on your assigned task to read the full description.
@@ -260,6 +289,9 @@ TASK DISCOVERY PROTOCOL:
      team_name: "refactor-team"
      name: "simplifier"
      prompt: "You are the simplifier agent on a refactoring swarm team. The scope is: {scope}.
+
+     BLACKBOARD: {blackboard_id}
+     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
 
      TASK DISCOVERY PROTOCOL:
      1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
@@ -290,10 +322,10 @@ TASK DISCOVERY PROTOCOL:
 
 ### Step 0.5.3: Distribute Context
 
-Attempt to write `codebase_context` to the Atlatl blackboard for cross-agent access:
+Write `codebase_context` to the shared blackboard for cross-agent access:
 
-1. **Try blackboard** (preferred): Call `blackboard_create` with a task-scoped key, then `blackboard_write` with the codebase map content. If successful, downstream agents read via `blackboard_read`.
-2. **Fallback** (if blackboard unavailable): Include `codebase_context` directly in every downstream task description under a `## Codebase Context` section.
+1. **Write to blackboard**: Call `blackboard_write(task_id="{blackboard_id}", key="codebase_context", value=codebase_context)`. All teammates already have `blackboard_id` from their spawn prompts and can read via `blackboard_read`.
+2. **Fallback** (if blackboard write fails): Include `codebase_context` directly in every downstream task description under a `## Codebase Context` section.
 
 ### Step 0.5.4: Checkpoint
 
@@ -649,9 +681,10 @@ Quality Scores:
 - Only the team lead commits code via git — teammates must never run git commit
 
 ### Context Distribution
-- **Blackboard (preferred)**: Use Atlatl `blackboard_write`/`blackboard_read` for sharing codebase_context across agents. Write once after Phase 0.5, all agents read as needed.
+- **Blackboard creation**: The team lead creates the blackboard in Phase 0.2 (at team creation time) and passes the `blackboard_id` to all teammates in their spawn prompts.
+- **Blackboard usage**: Agents use `blackboard_read(task_id=blackboard_id, key="...")` / `blackboard_write(task_id=blackboard_id, key="...", value="...")` to share context. Standard keys: `codebase_context`, `architect_plan`, `reviewer_baseline`.
+- **Write once, read many**: code-explorer writes `codebase_context` after Phase 0.5. All downstream agents read it as needed without the team lead re-distributing it.
 - **Inline fallback**: If blackboard is unavailable, embed `codebase_context` directly in task descriptions under a `## Codebase Context` heading.
-- Always include `codebase_context` reference in Phase 1 and first-iteration Phase 2 tasks. Subsequent iterations may omit if context hasn't changed.
 
 ### Parallel Execution Points
 - **Phase 0.5**: code-explorer runs solo (must complete before Phase 1)
