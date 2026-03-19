@@ -44,7 +44,7 @@ The `featureDev` section is optional. If missing, all defaults are applied silen
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `version` | `string` | `"3.1"` | Config schema version |
+| `version` | `string` | `"4.0"` | Config schema version |
 | `iterations` | `integer` | `3` | Number of refactoring iterations (1--10, overridable with `--iterations=N`) |
 | `commitStrategy` | `"none"` \| `"per-iteration"` \| `"single-final"` | `"none"` | Controls when/if git commits happen |
 | `createPR` | `boolean` | `false` | Whether to open a PR after refactoring |
@@ -109,7 +109,7 @@ Creates a GitHub Discussion in the configured category.
 **Commit per iteration, no PR or publishing:**
 ```json
 {
-  "version": "1.1",
+  "version": "4.0",
   "iterations": 3,
   "postRefactor": {
     "commitStrategy": "per-iteration",
@@ -125,7 +125,7 @@ Creates a GitHub Discussion in the configured category.
 **Full workflow — single commit, draft PR, issue report:**
 ```json
 {
-  "version": "1.1",
+  "version": "4.0",
   "iterations": 3,
   "postRefactor": {
     "commitStrategy": "single-final",
@@ -141,7 +141,7 @@ Creates a GitHub Discussion in the configured category.
 **Discussion-based reporting with ready-for-review PR:**
 ```json
 {
-  "version": "1.1",
+  "version": "4.0",
   "iterations": 5,
   "postRefactor": {
     "commitStrategy": "single-final",
@@ -205,7 +205,8 @@ These flags are available only on the command line and are not stored in the con
 
 | Flag | Values | Default | Description |
 |------|--------|---------|-------------|
-| `--iterations=N` | `1`--`10` | Config value (3) | Override iteration count for this run |
+| `--autonomous` | (boolean flag) | off | Enable autonomous convergence mode |
+| `--iterations=N` | `1`--`10` (standard) or `1`--`20` (autonomous) | Config value | Override iteration count for this run |
 | `--focus=<area>[,area...]` | `security`, `architecture`, `simplification`, `code`, `discovery` | (none — full run) | Constrain run to specific disciplines. Comma-separated for multiple areas. |
 
 ### --focus details
@@ -273,14 +274,6 @@ Weights must sum to 1.0.
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `maxIterations` | `integer` | `20` | Default max iterations for autonomous mode (overridable with `--iterations=N`) |
-
-## CLI-Only Flags (updated)
-
-| Flag | Values | Default | Description |
-|------|--------|---------|-------------|
-| `--autonomous` | (boolean flag) | off | Enable autonomous convergence mode |
-| `--iterations=N` | `1`--`10` (standard) or `1`--`20` (autonomous) | Config value | Override iteration count for this run |
-| `--focus=<area>[,area...]` | `security`, `architecture`, `simplification`, `code`, `discovery` | (none — full run) | Constrain run to specific disciplines |
 
 ## See Also
 

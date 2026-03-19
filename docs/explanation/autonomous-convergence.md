@@ -1,3 +1,8 @@
+---
+diataxis_type: explanation
+diataxis_topic: autonomous convergence mode design and the keep/discard evaluation pattern
+---
+
 # Autonomous Convergence Mode
 
 ## What Is It?
@@ -86,3 +91,11 @@ Instead of filesystem copies (used by the original autoresearch), autonomous mod
 - `autoresearch/v1`, `v2`, ... — Snapshots of kept iterations
 
 Branches are local only (never pushed) and automatically cleaned up when the loop completes. If the loop is interrupted, stale branches are detected and cleaned on the next run.
+
+## Further reading
+
+- [How to Use Autonomous Mode](../guides/use-autonomous-mode.md) — practical guide to running `--autonomous`
+- [Configuration Reference](../reference/configuration.md) — score weights and convergence thresholds
+- [Agent Reference](../reference/agents.md) — convergence-reporter agent and code-reviewer Mode 5
+- [Swarm Orchestration Design](architecture.md) — the broader plugin architecture that autonomous mode extends
+- [Troubleshooting](../guides/troubleshooting.md) — common autonomous mode issues

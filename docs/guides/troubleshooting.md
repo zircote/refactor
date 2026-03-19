@@ -127,8 +127,59 @@ The full iteration default from your config file (typically 3) only applies to u
 
 **Explanation:** The skill scales agent counts based on feature complexity (assessed during Phase 1). If your feature was assessed as complex despite being simple, the 95% confidence check may have identified uncertainty that inflated the complexity assessment. For truly simple features, the skill should reduce to 1 instance each. If this does not happen, reduce `explorerCount`, `architectCount`, and `reviewerCount` in `.claude/refactor.config.json` under the `featureDev` key.
 
+## Autonomous: Stale snapshot branches from interrupted run
+
+**Problem:** The autonomous loop warns about stale `autoresearch/v*` branches when starting.
+
+**Steps to resolve:**
+
+1. These branches are from a prior run that was interrupted before cleanup. The plugin detects and offers to clean them automatically.
+2. If cleanup fails, remove them manually:
+   ```bash
+   git branch --list 'autoresearch/v*' | xargs git branch -D
+   ```
+3. Re-run the autonomous command after cleanup.
+
+## Autonomous: Loop gets stuck immediately (reverts on iteration 1)
+
+**Problem:** The autonomous loop reverts every iteration starting from the first.
+
+**Steps to resolve:**
+
+1. Check the baseline score in the results log (`{scope-slug}-autonomous/results.tsv`). If it is already high (e.g., 0.90+), improvements may be hard to find.
+2. Reduce scope -- a broad scope makes it harder for agents to improve the composite score.
+3. Check `review-scores.json` for blocking findings that cap scores at 5.0. Fix blocking issues manually first, then re-run.
+4. Try adjusting `plateauDelta` higher (e.g., 0.05) in config if the score is oscillating just below threshold.
+
+## Autonomous: Composite score not improving despite good code changes
+
+**Problem:** The agents produce reasonable code improvements, but the composite score stays flat or drops.
+
+**Steps to resolve:**
+
+1. Check the score breakdown in `review-scores.json` -- which component is dragging?
+   - **Tests low:** Tests may be failing. Check `test-results.json` for failures.
+   - **Quality low:** Code-reviewer Mode 5 may be scoring harshly. Check `review-scores.json` for `blocking_findings: true` which caps scores at 5.0.
+   - **Security low:** New code may be introducing security concerns. Check the summary field.
+2. Adjust score weights in config if one component is disproportionately affecting the composite:
+   ```json
+   { "autonomous": { "scoreWeights": { "tests": 0.60, "quality": 0.25, "security": 0.15 } } }
+   ```
+3. Run standard mode first to establish a clean baseline, then switch to autonomous.
+
+## Autonomous: Too many iterations for a simple change
+
+**Problem:** The autonomous loop runs all 20 iterations on a small scope.
+
+**Steps to resolve:**
+
+1. Lower `--iterations` for small scopes: `--iterations=5`
+2. Check if the score is genuinely still improving. If so, the loop is working as intended.
+3. If the score is plateauing but not triggering the plateau detector, increase `plateauDelta` (e.g., from 0.01 to 0.05).
+
 ## Related
 
 - [Configuration Reference](../reference/configuration.md) — config options affecting behavior
 - [How to Scope Refactoring Effectively](scope-refactoring.md) — reducing scope to avoid problems
 - [How to Develop Features](use-feature-dev.md) — practical guide to `/feature-dev` scenarios
+- [How to Use Autonomous Mode](use-autonomous-mode.md) — autonomous convergence mode guide

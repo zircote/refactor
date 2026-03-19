@@ -1,11 +1,11 @@
 # Refactor Plugin
 
-![Version](https://img.shields.io/badge/version-3.1.0-blue)
+![Version](https://img.shields.io/badge/version-4.0.0-blue)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-plugin-7C3AED)
-![Agents](https://img.shields.io/badge/agents-7_specialists-FF8C42)
+![Agents](https://img.shields.io/badge/agents-8_specialists-FF8C42)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Swarm-orchestrated code refactoring and feature development with specialized AI agents. Two skills — `/refactor` for iterative quality improvement and `/feature-dev` for guided new feature development — sharing 7 specialist agents with multi-instance parallel spawning, blackboard context sharing, and interactive approval gates.
+Swarm-orchestrated code refactoring and feature development with specialized AI agents. Two skills — `/refactor` for iterative quality improvement and `/feature-dev` for guided new feature development — sharing 8 specialist agents with autonomous convergence mode, multi-instance parallel spawning, blackboard context sharing, and interactive approval gates.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme-infographic-dark.svg">
@@ -15,7 +15,7 @@ Swarm-orchestrated code refactoring and feature development with specialized AI 
 
 ## Overview
 
-The Refactor plugin provides two skills sharing seven specialist agents:
+The Refactor plugin provides two skills sharing eight specialist agents:
 
 ### `/refactor` — Iterative Code Improvement
 Systematically improves code quality while preserving functionality through iterative architect → code → test → review → simplify cycles.
@@ -32,6 +32,7 @@ Builds new features through interactive phases: requirement elicitation (95% con
 - **refactor-code** — Implements safe refactoring optimizations
 - **feature-code** — Implements new features from architecture blueprints
 - **simplifier** — Simplifies code for clarity, consistency, and maintainability
+- **convergence-reporter** — Analyzes autonomous convergence loop results and produces reports
 
 ## How It Works
 
@@ -45,12 +46,13 @@ Phase 1: Foundation (PARALLEL)
 ├── [architect]       → Architecture review
 └── [code-reviewer]   → Quality + security baseline
 
-Phase 2: Iteration Loop (×3 default)
+Phase 2: Iteration Loop (×3 default, or --autonomous convergence)
 ├── [architect]       → Optimization plan
 ├── [refactor-code]   → Implement optimizations
 ├── [refactor-test]   → Test verification
 ├── [code-reviewer]   → Quality + security gate
 └── [simplifier]      → Simplify changes
+(Autonomous: keep/discard gate + composite scoring + convergence detection)
 
 Phase 3: Final Assessment (PARALLEL) → Scoring
 Phase 4: Report + Cleanup
@@ -64,7 +66,7 @@ Phase 1: Discovery → 95% confidence elicitation (interactive)
 Phase 2: Exploration → N code-explorers in parallel
 Phase 3: Clarifications → Resolve codebase-specific ambiguities (interactive)
 Phase 4: Architecture → N architects in parallel, user picks approach (interactive)
-Phase 5: Implementation → [feature-code] builds feature (interactive approval)
+Phase 5: Implementation → [feature-code] builds feature (or --autonomous convergence)
 Phase 6: Quality Review → N code-reviewers in parallel (interactive disposition)
 Phase 7: Summary + Cleanup
 ```
@@ -91,6 +93,11 @@ Both workflows use swarm orchestration (TeamCreate, TaskCreate/TaskUpdate, SendM
 /refactor --focus=security src/auth/
 /refactor --focus=security,architecture src/
 
+# Autonomous convergence mode
+/refactor --autonomous src/services/
+/refactor --autonomous --iterations=10 --focus=security src/auth/
+/feature-dev --autonomous "add webhook support for event notifications"
+
 # Feature development
 /feature-dev "add webhook support for event notifications"
 /feature-dev "implement rate limiting middleware"
@@ -113,7 +120,8 @@ claude --plugin-dir /path/to/refactor
 ## Features
 
 - **Two Skills** — `/refactor` for iterative quality improvement, `/feature-dev` for guided new feature development.
-- **7 Specialist Agents** — Shared agent pool with multi-instance parallel spawning.
+- **Autonomous Convergence** — `--autonomous` flag for Karpathy autoresearch-style improvement loops with composite scoring, keep/discard gating, and automatic convergence detection.
+- **8 Specialist Agents** — Shared agent pool with multi-instance parallel spawning.
 - **Blackboard Context Sharing** — All agents read/write to a shared blackboard for context distribution.
 - **Interactive Gates** — Feature-dev includes 95% confidence elicitation, architecture selection, and review disposition.
 - **Multi-Instance Spawning** — Same agent runs as N parallel instances with different focuses (e.g., 3 explorers, 3 architects).
@@ -129,6 +137,7 @@ claude --plugin-dir /path/to/refactor
 |----------|----------|-------------|
 | [Tutorial: Your First Refactor](docs/tutorial.md) | Tutorial | Guided walkthrough from install to report review |
 | [Tutorial: Your First Feature Development](docs/tutorial-feature-dev.md) | Tutorial | Build a new feature with /feature-dev |
+| [Tutorial: Your First Autonomous Refactor](docs/tutorial-autonomous.md) | Tutorial | Run an unattended convergence loop with --autonomous |
 | [How to Configure Commit Strategies](docs/guides/configure-commits.md) | How-to | Set up commits, PRs, and report publishing |
 | [How to Scope Refactoring](docs/guides/scope-refactoring.md) | How-to | Choose effective scopes for different project sizes |
 | [How to Run Focused Refactoring](docs/guides/focus-refactoring.md) | How-to | Constrain runs to specific disciplines with --focus |
@@ -137,7 +146,9 @@ claude --plugin-dir /path/to/refactor
 | [Configuration Reference](docs/reference/configuration.md) | Reference | Full config schema, fields, and examples |
 | [Agent Reference](docs/reference/agents.md) | Reference | Agent specifications, tools, and invocation points |
 | [Quality Score Reference](docs/reference/quality-scores.md) | Reference | Scoring rubrics and criteria |
+| [How to Use Autonomous Mode](docs/guides/use-autonomous-mode.md) | How-to | Run unattended convergence loops with --autonomous |
 | [Swarm Orchestration Design](docs/explanation/architecture.md) | Explanation | Why the plugin works this way |
+| [Autonomous Convergence](docs/explanation/autonomous-convergence.md) | Explanation | The keep/discard scoring pattern and convergence detection |
 
 ## FAQ
 

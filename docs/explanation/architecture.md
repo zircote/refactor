@@ -25,9 +25,9 @@ The refactoring process has a natural structure: some tasks are independent (tes
 
 The alternative — a linear pipeline where each agent waits for the previous one — wastes time during independent phases. In the swarm model, Phase 1 and Phase 3 each run up to three agents in parallel, reducing wall-clock time for those phases.
 
-## The seven agents and their roles
+## The eight agents and their roles
 
-The decision to use seven specialized agents (six for /refactor, five+ for /feature-dev) rather than a single general-purpose agent reflects a separation of concerns:
+The decision to use eight specialized agents (six for /refactor standard mode, seven with convergence-reporter in autonomous mode, five+ for /feature-dev) rather than a single general-purpose agent reflects a separation of concerns:
 
 - **Code-Explorer** — Runs first (Phase 0.5). Deep codebase analysis producing a structured map consumed by all downstream agents. This eliminates redundant discovery work — agents start with shared understanding rather than each independently exploring the codebase.
 - **Architect** — Read-only analysis. Cannot modify files. This constraint prevents the planning agent from making changes that bypass the test-verify cycle.
@@ -141,6 +141,47 @@ Feature development is inherently more uncertain than refactoring (which preserv
 5. **Review disposition** — user decides what to fix
 
 These gates prevent the skill from building the wrong thing. The 95% confidence protocol uses graduated elicitation — detailed requests skip quickly (0-1 questions) while vague requests get thorough questioning (8-15 questions across multiple rounds).
+
+## v4.0.0: Autonomous convergence and the keep/discard pattern
+
+**v4.0.0** adds the `--autonomous` flag to both skills, implementing the [Karpathy autoresearch pattern](https://github.com/karpathy/autoresearch) for source code improvement. This is the most significant loop-level change since swarm orchestration in v2.0.0.
+
+### Why the autoresearch pattern
+
+The standard iteration loop has a fundamental weakness: it always moves forward. If iteration 2 produces a bad change, iteration 3 builds on top of that bad change. The only safety net is the test gate — and tests do not catch quality regressions, only functional ones.
+
+The autoresearch pattern solves this with a **keep/discard gate**: after each iteration, a composite score is computed. If the score improved, the changes are kept (snapshotted to a git branch). If not, the changes are discarded (working tree restored from the best snapshot). This means `best_score` monotonically increases and bad experiments are free.
+
+### Why composite scoring instead of just tests
+
+Tests tell you whether the code works, not whether it's good. A refactoring that passes all tests but introduces code smells, weakens security controls, or degrades readability should be caught. The composite score combines three signals:
+
+- **Test pass rate** (50%) — functional correctness
+- **Code quality score** (25%) — Clean Code rubric via code-reviewer Mode 5
+- **Security posture** (25%) — Security Posture rubric via code-reviewer Mode 5
+
+This ensures that the loop optimizes for overall code health, not just test passage.
+
+### Why git branches instead of filesystem copies
+
+The original autoresearch uses filesystem copies with SHA-256 verification. For source code, git branches are more natural:
+
+- Built-in diff/merge capabilities (`git diff autoresearch/v0..autoresearch/v3`)
+- Space-efficient (git's object model deduplicates unchanged files)
+- Inspectable with familiar tools (`git log`, `git show`)
+- Local-only (never pushed) with automatic cleanup
+
+### Why freeze tests for refactor but not feature-dev
+
+Refactoring preserves behavior — the tests are the fixed evaluation metric. If tests change alongside code, you cannot tell whether the score improved because the code got better or because the tests got easier. This is the "moving goalposts" problem.
+
+Feature development creates new behavior — the feature does not exist yet, so tests must evolve with the implementation. Freezing tests would mean scoring against a test suite that cannot exercise the new code.
+
+### The convergence-reporter agent
+
+The eighth agent was added specifically for autonomous mode. It reads the results log, computes score trajectories, generates diffs between baseline and best version, and produces a convergence report with recommendations. It runs only at loop finalization — it is never spawned during standard mode.
+
+For deeper coverage of the autonomous convergence pattern, see [Autonomous Convergence](autonomous-convergence.md).
 
 ## Further reading
 

@@ -15,7 +15,7 @@ In this tutorial, we will install the refactor plugin, run it against a codebase
 
 - How to install the refactor plugin
 - How to run a refactor with different scopes
-- How the six agents collaborate through the iteration cycle (plus the `/feature-dev` skill)
+- How the agents collaborate through the iteration cycle (plus the `/feature-dev` skill)
 - How to read the final quality report
 
 ## Prerequisites
@@ -157,7 +157,7 @@ git checkout -- .
 You have:
 - Installed the refactor plugin and configured it for your project
 - Run a scoped refactor with the default 3-iteration cycle
-- Observed six agents collaborating through parallel and sequential phases
+- Observed agents collaborating through parallel and sequential phases
 - Run a focused refactor constrained to a single discipline
 - Read a quality assessment report with Clean Code, Architecture, and Security Posture scores
 - Reviewed and committed (or discarded) the changes
@@ -170,4 +170,6 @@ You have:
 - [How to Run Focused Refactoring](guides/focus-refactoring.md) — constrain runs to specific disciplines
 - [How to Develop Features](guides/use-feature-dev.md) — practical guide to `/feature-dev` scenarios
 - [Configuration Reference](reference/configuration.md) — all config options
+- [How to Use Autonomous Mode](guides/use-autonomous-mode.md) — run unattended convergence loops
 - [Architecture: Swarm Orchestration Design](explanation/architecture.md) — understand why the plugin works this way
+- [Autonomous Convergence](explanation/autonomous-convergence.md) — the keep/discard scoring pattern

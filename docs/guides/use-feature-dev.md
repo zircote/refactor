@@ -11,7 +11,7 @@ This guide shows you how to use `/feature-dev` effectively across different scen
 
 ## Prerequisites
 
-- Refactor plugin v3.1.0+ installed and working (see [Tutorial](../tutorial.md))
+- Refactor plugin v4.0.0+ installed and working (see [Tutorial](../tutorial.md))
 - Familiarity with your project's directory structure
 - [GitHub CLI](https://cli.github.com/) (`gh`) installed and authenticated (if using `createPR`)
 
@@ -82,7 +82,7 @@ Edit `.claude/refactor.config.json` to tune the `featureDev` section:
 
 ```json
 {
-  "version": "3.1",
+  "version": "4.0",
   "featureDev": {
     "explorerCount": 3,
     "architectCount": 3,
