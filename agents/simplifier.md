@@ -2,7 +2,7 @@
 name: simplifier
 description: Code simplification specialist for refactoring workflows. Simplifies and refines recently changed code for clarity, consistency, and maintainability while preserving all functionality.
 tools: Read, Write, Edit, Glob, Grep, Bash, TaskList, TaskGet, TaskUpdate, SendMessage
-model: opus
+model: sonnet
 color: cyan
 ---
 
