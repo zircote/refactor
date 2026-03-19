@@ -1,0 +1,63 @@
+{
+  "task": "/refactor --focus=security,architecture --iterations=2 src/auth/",
+  "timestamp": "2026-03-19T10:38:00Z",
+  "skill_version": "3.1.0",
+  "config_version": "2.0",
+  "parsing": {
+    "flags_extracted": 2,
+    "flags": {
+      "--iterations": 2,
+      "--focus": ["security", "architecture"]
+    },
+    "focus_areas_valid": true,
+    "focus_areas_count": 2,
+    "remaining_args": "src/auth/"
+  },
+  "iteration_resolution": {
+    "cli_iterations": 2,
+    "config_iterations": 5,
+    "focused_default": 1,
+    "hardcoded_default": 3,
+    "resolved_max_iterations": 2,
+    "resolution_source": "cli_flag"
+  },
+  "agent_selection": {
+    "total_plugin_agents": 7,
+    "total_refactor_agents": 6,
+    "active_agents_count": 4,
+    "active_agents": [
+      "architect",
+      "code-reviewer",
+      "refactor-test",
+      "refactor-code"
+    ],
+    "excluded_by_focus": ["code-explorer", "simplifier"],
+    "excluded_by_skill_boundary": ["feature-code"],
+    "is_focused": true
+  },
+  "phase_plan": {
+    "phase_0_0_config_check": "completed",
+    "phase_0_0_2_interactive_setup": "skipped (config exists)",
+    "phase_0_1_understand_scope": "completed",
+    "phase_0_2_create_team": "dry-run (documented)",
+    "phase_0_3_spawn_teammates": "dry-run (documented)",
+    "phase_0_5_discovery": "will_skip (code-explorer not active)",
+    "phase_1_foundation": "not_reached",
+    "phase_2_iterations_planned": 2,
+    "phase_3_final_assessment": "not_reached",
+    "phase_4_report": "not_reached"
+  },
+  "tasks_planned": {
+    "phase_tasks": 5,
+    "phase_0_5_tasks": 0,
+    "note": "Phase 0.5 skipped; 5 phase-level tasks: Phase 1 + 2 iterations of Phase 2 + Phase 3 + Phase 4"
+  },
+  "overview_accuracy": {
+    "six_agent_count_correct": true,
+    "feature_code_exclusion_documented": true,
+    "feature_code_exclusion_line": 21,
+    "spawn_list_count": 6,
+    "default_active_agents_listed": 6,
+    "feature_dev_skill_exists": true
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "task": "/refactor --focus=security,architecture --iterations=2 src/auth/",
+  "timestamp": "2026-03-19T10:38:00Z",
+  "phases_executed": ["0.0", "0.1", "0.2 (dry-run)", "0.3 (dry-run)"],
+  "phases_skipped_by_design": ["0.0.2", "0.0.3", "0.5"],
+  "decisions": [
+    {
+      "id": "D001",
+      "phase": "0.0",
+      "decision": "Skip interactive setup",
+      "reason": "Config file .claude/refactor.config.json already exists with version 2.0",
+      "config_loaded": {
+        "version": "2.0",
+        "iterations": 5,
+        "commitStrategy": "single-final",
+        "createPR": true,
+        "prDraft": true,
+        "publishReport": "none"
+      }
+    },
+    {
+      "id": "D002",
+      "phase": "arguments",
+      "decision": "Set cli_iterations=2 from --iterations flag",
+      "reason": "--iterations=2 explicitly provided; overrides config.iterations (5) and focused-default (1)",
+      "precedence_chain": "cli_iterations (2) >> is_focused default (1) >> config.iterations (5) >> hardcoded default (3)"
+    },
+    {
+      "id": "D003",
+      "phase": "arguments",
+      "decision": "Set is_focused=true with focus areas [security, architecture]",
+      "reason": "--focus=security,architecture provided; both values validated against allowed set"
+    },
+    {
+      "id": "D004",
+      "phase": "arguments",
+      "decision": "Derive active_agents={architect, code-reviewer, refactor-test, refactor-code}",
+      "reason": "Spawn matrix: security->code-reviewer, architecture->architect, plus always-included refactor-test and refactor-code. Union of all.",
+      "agents_excluded": ["code-explorer", "simplifier"],
+      "agents_never_spawned_in_refactor": ["feature-code"]
+    },
+    {
+      "id": "D005",
+      "phase": "0.1",
+      "decision": "Set scope=src/auth/",
+      "reason": "Remaining arguments after flag extraction interpreted as file path",
+      "note": "src/auth/ does not exist in this repository; agents would discover this at runtime"
+    },
+    {
+      "id": "D006",
+      "phase": "0.2",
+      "decision": "Skip Phase 0.5 task creation",
+      "reason": "code-explorer not in active_agents; discovery phase conditional on code-explorer presence"
+    },
+    {
+      "id": "D007",
+      "phase": "0.2",
+      "decision": "Create 5 phase tasks (not 6)",
+      "reason": "Phase 0.5 skipped. Remaining: Phase 1, Phase 2 iter 1, Phase 2 iter 2, Phase 3, Phase 4"
+    },
+    {
+      "id": "D008",
+      "phase": "0.3",
+      "decision": "Spawn 4 of 6 refactor agents",
+      "reason": "active_agents derived from --focus=security,architecture spawn matrix. code-explorer and simplifier excluded. feature-code is never part of refactoring.",
+      "spawned": [
+        "architect",
+        "code-reviewer",
+        "refactor-test",
+        "refactor-code"
+      ],
+      "not_spawned": ["code-explorer", "simplifier"],
+      "not_applicable": ["feature-code"]
+    }
+  ],
+  "verification": {
+    "question": "Does the SKILL.md overview correctly communicate that only 6 agents are active in refactor and feature-code is not spawned?",
+    "answer": true,
+    "evidence": [
+      "Lines 13-19: Overview lists exactly 6 agents with role descriptions",
+      "Line 21: Explicit statement that feature-code is NOT spawned during refactoring and belongs to /feature-dev",
+      "Line 47: Default active_agents explicitly enumerates all 6 refactor agents",
+      "Lines 162-305: Spawn instructions list 6 numbered agents; feature-code absent",
+      "agents/ directory has 7 files; skills/feature-dev/SKILL.md exists separately"
+    ]
+  }
+}

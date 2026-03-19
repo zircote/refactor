@@ -1,0 +1,46 @@
+{
+  "evaluation_metadata": {
+    "iteration": 2,
+    "eval": 2,
+    "variant": "with_skill",
+    "date": "2026-03-19",
+    "task": "add dark mode",
+    "stopped_at_phase": 1
+  },
+  "verification_checks": {
+    "phase_0_2_no_agents_spawned": {
+      "result": "PASS",
+      "detail": "Skill line 107 states agents spawn on-demand per phase. Phase 0.2 only defines the protocol template. No Agent tool calls, no TeamCreate members added."
+    },
+    "graduated_elicitation_low_confidence": {
+      "result": "PASS",
+      "confidence_percent": 15,
+      "bracket": "low (<50%)",
+      "prescribed_range_min": 8,
+      "prescribed_range_max": 15,
+      "actual_question_count": 12,
+      "within_range": true,
+      "does_not_exceed_17": true
+    },
+    "questions_focus_requirements_not_design": {
+      "result": "PASS",
+      "requirements_questions_count": 12,
+      "design_questions_count": 0,
+      "deferred_to_architecture_count": 5,
+      "detail": "All 12 questions address what/why/who/when requirements. 5 design topics explicitly deferred to Phase 4 architects."
+    }
+  },
+  "phase_completion": {
+    "phase_0_0_config_check": "completed",
+    "phase_0_1_team_init": "documented_would_do",
+    "phase_0_2_protocol_template": "verified_no_spawn",
+    "phase_1_elicitation": "stopped_at_question_generation"
+  },
+  "skill_compliance": {
+    "config_merge_behavior": "correct -- missing featureDev key filled with defaults",
+    "scope_slug_derivation": "correct -- 'add dark mode' -> 'add-dark-mode'",
+    "agent_spawn_timing": "correct -- all deferred to respective phases",
+    "elicitation_graduation": "correct -- 12 questions for 15% confidence (range: 8-15)",
+    "requirements_vs_design_separation": "correct -- design gaps deferred to architecture"
+  }
+}
