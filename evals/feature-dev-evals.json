@@ -1,0 +1,49 @@
+{
+  "skill_name": "feature-dev",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I need to add webhook support to our event system — when certain events fire (user.created, order.completed, payment.failed), we should POST a JSON payload to registered webhook URLs. we already have an event bus in src/events/ but no outbound webhook delivery yet. needs retry logic and a way for users to register their endpoints via the API",
+      "expected_output": "The skill should parse this as a well-specified feature request, assess confidence, potentially ask 1-2 clarifying questions about edge cases (retry policy, auth for webhook registration, payload format), write feature_spec to blackboard, then proceed to Phase 2 codebase exploration with multiple explorer instances.",
+      "files": [],
+      "expectations": [
+        "The skill starts with Phase 0.0 configuration check",
+        "A team is created with TeamCreate (team_name containing 'feature-dev')",
+        "A blackboard is created for context sharing",
+        "Phase 1 begins with confidence assessment of the feature description",
+        "The skill identifies this as a reasonably well-specified request (mentions events, webhook URLs, retry logic, API endpoint) but asks clarifying questions about gaps",
+        "Clarifying questions target practical gaps: retry policy details, authentication/authorization for webhook registration, payload schema, failure thresholds, or rate limiting",
+        "A feature_spec is written to the blackboard before Phase 2",
+        "Phase 2 spawns multiple code-explorer instances (default 3) with different exploration focuses",
+        "Explorer instances are named with numbered suffixes (e.g., code-explorer-1, code-explorer-2)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "add dark mode",
+      "expected_output": "This is a deliberately vague request. The skill should recognize low confidence and enter the elicitation loop, asking multiple rounds of questions to understand scope, what 'dark mode' means for this project, which components are affected, persistence strategy, etc.",
+      "files": [],
+      "expectations": [
+        "The skill recognizes this as an underspecified request (cannot achieve 95% confidence from 2 words)",
+        "The first elicitation round asks about problem statement, scope, and what 'dark mode' means in context",
+        "Questions cover at least 3 of these dimensions: scope boundaries, user-facing behavior, integration points, persistence strategy, existing theming infrastructure",
+        "The skill does NOT proceed to Phase 2 without at least one round of user clarification",
+        "The skill uses AskUserQuestion (not just text output) to collect user input",
+        "After user responds, the skill re-assesses confidence before deciding whether to ask more questions"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I want to implement rate limiting middleware for our Express API. Should support per-route configuration (some endpoints like /health should be unlimited, auth endpoints should be strict like 5/min, and general API should be around 100/min). Use Redis for the token bucket counters since we already have a Redis connection in src/config/redis.ts. The middleware should return 429 with a Retry-After header when rate is exceeded. Needs to work with our existing auth middleware chain in src/middleware/",
+      "expected_output": "This is a very detailed request that should achieve near-95% confidence quickly. The skill should recognize the high level of specification, potentially ask only 1 question about minor gaps, write a comprehensive feature_spec, and move briskly to exploration.",
+      "files": [],
+      "expectations": [
+        "The skill assesses this as a highly specified request (mentions technology, config pattern, existing infrastructure, HTTP behavior, integration points)",
+        "Confidence assessment is high — the skill either proceeds directly or asks at most 1 round of minor clarifying questions",
+        "The feature_spec captures: per-route config, Redis token bucket, 429 + Retry-After, integration with existing middleware",
+        "The skill does NOT over-elicit — it respects that the user has already provided detailed requirements",
+        "Phase 2 exploration focuses are tailored to the specific feature: one explorer for existing middleware patterns, one for Redis usage patterns, one for route configuration patterns"
+      ]
+    }
+  ]
+}

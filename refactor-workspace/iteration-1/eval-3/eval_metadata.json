@@ -1,0 +1,14 @@
+{
+  "eval_id": 3,
+  "eval_name": "focused-discovery-simplification",
+  "prompt": "/refactor --focus=discovery,simplification src/utils/helpers.ts",
+  "assertions": [
+    "The --focus flag is parsed: 'discovery' and 'simplification' are recognized",
+    "active_agents includes code-explorer (from discovery), simplifier (from simplification), refactor-test, and refactor-code",
+    "active_agents does NOT include architect or code-reviewer",
+    "The iteration count defaults to 1 for focused runs (no --iterations override)",
+    "The scope is 'src/utils/helpers.ts' (a single file)",
+    "Phase 0.5 IS executed because code-explorer is in active_agents",
+    "Phase 1 foundation analysis only creates tasks for active agents"
+  ]
+}

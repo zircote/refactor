@@ -1,0 +1,48 @@
+{
+  "expectations": [
+    {
+      "text": "The --focus flag is parsed: 'discovery' and 'simplification' are recognized",
+      "passed": true,
+      "evidence": "decisions.json focus_areas: ['discovery', 'simplification']"
+    },
+    {
+      "text": "active_agents includes code-explorer (from discovery), simplifier (from simplification), refactor-test, and refactor-code",
+      "passed": true,
+      "evidence": "decisions.json active_agents: ['code-explorer', 'simplifier', 'refactor-test', 'refactor-code']"
+    },
+    {
+      "text": "active_agents does NOT include architect or code-reviewer",
+      "passed": true,
+      "evidence": "decisions.json skipped_phases includes 'Phase 1: architect task (not in active_agents)' and 'Phase 1: code-reviewer task (not in active_agents)'"
+    },
+    {
+      "text": "The iteration count defaults to 1 for focused runs (no --iterations override)",
+      "passed": true,
+      "evidence": "decisions.json iterations: 1, iteration_derivation.explanation: 'No --iterations flag provided. is_focused is true, so default to 1 instead of config value of 5.'"
+    },
+    {
+      "text": "The scope is 'src/utils/helpers.ts' (a single file)",
+      "passed": true,
+      "evidence": "decisions.json scope: 'src/utils/helpers.ts'"
+    },
+    {
+      "text": "Phase 0.5 IS executed because code-explorer is in active_agents",
+      "passed": true,
+      "evidence": "decisions.json phases_planned includes 'Phase 0.5: Discovery (code-explorer)'"
+    },
+    {
+      "text": "Phase 1 foundation analysis only creates tasks for active agents",
+      "passed": true,
+      "evidence": "decisions.json phases_planned shows 'Phase 1: Foundation (refactor-test only)' — architect and code-reviewer tasks are in skipped_phases"
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "total": 7,
+    "pass_rate": 1.0
+  },
+  "eval_feedback": {
+    "overall": "Perfect execution. Focused discovery+simplification mode handled correctly with proper iteration defaulting and phase skipping."
+  }
+}

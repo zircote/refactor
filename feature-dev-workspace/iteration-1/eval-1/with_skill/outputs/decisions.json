@@ -1,0 +1,215 @@
+{
+  "confidence_initial": 45,
+  "confidence_post_draft": 60,
+  "confidence_criteria": {
+    "problem_statement": true,
+    "acceptance_criteria": true,
+    "scope_boundaries": false,
+    "user_interactions": false,
+    "integration_points": false,
+    "constraints": false
+  },
+  "clarifying_questions": [
+    {
+      "dimension": "codebase_location",
+      "question": "The current repository appears to be a Claude Code plugin/skill repo — I don't see a src/events/ directory here. Is the webhook feature meant for a different repository, or should I treat this as a greenfield implementation within this repo for evaluation purposes?",
+      "priority": "critical",
+      "reason": "Cannot assess integration points or explore codebase patterns without knowing where the actual application code lives"
+    },
+    {
+      "dimension": "scope_boundaries",
+      "question": "Should webhook subscriptions be limited to the 3 named events (user.created, order.completed, payment.failed), or should the system support arbitrary event types?",
+      "priority": "high",
+      "reason": "Determines whether we build a fixed-list or extensible subscription model, significantly affecting architecture"
+    },
+    {
+      "dimension": "scope_boundaries",
+      "question": "Is a webhook management UI in scope, or strictly API endpoints?",
+      "priority": "medium",
+      "reason": "UI scope would significantly expand the feature"
+    },
+    {
+      "dimension": "scope_boundaries",
+      "question": "Is webhook payload signing (HMAC) a requirement or a nice-to-have?",
+      "priority": "high",
+      "reason": "Security feature that affects registration schema (secret field) and delivery logic"
+    },
+    {
+      "dimension": "retry_policy",
+      "question": "What's the desired retry strategy? (e.g., exponential backoff with 3 retries over 1 hour?) What counts as a failed delivery — any non-2xx, only 5xx, timeouts?",
+      "priority": "high",
+      "reason": "Core requirement — retry logic specifics directly affect implementation complexity and architecture"
+    },
+    {
+      "dimension": "retry_policy",
+      "question": "Should there be a dead-letter mechanism or automatic disabling after N consecutive failures?",
+      "priority": "medium",
+      "reason": "Determines whether we need failure tracking state and auto-disable logic"
+    },
+    {
+      "dimension": "api_design",
+      "question": "What API framework is in use? (Express, Fastify, Hono, etc.)",
+      "priority": "high",
+      "reason": "Need to follow existing patterns for route definition, middleware, validation"
+    },
+    {
+      "dimension": "api_design",
+      "question": "What does the registration endpoint need to accept? Minimum: URL + event types? Also: secret, description, active flag?",
+      "priority": "medium",
+      "reason": "Defines the webhook subscription model and API contract"
+    },
+    {
+      "dimension": "api_design",
+      "question": "What authentication protects the webhook management API?",
+      "priority": "medium",
+      "reason": "Must integrate with existing auth system"
+    },
+    {
+      "dimension": "data_storage",
+      "question": "What database/ORM is available for persisting webhook registrations and delivery logs?",
+      "priority": "high",
+      "reason": "Need to follow existing data access patterns"
+    },
+    {
+      "dimension": "data_storage",
+      "question": "Should we store delivery attempt history (for debugging/audit)?",
+      "priority": "medium",
+      "reason": "Adds a delivery_logs table and significant storage/query complexity"
+    },
+    {
+      "dimension": "delivery_mechanism",
+      "question": "Should delivery be synchronous (in the event handler) or asynchronous (via a queue/worker)?",
+      "priority": "high",
+      "reason": "Fundamental architecture decision — sync is simpler but blocks event processing; async needs queue infrastructure"
+    },
+    {
+      "dimension": "delivery_mechanism",
+      "question": "Any rate limiting or concurrency constraints on outbound requests?",
+      "priority": "low",
+      "reason": "Nice-to-have for production but may not be MVP"
+    }
+  ],
+  "feature_spec_summary": "Add outbound webhook delivery to the existing event bus. Users register webhook URLs via CRUD API endpoints, specifying which events to subscribe to. When target events (user.created, order.completed, payment.failed) fire, JSON payloads are POSTed to all matching registered webhooks. Failed deliveries are retried with exponential backoff. Optional HMAC payload signing for security.",
+  "explorer_focuses": [
+    {
+      "instance": "code-explorer-1",
+      "focus": "Event System Internals",
+      "prompt": "Find the event bus implementation in src/events/. Trace how events are published and subscribed to. Map the event types, their payloads, and the pub/sub mechanism. Include a list of 5-10 essential files with rationale."
+    },
+    {
+      "instance": "code-explorer-2",
+      "focus": "API Layer and Patterns",
+      "prompt": "Map the API framework, routing patterns, middleware, authentication, and request/response conventions. Find examples of CRUD resource endpoints similar to what webhook registration would need. Include a list of 5-10 essential files with rationale."
+    },
+    {
+      "instance": "code-explorer-3",
+      "focus": "Data Layer and Infrastructure",
+      "prompt": "Analyze the database layer: ORM, migrations, model definitions, and persistence patterns. Also examine any existing async/queue/worker patterns, HTTP client usage, and retry mechanisms in the codebase. Include a list of 5-10 essential files with rationale."
+    }
+  ],
+  "team_name": "feature-dev-team",
+  "agents_to_spawn": [
+    {
+      "name": "feature-code",
+      "subagent_type": "refactor:feature-code",
+      "phase": "0.2",
+      "persistent": true,
+      "purpose": "Feature implementation agent — builds the chosen architecture"
+    },
+    {
+      "name": "refactor-test",
+      "subagent_type": "refactor:refactor-test",
+      "phase": "0.2",
+      "persistent": true,
+      "purpose": "Test verification agent — runs test suite after implementation"
+    },
+    {
+      "name": "code-explorer-1",
+      "subagent_type": "refactor:code-explorer",
+      "phase": "2",
+      "persistent": false,
+      "purpose": "Explore event system internals"
+    },
+    {
+      "name": "code-explorer-2",
+      "subagent_type": "refactor:code-explorer",
+      "phase": "2",
+      "persistent": false,
+      "purpose": "Explore API layer and patterns"
+    },
+    {
+      "name": "code-explorer-3",
+      "subagent_type": "refactor:code-explorer",
+      "phase": "2",
+      "persistent": false,
+      "purpose": "Explore data layer and infrastructure"
+    },
+    {
+      "name": "architect-1",
+      "subagent_type": "refactor:architect",
+      "phase": "4",
+      "persistent": false,
+      "purpose": "Minimal changes architecture design"
+    },
+    {
+      "name": "architect-2",
+      "subagent_type": "refactor:architect",
+      "phase": "4",
+      "persistent": false,
+      "purpose": "Clean architecture design"
+    },
+    {
+      "name": "architect-3",
+      "subagent_type": "refactor:architect",
+      "phase": "4",
+      "persistent": false,
+      "purpose": "Pragmatic balance architecture design"
+    },
+    {
+      "name": "code-reviewer-1",
+      "subagent_type": "refactor:code-reviewer",
+      "phase": "6",
+      "persistent": false,
+      "purpose": "Review for simplicity / DRY / elegance"
+    },
+    {
+      "name": "code-reviewer-2",
+      "subagent_type": "refactor:code-reviewer",
+      "phase": "6",
+      "persistent": false,
+      "purpose": "Review for bugs / functional correctness"
+    },
+    {
+      "name": "code-reviewer-3",
+      "subagent_type": "refactor:code-reviewer",
+      "phase": "6",
+      "persistent": false,
+      "purpose": "Review for conventions / abstractions"
+    }
+  ],
+  "config_resolved": {
+    "explorerCount": 3,
+    "architectCount": 3,
+    "reviewerCount": 3,
+    "commitStrategy": "single-final",
+    "createPR": false,
+    "prDraft": true,
+    "source": "defaults (featureDev key absent from config v2.0)"
+  },
+  "blackboard_keys_planned": [
+    "feature_spec",
+    "explorer_1_findings",
+    "explorer_2_findings",
+    "explorer_3_findings",
+    "codebase_context",
+    "clarifications",
+    "architect_1_design",
+    "architect_2_design",
+    "architect_3_design",
+    "chosen_architecture",
+    "implementation_report",
+    "reviewer_1_findings",
+    "reviewer_2_findings",
+    "reviewer_3_findings"
+  ]
+}

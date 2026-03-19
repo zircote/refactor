@@ -1,0 +1,41 @@
+{
+  "scope": "src/auth/",
+  "iterations": 2,
+  "is_focused": true,
+  "active_agents": [
+    "architect",
+    "code-reviewer",
+    "refactor-test",
+    "refactor-code"
+  ],
+  "focus_areas": ["security", "architecture"],
+  "config_action": "loaded",
+  "phases_planned": [
+    "Phase 1: Foundation analysis (parallel)",
+    "Phase 2: Iteration 1 of 2",
+    "Phase 2: Iteration 2 of 2",
+    "Phase 3: Final assessment",
+    "Phase 4: Report and cleanup"
+  ],
+  "skipped_phases": [
+    "Phase 0.5: Discovery (code-explorer not in active_agents)",
+    "Step 2.F: Simplify (simplifier not in active_agents, skipped every iteration)",
+    "Phase 3.1 simplifier task (simplifier not in active_agents)"
+  ],
+  "config_loaded": {
+    "version": "2.0",
+    "iterations": 5,
+    "postRefactor": {
+      "commitStrategy": "single-final",
+      "createPR": true,
+      "prDraft": true,
+      "publishReport": "none",
+      "discussionCategory": "General",
+      "reportRepository": null
+    }
+  },
+  "max_iterations_derivation": "cli_iterations (2) takes precedence over is_focused default (1) and config.iterations (5)",
+  "agents_not_spawned": ["code-explorer", "simplifier", "feature-code"],
+  "blackboard_id": "refactor-src-auth",
+  "team_name": "refactor-team"
+}

@@ -1,0 +1,70 @@
+{
+  "tool_calls_actual": {
+    "Read": 2,
+    "Bash": 3,
+    "Write": 3,
+    "total": 8
+  },
+  "tool_calls_planned_but_not_executed": {
+    "TeamCreate": {
+      "count": 1,
+      "args": {
+        "team_name": "refactor-team"
+      }
+    },
+    "blackboard_create": {
+      "count": 1,
+      "args": {
+        "task_id": "refactor-src-utils-helpers-ts",
+        "ttl": 3600
+      }
+    },
+    "TaskCreate": {
+      "count": 5,
+      "tasks": [
+        "Phase 0.5: Deep codebase discovery",
+        "Phase 1: Foundation analysis (parallel)",
+        "Phase 2: Iteration 1 of 1",
+        "Phase 3: Final assessment",
+        "Phase 4: Report and cleanup"
+      ]
+    },
+    "Agent_spawn": {
+      "count": 4,
+      "agents": [
+        {
+          "name": "code-explorer",
+          "subagent_type": "refactor:code-explorer",
+          "team_name": "refactor-team"
+        },
+        {
+          "name": "refactor-test",
+          "subagent_type": "refactor:refactor-test",
+          "team_name": "refactor-team"
+        },
+        {
+          "name": "refactor-code",
+          "subagent_type": "refactor:refactor-code",
+          "team_name": "refactor-team"
+        },
+        {
+          "name": "simplifier",
+          "subagent_type": "refactor:simplifier",
+          "team_name": "refactor-team"
+        }
+      ]
+    }
+  },
+  "execution_summary": {
+    "stopped_at": "Phase 0.3 (Spawn Teammates)",
+    "reason": "Test run -- instructed to stop after Phase 0.3",
+    "phases_completed": [
+      "Phase 0.0",
+      "Phase 0.1",
+      "Phase 0.2 (planned)",
+      "Phase 0.3 (planned)"
+    ],
+    "agents_that_would_spawn": 4,
+    "agents_excluded_by_focus": ["architect", "code-reviewer"]
+  }
+}

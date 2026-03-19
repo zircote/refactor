@@ -1,11 +1,11 @@
 # Refactor Plugin
 
-![Version](https://img.shields.io/badge/version-2.2.0-blue)
+![Version](https://img.shields.io/badge/version-3.1.0-blue)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-plugin-7C3AED)
-![Agents](https://img.shields.io/badge/agents-5_specialists-FF8C42)
+![Agents](https://img.shields.io/badge/agents-7_specialists-FF8C42)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Swarm-orchestrated iterative code refactoring with specialized AI agents that ensure test coverage, design optimizations, simplify code, review security, and verify quality through parallel execution and multiple refinement cycles.
+Swarm-orchestrated code refactoring and feature development with specialized AI agents. Two skills — `/refactor` for iterative quality improvement and `/feature-dev` for guided new feature development — sharing 7 specialist agents with multi-instance parallel spawning, blackboard context sharing, and interactive approval gates.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme-infographic-dark.svg">
@@ -15,52 +15,61 @@ Swarm-orchestrated iterative code refactoring with specialized AI agents that en
 
 ## Overview
 
-The Refactor plugin orchestrates five specialized agents as a swarm team to systematically improve code quality while preserving functionality:
+The Refactor plugin provides two skills sharing seven specialist agents:
 
-- **Architect Agent** — Reviews code architecture, plans optimizations, scores quality
-- **Refactor-Test Agent** — Ensures comprehensive test coverage and validates changes
-- **Refactor-Code Agent** — Implements clean code improvements safely
-- **Simplifier Agent** — Simplifies changed code for clarity, consistency, and maintainability
-- **Security-Review Agent** — Detects security regressions, scans for vulnerabilities, scores security posture
+### `/refactor` — Iterative Code Improvement
+Systematically improves code quality while preserving functionality through iterative architect → code → test → review → simplify cycles.
+
+### `/feature-dev` — Guided Feature Development
+Builds new features through interactive phases: requirement elicitation (95% confidence gate), parallel codebase exploration, architecture design with user selection, implementation, and multi-perspective quality review.
+
+### Agents
+
+- **code-explorer** — Deep codebase discovery: traces entry points, maps architecture, catalogs patterns
+- **architect** — Reviews architecture, plans optimizations, designs feature blueprints, scores quality
+- **code-reviewer** — Confidence-scored quality + security review with focus-area specialization
+- **refactor-test** — Ensures test coverage and validates all changes
+- **refactor-code** — Implements safe refactoring optimizations
+- **feature-code** — Implements new features from architecture blueprints
+- **simplifier** — Simplifies code for clarity, consistency, and maintainability
 
 ## How It Works
 
-The refactoring process uses swarm orchestration (TeamCreate, TaskCreate/TaskUpdate, SendMessage) with parallel execution where possible:
+### Refactor Workflow
 
 ```text
-Phase 0: Initialize
-├── Create swarm team
-├── Spawn agents (all 5, or subset via --focus)
-└── Create phase tasks
-
+Phase 0: Initialize → Create team, spawn agents, blackboard
+Phase 0.5: Discovery → [code-explorer] maps codebase
 Phase 1: Foundation (PARALLEL)
-├── [refactor-test]   → Analyze coverage, add missing tests, verify passing
-├── [architect]       → Initial architecture review, identify all opportunities
-└── [security-review] → Establish security baseline for regression detection
+├── [refactor-test]   → Coverage analysis
+├── [architect]       → Architecture review
+└── [code-reviewer]   → Quality + security baseline
 
-Phase 2: Iteration Loop (×3 default, ×1 in focus mode)
-│
-├── Step A: [architect]       → Create optimization plan (top 3 priorities)
-├── Step B: [refactor-code]   → Implement top 3 optimizations
-├── Step C: [refactor-test]   → Run full test suite, report pass/fail
-├── Step D: [refactor-code]   → Fix test failures if any → [refactor-test] re-run
-├── Step E: [simplifier]      → Simplify all code changed this iteration
-│           [security-review] → Review changes against baseline (PARALLEL)
-└── Step F: [refactor-test]   → Verify simplification + security fixes
+Phase 2: Iteration Loop (×3 default)
+├── [architect]       → Optimization plan
+├── [refactor-code]   → Implement optimizations
+├── [refactor-test]   → Test verification
+├── [code-reviewer]   → Quality + security gate
+└── [simplifier]      → Simplify changes
 
-Phase 3: Final Assessment (PARALLEL)
-├── [simplifier]      → Final whole-scope simplification pass
-├── [architect]       → Prepare final quality assessment framework
-└── [security-review] → Final security assessment + Security Posture Score
-
-Phase 4: Final Verification & Report
-├── [refactor-test] → Final test suite run
-├── [architect]     → Score code (Clean Code + Architecture + Security Posture)
-├── Generate refactor-result-{timestamp}.md
-└── Shutdown team
+Phase 3: Final Assessment (PARALLEL) → Scoring
+Phase 4: Report + Cleanup
 ```
 
-In focus mode (`--focus`), only the relevant agents spawn and irrelevant steps are skipped. The refactor-test and refactor-code agents always run as a safety net.
+### Feature-Dev Workflow
+
+```text
+Phase 0: Initialize → Create team, spawn agents, blackboard
+Phase 1: Discovery → 95% confidence elicitation (interactive)
+Phase 2: Exploration → N code-explorers in parallel
+Phase 3: Clarifications → Resolve codebase-specific ambiguities (interactive)
+Phase 4: Architecture → N architects in parallel, user picks approach (interactive)
+Phase 5: Implementation → [feature-code] builds feature (interactive approval)
+Phase 6: Quality Review → N code-reviewers in parallel (interactive disposition)
+Phase 7: Summary + Cleanup
+```
+
+Both workflows use swarm orchestration (TeamCreate, TaskCreate/TaskUpdate, SendMessage) with blackboard context sharing. Multi-instance spawning allows N parallel agents with different focuses.
 
 ## Quick Start
 
@@ -68,10 +77,8 @@ In focus mode (`--focus`), only the relevant agents spawn and irrelevant steps a
 # Refactor entire codebase
 /refactor
 
-# Refactor specific directory
+# Refactor specific file or directory
 /refactor src/utils/
-
-# Refactor specific file
 /refactor src/app.ts
 
 # Refactor by description
@@ -80,14 +87,13 @@ In focus mode (`--focus`), only the relevant agents spawn and irrelevant steps a
 # Override iteration count
 /refactor --iterations=5 src/
 
-# Security-only review (1 iteration default)
+# Focused refactoring
 /refactor --focus=security src/auth/
-
-# Architecture + security review
 /refactor --focus=security,architecture src/
 
-# Simplification pass only
-/refactor --focus=simplification src/utils/
+# Feature development
+/feature-dev "add webhook support for event notifications"
+/feature-dev "implement rate limiting middleware"
 ```
 
 ## Installation
@@ -106,14 +112,16 @@ claude --plugin-dir /path/to/refactor
 
 ## Features
 
-- **Safety First** — Only improves code quality, never alters behavior. Tests pass before and after every change.
-- **Parallel Execution** — Phase 1 and Phase 3 run agents simultaneously for faster results.
-- **Automatic Test Generation** — Adds missing test cases for critical paths, edge cases, and error handling.
-- **Quality Scoring** — Clean Code, Architecture, Security Posture, and Simplification scores (1--10) with per-criteria justifications.
-- **Code Simplification** — Post-implementation polish: naming clarity, guard clauses, redundancy removal, cross-file consistency.
-- **Security Review** — Per-iteration regression detection, vulnerability scanning, secrets/PII checks, blocking on Critical/High findings.
-- **Focus Mode** — Constrain runs to specific disciplines (`--focus=security`, `architecture`, `simplification`, `code`) with 1-iteration default.
-- **Configurable Workflow** — Commit strategies, PR creation, and report publishing via `.claude/refactor.config.json`.
+- **Two Skills** — `/refactor` for iterative quality improvement, `/feature-dev` for guided new feature development.
+- **7 Specialist Agents** — Shared agent pool with multi-instance parallel spawning.
+- **Blackboard Context Sharing** — All agents read/write to a shared blackboard for context distribution.
+- **Interactive Gates** — Feature-dev includes 95% confidence elicitation, architecture selection, and review disposition.
+- **Multi-Instance Spawning** — Same agent runs as N parallel instances with different focuses (e.g., 3 explorers, 3 architects).
+- **Safety First** — Tests pass before and after every change.
+- **Quality Scoring** — Clean Code, Architecture, Security Posture scores (1--10) with justifications.
+- **Security Review** — Per-iteration regression detection, vulnerability scanning, blocking on Critical/High findings.
+- **Focus Mode** — Constrain refactoring to specific disciplines (`--focus=security`, `architecture`, etc.).
+- **Configurable Workflow** — Commit strategies, PR creation, instance counts via `.claude/refactor.config.json`.
 
 ## Documentation
 

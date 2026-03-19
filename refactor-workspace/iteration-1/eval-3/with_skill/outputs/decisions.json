@@ -1,0 +1,61 @@
+{
+  "scope": "src/utils/helpers.ts",
+  "iterations": 1,
+  "is_focused": true,
+  "active_agents": [
+    "code-explorer",
+    "simplifier",
+    "refactor-test",
+    "refactor-code"
+  ],
+  "focus_areas": ["discovery", "simplification"],
+  "config_action": "loaded",
+  "phases_planned": [
+    "Phase 0.0: Configuration Check (load existing config)",
+    "Phase 0.1: Understand Scope",
+    "Phase 0.2: Create Swarm Team and Blackboard",
+    "Phase 0.3: Spawn Teammates (4 agents)",
+    "Phase 0.5: Discovery (code-explorer)",
+    "Phase 1: Foundation (refactor-test only)",
+    "Phase 2: Iteration 1 of 1 (Steps 2.F, 2.G, 2.H only)",
+    "Phase 3: Final Assessment (simplifier + final test + team-lead scoring)",
+    "Phase 4: Report and Cleanup (report + single-final commit + draft PR)"
+  ],
+  "skipped_phases": [
+    "Phase 0.0.2: Interactive Setup (config file exists)",
+    "Phase 0.0.3: Write Configuration (config file exists)",
+    "Phase 1: architect task (not in active_agents)",
+    "Phase 1: code-reviewer task (not in active_agents)",
+    "Phase 2.A: Architecture Review (architect not in active_agents)",
+    "Phase 2.B: Implement Optimizations (2.A skipped; simplification-only focus skips to 2.F)",
+    "Phase 2.C: Test Verification (2.B skipped)",
+    "Phase 2.D: Fix Failures (2.C skipped)",
+    "Phase 2.E: Code Review (code-reviewer not in active_agents)",
+    "Phase 2.E.1: Resolve Blocking Findings (2.E skipped)",
+    "Phase 2.H: per-iteration commit (commitStrategy is single-final, not per-iteration)",
+    "Phase 3.1: architect final assessment (not in active_agents)",
+    "Phase 3.1: code-reviewer final review (not in active_agents)",
+    "Phase 3.4: architect final scoring (not in active_agents; team lead compiles report)",
+    "Phase 4.1.6: Publish Report (publishReport is none)"
+  ],
+  "iteration_derivation": {
+    "cli_iterations": null,
+    "is_focused": true,
+    "config_iterations": 5,
+    "formula": "cli_iterations ?? (is_focused ? 1 : config.iterations) ?? 3",
+    "result": 1,
+    "explanation": "No --iterations flag provided. is_focused is true, so default to 1 instead of config value of 5."
+  },
+  "config_loaded": {
+    "version": "2.0",
+    "iterations": 5,
+    "postRefactor": {
+      "commitStrategy": "single-final",
+      "createPR": true,
+      "prDraft": true,
+      "publishReport": "none",
+      "discussionCategory": "General",
+      "reportRepository": null
+    }
+  }
+}

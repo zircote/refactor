@@ -1,0 +1,15 @@
+{
+  "eval_id": 2,
+  "eval_name": "focused-security-architecture",
+  "prompt": "/refactor --focus=security,architecture --iterations=2 src/auth/",
+  "assertions": [
+    "The --focus flag is parsed and validated: 'security' and 'architecture' are recognized as valid",
+    "active_agents includes code-reviewer (from security), architect (from architecture), refactor-test, and refactor-code",
+    "active_agents does NOT include simplifier or code-explorer (not in focus set)",
+    "The iteration count is set to 2 (from --iterations=2)",
+    "The remaining scope after flag extraction is 'src/auth/'",
+    "is_focused is set to true",
+    "Phase 0.5 discovery is skipped because code-explorer is not in active_agents",
+    "Only agents in active_agents are spawned as teammates"
+  ]
+}

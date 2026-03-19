@@ -1,0 +1,72 @@
+{
+  "tool_calls_executed": {
+    "Read": 2,
+    "Bash": 3,
+    "Write": 3,
+    "Glob": 0,
+    "Grep": 0
+  },
+  "tool_calls_planned_but_not_executed": {
+    "TeamCreate": 1,
+    "blackboard_create": 1,
+    "TaskCreate": 5,
+    "Agent_spawn": 4,
+    "total_swarm_tools": 11
+  },
+  "agent_spawns_planned": {
+    "architect": {
+      "subagent_type": "refactor:architect",
+      "team_name": "refactor-team",
+      "spawned": false,
+      "reason": "test run"
+    },
+    "code-reviewer": {
+      "subagent_type": "refactor:code-reviewer",
+      "team_name": "refactor-team",
+      "spawned": false,
+      "reason": "test run"
+    },
+    "refactor-test": {
+      "subagent_type": "refactor:refactor-test",
+      "team_name": "refactor-team",
+      "spawned": false,
+      "reason": "test run"
+    },
+    "refactor-code": {
+      "subagent_type": "refactor:refactor-code",
+      "team_name": "refactor-team",
+      "spawned": false,
+      "reason": "test run"
+    }
+  },
+  "agents_excluded": {
+    "code-explorer": "not in active_agents (discovery focus not specified)",
+    "simplifier": "not in active_agents (simplification focus not specified)",
+    "feature-code": "only used by /feature-dev skill"
+  },
+  "argument_parsing": {
+    "raw_input": "--focus=security,architecture --iterations=2 src/auth/",
+    "flags_extracted": ["--iterations=2", "--focus=security,architecture"],
+    "remaining_after_extraction": "src/auth/",
+    "focus_validation": "all values valid against {security, architecture, simplification, code, discovery}"
+  },
+  "phases_with_estimated_task_counts": {
+    "Phase 0.5": { "tasks": 0, "reason": "skipped" },
+    "Phase 1": {
+      "tasks": 3,
+      "agents": ["refactor-test", "architect", "code-reviewer"]
+    },
+    "Phase 2 (per iteration)": {
+      "tasks": "4-8 depending on failures",
+      "agents": ["architect", "refactor-code", "refactor-test", "code-reviewer"]
+    },
+    "Phase 3": {
+      "tasks": 4,
+      "agents": ["architect", "code-reviewer", "refactor-test"]
+    },
+    "Phase 4": {
+      "tasks": 0,
+      "note": "team lead handles report/commit/PR directly"
+    }
+  }
+}

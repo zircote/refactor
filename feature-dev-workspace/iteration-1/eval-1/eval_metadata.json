@@ -1,0 +1,16 @@
+{
+  "eval_id": 1,
+  "eval_name": "webhook-feature-moderate-spec",
+  "prompt": "I need to add webhook support to our event system — when certain events fire (user.created, order.completed, payment.failed), we should POST a JSON payload to registered webhook URLs. we already have an event bus in src/events/ but no outbound webhook delivery yet. needs retry logic and a way for users to register their endpoints via the API",
+  "assertions": [
+    "The skill starts with Phase 0.0 configuration check",
+    "A team is created with TeamCreate (team_name containing 'feature-dev')",
+    "A blackboard is created for context sharing",
+    "Phase 1 begins with confidence assessment of the feature description",
+    "The skill identifies this as a reasonably well-specified request but asks clarifying questions about gaps",
+    "Clarifying questions target practical gaps: retry policy details, authentication/authorization, payload schema, failure thresholds, or rate limiting",
+    "A feature_spec is written to the blackboard before Phase 2",
+    "Phase 2 spawns multiple code-explorer instances (default 3) with different exploration focuses",
+    "Explorer instances are named with numbered suffixes (e.g., code-explorer-1, code-explorer-2)"
+  ]
+}

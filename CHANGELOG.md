@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-03-19
+
+### Added
+
+- **`/feature-dev` skill**: Guided feature development workflow with 7-phase interactive process — discovery with 95% confidence elicitation, parallel codebase exploration, clarifying questions, multi-perspective architecture design, implementation, quality review, and summary
+- **feature-code agent**: New implementation specialist for feature development that reads architecture blueprints from blackboard and creates code following codebase conventions
+- **Multi-instance agent spawning**: Same agent definition can be spawned multiple times with unique names and different focus areas (e.g., `code-explorer-1`, `code-explorer-2`, `code-explorer-3`)
+- **Blackboard Protocol sections**: All 7 agents now document their blackboard read/write keys in a standardized table
+- **Config `featureDev` section**: Configurable explorer/architect/reviewer instance counts, commit strategy, and PR creation for feature-dev workflow
+- **Feature Architecture Design Mode** in architect agent: Designs implementation blueprints with pattern analysis, decisive architecture choices, and phased build sequences
+- **Mode 4 — Feature Development Review** in code-reviewer agent: Focus-area reviews for simplicity/DRY, bugs/correctness, and conventions/abstractions
+- **Interactive approval gates**: Feature-dev includes user decision points at elicitation, clarification, architecture selection, implementation start, and review disposition
+
+### Changed
+
+- **7-agent architecture**: Added feature-code to the roster (was 6 agents)
+- **code-explorer**: Updated to serve both refactoring discovery AND feature-specific exploration with multi-instance support
+- **architect**: Added Bash tool, feature architecture design mode, expanded core responsibilities
+- **code-reviewer**: Added feature development review mode (Mode 4) with focus-area specialization
+- **refactor-code**: Added Bash to allowed-tools
+- **Config schema version**: Bumped to `"3.1"` with backward-compatible `featureDev` key (defaults applied when missing)
+- **Plugin version**: 3.1.0
+
 ## [3.0.0] - 2026-03-18
 
 ### BREAKING CHANGES
@@ -110,7 +133,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release with sequential 7-step workflow
 - Three agents: architect, refactor-test, refactor-code
 
-[Unreleased]: https://github.com/zircote/refactor/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/zircote/refactor/compare/v3.1.0...HEAD
+[3.1.0]: https://github.com/zircote/refactor/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/zircote/refactor/compare/v2.2.0...v3.0.0
 [2.2.0]: https://github.com/zircote/refactor/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/zircote/refactor/compare/v2.0.0...v2.1.0

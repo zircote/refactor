@@ -1,0 +1,12 @@
+{
+  "eval_id": 3,
+  "eval_name": "detailed-rate-limiting",
+  "prompt": "I want to implement rate limiting middleware for our Express API. Should support per-route configuration (some endpoints like /health should be unlimited, auth endpoints should be strict like 5/min, and general API should be around 100/min). Use Redis for the token bucket counters since we already have a Redis connection in src/config/redis.ts. The middleware should return 429 with a Retry-After header when rate is exceeded. Needs to work with our existing auth middleware chain in src/middleware/",
+  "assertions": [
+    "The skill assesses this as a highly specified request (mentions technology, config pattern, existing infrastructure, HTTP behavior, integration points)",
+    "Confidence assessment is high — the skill either proceeds directly or asks at most 1 round of minor clarifying questions",
+    "The feature_spec captures: per-route config, Redis token bucket, 429 + Retry-After, integration with existing middleware",
+    "The skill does NOT over-elicit — it respects that the user has already provided detailed requirements",
+    "Phase 2 exploration focuses are tailored to the specific feature: exploring middleware patterns, Redis usage, and route configuration"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "eval_id": 1,
+  "eval_name": "full-refactor-natural-language",
+  "prompt": "ok I've got this express API in src/routes/ that's gotten pretty gnarly over the past few months — lots of copy-paste between route handlers, inconsistent error handling, and the middleware chain is a mess. can you clean it up? I'd like 3 iterations and let's do a security check too since it handles user auth",
+  "assertions": [
+    "The skill starts with Phase 0.0 configuration check — attempts to read .claude/refactor.config.json",
+    "The scope is identified as src/routes/ or the express API routes",
+    "The iteration count is set to 3 (from the user's explicit request)",
+    "All 6 refactoring agents are included in active_agents (no --focus flag means full run)",
+    "A TeamCreate call is made with team_name 'refactor-team'",
+    "A blackboard_create call is made for cross-agent context sharing",
+    "The code-explorer agent is spawned first or in the initial spawn batch",
+    "Each spawned agent receives the blackboard_id in their prompt",
+    "Phase 0.5 discovery is initiated before Phase 1"
+  ]
+}

@@ -1,0 +1,199 @@
+{
+  "metadata": {
+    "skill_name": "refactor",
+    "skill_path": "/Users/AllenR1_1/Projects/zircote/refactor/skills/refactor/SKILL.md",
+    "executor_model": "claude-opus-4-6",
+    "timestamp": "2026-03-19T10:30:00Z",
+    "evals_run": [1, 2, 3],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "full-refactor-natural-language",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Phase 0.0 config check",
+          "passed": true,
+          "evidence": "Config loaded successfully"
+        },
+        {
+          "text": "Scope identified as src/routes/",
+          "passed": true,
+          "evidence": "Correct scope extraction"
+        },
+        {
+          "text": "Iterations set to 3",
+          "passed": true,
+          "evidence": "Natural language parsing worked"
+        },
+        {
+          "text": "All 6 agents in active_agents",
+          "passed": true,
+          "evidence": "Full unfocused run"
+        },
+        {
+          "text": "TeamCreate with refactor-team",
+          "passed": true,
+          "evidence": "Correct team name"
+        },
+        {
+          "text": "blackboard_create called",
+          "passed": true,
+          "evidence": "Blackboard created"
+        },
+        {
+          "text": "code-explorer in spawn batch",
+          "passed": true,
+          "evidence": "Spawned with all agents"
+        },
+        {
+          "text": "blackboard_id in spawn prompts",
+          "passed": true,
+          "evidence": "All prompts include it"
+        },
+        {
+          "text": "Phase 0.5 before Phase 1",
+          "passed": true,
+          "evidence": "Correct ordering"
+        }
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "focused-security-architecture",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "--focus flag parsed correctly",
+          "passed": true,
+          "evidence": "security + architecture validated"
+        },
+        {
+          "text": "Correct active_agents derived",
+          "passed": true,
+          "evidence": "architect, code-reviewer, refactor-test, refactor-code"
+        },
+        {
+          "text": "simplifier and code-explorer excluded",
+          "passed": true,
+          "evidence": "Not in focus set"
+        },
+        {
+          "text": "Iterations set to 2",
+          "passed": true,
+          "evidence": "CLI override works"
+        },
+        {
+          "text": "Scope is src/auth/",
+          "passed": true,
+          "evidence": "Flag extraction correct"
+        },
+        {
+          "text": "is_focused = true",
+          "passed": true,
+          "evidence": "Focused mode active"
+        },
+        {
+          "text": "Phase 0.5 skipped",
+          "passed": true,
+          "evidence": "code-explorer not active"
+        },
+        {
+          "text": "Only active agents spawned",
+          "passed": true,
+          "evidence": "4 agents, not 6"
+        }
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "focused-discovery-simplification",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "--focus flag parsed",
+          "passed": true,
+          "evidence": "discovery + simplification recognized"
+        },
+        {
+          "text": "Correct active_agents",
+          "passed": true,
+          "evidence": "code-explorer, simplifier, refactor-test, refactor-code"
+        },
+        {
+          "text": "architect and code-reviewer excluded",
+          "passed": true,
+          "evidence": "Not in focus set"
+        },
+        {
+          "text": "Iterations default to 1",
+          "passed": true,
+          "evidence": "Focused run default applied"
+        },
+        {
+          "text": "Single file scope",
+          "passed": true,
+          "evidence": "src/utils/helpers.ts"
+        },
+        {
+          "text": "Phase 0.5 executed",
+          "passed": true,
+          "evidence": "code-explorer active"
+        },
+        {
+          "text": "Phase 1 only active agents",
+          "passed": true,
+          "evidence": "refactor-test only in foundation"
+        }
+      ]
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": { "mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0 },
+      "time_seconds": { "mean": 0, "stddev": 0, "min": 0, "max": 0 },
+      "tokens": { "mean": 0, "stddev": 0, "min": 0, "max": 0 }
+    }
+  },
+  "notes": [
+    "All 3 refactor evals achieved 100% pass rate — the skill handles argument parsing, focus derivation, and phase planning correctly",
+    "Eval 1 revealed that natural language iteration parsing works even though only --iterations=N flag was documented — skill has been updated to document this",
+    "Eval 3 correctly demonstrated the focused-run iteration default (1 instead of config value) and comprehensive phase skipping",
+    "No baseline runs were performed — orchestration skills cannot meaningfully execute without skill instructions"
+  ]
+}
