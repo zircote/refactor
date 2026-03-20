@@ -80,18 +80,23 @@ Store any matching patterns as `prior_patterns` for inclusion in agent task desc
 
 ### Step 0.3: Create Swarm Team and Blackboard
 
-1. Use **TeamCreate** to create the test architecture team:
+**MANDATORY SWARM ORCHESTRATION — DO NOT USE PLAIN AGENT SPAWNS**
+
+You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with team_name → SendMessage. Do NOT fall back to spawning standalone Agent subagents without a team. The swarm pattern enables persistent teammates that coordinate via shared task lists and messaging — standalone subagents cannot do this.
+
+**Step 0.3.1**: Call **TeamCreate** to create the team. This is a blocking prerequisite — do not proceed until TeamCreate succeeds:
    ```
    TeamCreate with team_name: "test-architect-team"
    ```
+   If TeamCreate fails, retry once. If it fails again, report the error and stop.
 
-2. Create a shared blackboard for cross-agent context:
+**Step 0.3.2**: Create a shared blackboard for cross-agent context:
    ```
    blackboard_create with task_id: "test-architect-{scope-slug}" and TTL appropriate for the session
    ```
    Store the returned blackboard ID as `blackboard_id`.
 
-3. Use **TaskCreate** to create the high-level phase tasks based on mode:
+**Step 0.3.3**: Use **TaskCreate** to create the high-level phase tasks based on mode:
    - **full**: "Phase 1: Test Planning", "Phase 2: Test Writing", "Phase 3: Rigor Review", "Phase 4: Coverage Analysis", "Phase 5: Report and Cleanup"
    - **plan**: "Phase 1: Test Planning", "Phase 2: Report and Cleanup"
    - **eval**: "Phase 1: Rigor Review", "Phase 2: Coverage Analysis", "Phase 3: Report and Cleanup"
@@ -99,7 +104,9 @@ Store any matching patterns as `prior_patterns` for inclusion in agent task desc
 
 ### Step 0.4: Spawn Teammates
 
-Spawn agents based on mode using the **Agent tool** with `team_name: "test-architect-team"`. Launch all needed agents in parallel.
+Spawn agents using the **Agent tool** with `team_name: "test-architect-team"`. The `team_name` parameter is REQUIRED on every Agent call — it registers the agent as a persistent teammate rather than a fire-and-forget subagent. Launch all needed agents in parallel.
+
+**Verification**: After spawning, confirm each teammate is addressable by name via SendMessage before assigning tasks.
 
 Each teammate receives the task-discovery protocol and blackboard ID:
 

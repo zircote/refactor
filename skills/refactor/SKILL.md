@@ -152,12 +152,17 @@ Run the following **AskUserQuestion** prompts sequentially:
 
 ### Step 0.2: Create Swarm Team and Blackboard
 
-1. Use **TeamCreate** to create the refactoring team:
+**MANDATORY SWARM ORCHESTRATION — DO NOT USE PLAIN AGENT SPAWNS**
+
+You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with team_name → SendMessage. Do NOT fall back to spawning standalone Agent subagents without a team. The swarm pattern enables persistent teammates that coordinate via shared task lists and messaging — standalone subagents cannot do this.
+
+**Step 0.2.1**: Call **TeamCreate** to create the team. This is a blocking prerequisite — do not proceed until TeamCreate succeeds:
    ```
    TeamCreate with team_name: "refactor-team"
    ```
+   If TeamCreate fails, retry once. If it fails again, report the error and stop.
 
-2. Create a shared blackboard for cross-agent context:
+**Step 0.2.2**: Create a shared blackboard for cross-agent context:
    ```
    blackboard_create with task_id: "refactor-{scope-slug}" and TTL appropriate for the session
    ```
@@ -174,7 +179,7 @@ Run the following **AskUserQuestion** prompts sequentially:
 
 ### Step 0.3: Spawn Teammates
 
-Spawn only agents in `active_agents` using the **Agent tool** with `team_name: "refactor-team"`. Launch all selected agents in parallel.
+Spawn only agents in `active_agents` using the **Agent tool** with `team_name: "refactor-team"`. The `team_name` parameter is REQUIRED on every Agent call — it registers the agent as a persistent teammate rather than a fire-and-forget subagent. Launch all selected agents in parallel.
 
 Each teammate receives the same task-discovery protocol and blackboard ID in their spawn prompt. This is critical for preventing stuck agents:
 

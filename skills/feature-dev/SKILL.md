@@ -78,18 +78,23 @@ After extracting flags, the remaining `$ARGUMENTS` is the feature description. T
 
 ## Phase 0.1: Initialize Team and Blackboard
 
-1. Use **TeamCreate** to create the feature development team:
+**MANDATORY SWARM ORCHESTRATION — DO NOT USE PLAIN AGENT SPAWNS**
+
+You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with team_name → SendMessage. Do NOT fall back to spawning standalone Agent subagents without a team. The swarm pattern enables persistent teammates that coordinate via shared task lists and messaging — standalone subagents cannot do this.
+
+**Step 0.1.1**: Call **TeamCreate** to create the team. This is a blocking prerequisite — do not proceed until TeamCreate succeeds:
    ```
    TeamCreate with team_name: "feature-dev-team"
    ```
+   If TeamCreate fails, retry once. If it fails again, report the error and stop.
 
-2. Create a shared blackboard for cross-agent context. Derive `scope-slug` from the feature description: lowercase, replace spaces and special characters with hyphens, truncate to 40 characters (e.g., "add webhook support" → "add-webhook-support"):
+**Step 0.1.2**: Create a shared blackboard for cross-agent context. Derive `scope-slug` from the feature description: lowercase, replace spaces and special characters with hyphens, truncate to 40 characters (e.g., "add webhook support" → "add-webhook-support"):
    ```
    blackboard_create with task_id: "feature-dev-{scope-slug}" and TTL appropriate for the session
    ```
    Store the returned blackboard ID as `blackboard_id`.
 
-3. Use **TaskCreate** to create high-level phase tasks:
+**Step 0.1.3**: Use **TaskCreate** to create high-level phase tasks:
    - "Phase 1: Discovery + Elicitation"
    - "Phase 2: Codebase Exploration"
    - "Phase 3: Clarifying Questions"
@@ -100,7 +105,7 @@ After extracting flags, the remaining `$ARGUMENTS` is the feature description. T
 
 ## Phase 0.2: Task Discovery Protocol Template
 
-All teammates receive this protocol in their spawn prompt:
+All teammates receive this protocol in their spawn prompt. When spawning agents, the `team_name` parameter is REQUIRED on every Agent call — it registers the agent as a persistent teammate rather than a fire-and-forget subagent:
 
 ```
 BLACKBOARD: {blackboard_id}
@@ -117,6 +122,8 @@ TASK DISCOVERY PROTOCOL:
 ```
 
 **All agents are spawned on-demand** when their phase begins — not upfront. This avoids wasting resources if the user abandons after elicitation. code-explorer instances spawn in Phase 2, architect instances in Phase 4, feature-code and refactor-test in Phase 5, and code-reviewer instances in Phase 6.
+
+**Every Agent spawn MUST include `team_name: "feature-dev-team"`** — this is what makes them persistent teammates rather than disposable subagents. After each spawn, send a **SendMessage** to the teammate with their task assignment. Without SendMessage, teammates sit idle.
 
 ## Phase 1: Discovery + Elicitation
 
