@@ -18,8 +18,10 @@ This skill implements a comprehensive feature development workflow using special
 - **refactor-code** — Available for fix-up tasks if needed
 - **refactor-test** — Runs tests to verify implementation correctness
 - **simplifier** — Available for post-implementation polish if needed
-
 - **convergence-reporter** — Analyzes autonomous loop results and produces convergence reports (autonomous mode only)
+- **test-planner** — *(optional)* Produces JSON test plans using formal test design techniques for new feature code
+- **test-rigor-reviewer** — *(optional)* Reviews generated tests for scientific rigor, scoring quality 0.0–1.0
+- **coverage-analyst** — *(optional)* Runs native coverage tools on new feature code to verify test completeness
 
 The workflow uses interactive approval gates at key decision points and parallel multi-instance agent spawning for exploration, architecture, and review phases. In **autonomous mode** (`--autonomous`), Phase 5 (Implementation) is replaced by a Karpathy autoresearch-style convergence loop with keep/discard gating, composite scoring, and automatic convergence detection.
 
@@ -500,13 +502,48 @@ TaskUpdate: assign owner to "code-reviewer-{i}"
 SendMessage to "code-reviewer-{i}": "Task #{id} assigned: feature review. Start now."
 ```
 
+### Step 6.2.1: Test Architecture Review (Optional)
+
+**If the user requested test quality analysis**, or if the implemented feature contains test files, spawn test-architect agents in parallel with code reviewers:
+
+1. **Spawn test-rigor-reviewer**:
+   ```
+   Agent tool with:
+     subagent_type: "refactor:test-rigor-reviewer"
+     team_name: "feature-dev-team"
+     name: "test-rigor-reviewer"
+     prompt: "You are the test rigor reviewer on a feature dev team.
+     BLACKBOARD: {blackboard_id}
+     Read keys: codebase_context, feature_spec
+     Write key: test_rigor_report
+     {TASK DISCOVERY PROTOCOL}"
+   ```
+
+2. **Spawn coverage-analyst**:
+   ```
+   Agent tool with:
+     subagent_type: "refactor:coverage-analyst"
+     team_name: "feature-dev-team"
+     name: "coverage-analyst"
+     prompt: "You are the coverage analyst on a feature dev team.
+     BLACKBOARD: {blackboard_id}
+     Read key: codebase_context
+     Write key: coverage_report
+     {TASK DISCOVERY PROTOCOL}"
+   ```
+
+3. **TaskCreate** for test-rigor-reviewer: "Review all test files for the implemented feature. Score rigor 0.0-1.0 per test."
+4. **TaskCreate** for coverage-analyst: "Run coverage analysis for the implemented feature code. Report gaps."
+
 ### Step 6.3: Consolidate and Present
 
-1. Wait for all reviewer tasks to complete.
+1. Wait for all reviewer tasks (and test-architect tasks if spawned) to complete.
 2. Read all `reviewer_{i}_findings` from the blackboard.
-3. Consolidate findings and identify highest-severity issues.
-4. **Present to user** using **AskUserQuestion**:
+3. If test-architect agents ran: read `test_rigor_report` and `coverage_report` from blackboard.
+4. Consolidate findings and identify highest-severity issues.
+5. **Present to user** using **AskUserQuestion**:
    - Consolidated findings grouped by severity
+   - {If test-architect ran: "Test rigor score: X/1.0, Coverage: Y%"}
    - Your recommendation on what to fix
    - Options: "Fix critical issues now", "Fix all issues", "Proceed as-is"
 5. Address issues based on user decision:

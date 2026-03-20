@@ -10,7 +10,7 @@ You are the team lead orchestrating an automated, iterative code refactoring pro
 
 ## Overview
 
-This skill implements a comprehensive refactoring workflow using 7 specialist agents coordinated as a swarm team:
+This skill implements a comprehensive refactoring workflow using 7 specialist agents (plus 4 optional test-architect agents) coordinated as a swarm team:
 - **code-explorer** — Deep codebase discovery: traces entry points, maps execution flows, catalogs dependencies and patterns
 - **architect** — Reviews architecture, identifies improvements, designs blueprints, scores quality
 - **code-reviewer** — Confidence-scored quality review AND security analysis (regressions, secrets, OWASP)
@@ -18,6 +18,10 @@ This skill implements a comprehensive refactoring workflow using 7 specialist ag
 - **refactor-code** — Implements optimizations, fixes test failures and blocking findings
 - **simplifier** — Simplifies changed code for clarity and consistency
 - **convergence-reporter** — Analyzes autonomous loop results and produces convergence reports (autonomous mode only)
+- **test-planner** — *(testing focus)* Produces JSON test plans using equivalence class partitioning, boundary value analysis, property-based testing
+- **test-rigor-reviewer** — *(testing focus)* Reviews test suites for scientific rigor, scoring each test 0.0–1.0
+- **coverage-analyst** — *(testing focus)* Runs native coverage tools, identifies uncovered paths, suggests targeted tests
+- **test-writer** — *(testing focus)* Transforms JSON test plans into idiomatic, compilable test code (TDD red phase)
 
 The plugin also defines **feature-code** (used by the `/feature-dev` skill) — it is NOT spawned during refactoring.
 
@@ -35,18 +39,19 @@ Parse `$ARGUMENTS` for the following **before** any other processing:
 
 - `--focus=<area>[,area...]` — Constrain the run to specific disciplines. If present, extract and remove it from `$ARGUMENTS` and process as follows:
   1. Split the value on commas to get a list of focus areas
-  2. Validate each value against the allowed set: `{security, architecture, simplification, code, discovery}`
-  3. If any value is invalid, report the error to the user and stop: "Invalid focus area '{value}'. Valid values: security, architecture, simplification, code, discovery"
+  2. Validate each value against the allowed set: `{security, architecture, simplification, code, discovery, testing}`
+  3. If any value is invalid, report the error to the user and stop: "Invalid focus area '{value}'. Valid values: security, architecture, simplification, code, discovery, testing"
   4. Derive `active_agents` from the focus areas using the spawn matrix:
      - `security` → adds `code-reviewer`
      - `architecture` → adds `architect`
      - `simplification` → adds `simplifier`
      - `code` → adds `architect` + `code-reviewer`
      - `discovery` → adds `code-explorer`
+     - `testing` → adds `test-planner` + `test-rigor-reviewer` + `coverage-analyst` + `test-writer`
      - `refactor-test` and `refactor-code` are **always** included regardless of focus
   5. For multi-focus (e.g., `--focus=security,architecture`), take the **union** of all focus-specific agents plus the always-included pair
   6. Set `is_focused = true`
-  7. If `--focus` is not provided: set `is_focused = false` and `active_agents = {code-explorer, architect, refactor-test, refactor-code, simplifier, code-reviewer}` (all 6)
+  7. If `--focus` is not provided: set `is_focused = false` and `active_agents = {code-explorer, architect, refactor-test, refactor-code, simplifier, code-reviewer}` (all 6 — test-architect agents excluded unless explicitly focused)
 
 After extracting flags, the remaining arguments are interpreted as:
 - If empty: refactor the entire codebase
@@ -312,7 +317,91 @@ TASK DISCOVERY PROTOCOL:
      6. NEVER commit code via git — only the team lead commits."
    ```
 
-7. **convergence-reporter** teammate (**If autonomous_mode is true** — spawned deferred, at finalization):
+7. **test-planner** teammate (**If "test-planner" in active_agents**):
+   ```
+   Agent tool with:
+     subagent_type: "refactor:test-planner"
+     team_name: "refactor-team"
+     name: "test-planner"
+     prompt: "You are the test planner agent on a refactoring swarm team. The scope is: {scope}.
+
+     BLACKBOARD: {blackboard_id}
+     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map.
+     Use blackboard_write to share your test plan with key 'test_plan'.
+
+     TASK DISCOVERY PROTOCOL:
+     1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
+     2. Call TaskGet on your assigned task to read the full description.
+     3. Work on the task.
+     4. When done: (a) mark it completed via TaskUpdate, (b) send results to team lead via SendMessage, (c) call TaskList for more work.
+     5. If no tasks assigned, wait for next message.
+     6. NEVER commit code via git — only the team lead commits."
+   ```
+
+8. **test-writer** teammate (**If "test-writer" in active_agents**):
+   ```
+   Agent tool with:
+     subagent_type: "refactor:test-writer"
+     team_name: "refactor-team"
+     name: "test-writer"
+     prompt: "You are the test writer agent on a refactoring swarm team. The scope is: {scope}. TDD red phase: tests MUST compile but FAIL.
+
+     BLACKBOARD: {blackboard_id}
+     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map.
+     Use blackboard_read(task_id='{blackboard_id}', key='test_plan') to read the test plan.
+
+     TASK DISCOVERY PROTOCOL:
+     1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
+     2. Call TaskGet on your assigned task to read the full description.
+     3. Work on the task.
+     4. When done: (a) mark it completed via TaskUpdate, (b) send results to team lead via SendMessage, (c) call TaskList for more work.
+     5. If no tasks assigned, wait for next message.
+     6. NEVER commit code via git — only the team lead commits."
+   ```
+
+9. **test-rigor-reviewer** teammate (**If "test-rigor-reviewer" in active_agents**):
+   ```
+   Agent tool with:
+     subagent_type: "refactor:test-rigor-reviewer"
+     team_name: "refactor-team"
+     name: "test-rigor-reviewer"
+     prompt: "You are the test rigor reviewer agent on a refactoring swarm team. The scope is: {scope}.
+
+     BLACKBOARD: {blackboard_id}
+     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map.
+     Use blackboard_read(task_id='{blackboard_id}', key='test_plan') to cross-reference against the plan.
+
+     TASK DISCOVERY PROTOCOL:
+     1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
+     2. Call TaskGet on your assigned task to read the full description.
+     3. Work on the task.
+     4. When done: (a) mark it completed via TaskUpdate, (b) send results to team lead via SendMessage, (c) call TaskList for more work.
+     5. If no tasks assigned, wait for next message.
+     6. NEVER commit code via git — only the team lead commits."
+   ```
+
+10. **coverage-analyst** teammate (**If "coverage-analyst" in active_agents**):
+    ```
+    Agent tool with:
+      subagent_type: "refactor:coverage-analyst"
+      team_name: "refactor-team"
+      name: "coverage-analyst"
+      prompt: "You are the coverage analyst agent on a refactoring swarm team. The scope is: {scope}.
+
+      BLACKBOARD: {blackboard_id}
+      Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map.
+      Use blackboard_write to share your coverage report with key 'coverage_report'.
+
+      TASK DISCOVERY PROTOCOL:
+      1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
+      2. Call TaskGet on your assigned task to read the full description.
+      3. Work on the task.
+      4. When done: (a) mark it completed via TaskUpdate, (b) send results to team lead via SendMessage, (c) call TaskList for more work.
+      5. If no tasks assigned, wait for next message.
+      6. NEVER commit code via git — only the team lead commits."
+    ```
+
+11. **convergence-reporter** teammate (**If autonomous_mode is true** — spawned deferred, at finalization):
    ```
    Agent tool with:
      subagent_type: "refactor:convergence-reporter"
@@ -383,6 +472,14 @@ Create tasks for active agents and assign them in parallel. **Include `codebase_
    - **TaskUpdate**: assign owner to "code-reviewer"
    - **SendMessage** to "code-reviewer": "Task #{id} assigned: establish quality + security baseline. Start now."
 
+4. **TaskCreate** (**If "test-planner" in active_agents**): "Analyze [{scope}] and produce a structured JSON test plan using equivalence class partitioning, boundary value analysis, state transition coverage, and property-based testing. Identify public API surface, types, constraints, invariants. Output JSON test plan with test_cases and property_tests arrays. Write plan to blackboard key 'test_plan'.{if codebase_context: '\n\n## Codebase Context\n' + codebase_context}"
+   - **TaskUpdate**: assign owner to "test-planner"
+   - **SendMessage** to "test-planner": "Task #{id} assigned: create test plan. Start now."
+
+5. **TaskCreate** (**If "coverage-analyst" in active_agents**): "Run coverage analysis for [{scope}]. Execute native coverage tools. Parse output, identify uncovered functions/branches/lines. For each gap, suggest specific test cases. Target: 90% coverage. Write report to blackboard key 'coverage_report'.{if codebase_context: '\n\n## Codebase Context\n' + codebase_context}"
+   - **TaskUpdate**: assign owner to "coverage-analyst"
+   - **SendMessage** to "coverage-analyst": "Task #{id} assigned: coverage analysis. Start now."
+
 ### Step 1.2: Wait for All Created Phase 1 Tasks to Complete
 
 - Monitor TaskList until all created Phase 1 tasks show status: completed
@@ -390,11 +487,30 @@ Create tasks for active agents and assign them in parallel. **Include `codebase_
 - Verify refactor-test agent confirms all tests are passing before proceeding
 - If "code-reviewer" in active_agents: record code-reviewer's baseline for use in iteration reviews
 
-### Step 1.3: Checkpoint
+### Step 1.3: Test Architecture Follow-Up (If testing focus active)
+
+**Skip if none of {test-planner, test-writer, test-rigor-reviewer} are in active_agents.**
+
+After Phase 1 parallel tasks complete, run sequential test-architect steps:
+
+1. **If "test-writer" in active_agents** (requires test-planner to have completed):
+   - **TaskCreate**: "Generate idiomatic test code from the test plan on blackboard key 'test_plan'. TDD RED PHASE: tests must compile but FAIL. Follow language conventions. Report all files created. Write report to blackboard key 'test_generation_report'."
+     - **TaskUpdate**: assign owner to "test-writer"
+     - **SendMessage** to "test-writer": "Task #{id} assigned: generate test code from plan. Start now."
+   - Wait for completion
+
+2. **If "test-rigor-reviewer" in active_agents**:
+   - **TaskCreate**: "Review all test files {if test-writer ran: 'generated by test-writer' else: 'in [{scope}]'} for scientific rigor. Check for tautological assertions, weak generators, missing boundaries, mutation-susceptible patterns. Score each test 0.0-1.0. Write rigor report to blackboard key 'test_rigor_report'."
+     - **TaskUpdate**: assign owner to "test-rigor-reviewer"
+     - **SendMessage** to "test-rigor-reviewer": "Task #{id} assigned: rigor review. Start now."
+   - Wait for completion
+   - Record rigor score for inclusion in final report
+
+### Step 1.4: Checkpoint
 
 - Inform user with a message reflecting which agents ran:
   - Full run: "Phase 1 complete. Test coverage established. Architecture reviewed. Quality + security baseline recorded. Starting iteration loop."
-  - Focused run: "Phase 1 complete. Test coverage established.{' Architecture reviewed.' if architect active}{' Quality + security baseline recorded.' if code-reviewer active} Starting iteration loop ({max_iterations} iteration{s})."
+  - Focused run: "Phase 1 complete. Test coverage established.{' Architecture reviewed.' if architect active}{' Quality + security baseline recorded.' if code-reviewer active}{' Test plan generated.' if test-planner active}{' Test code generated (TDD red phase).' if test-writer active}{' Test rigor score: X/1.0.' if test-rigor-reviewer active}{' Coverage: Y%.' if coverage-analyst active} Starting iteration loop ({max_iterations} iteration{s})."
 
 ## Phase 2: Autonomous Convergence Loop (when `autonomous_mode = true`)
 

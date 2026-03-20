@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0] - 2026-03-19
+
+### Added
+
+- **test-architect skill** (`/test-gen`, `/test-plan`, `/test-eval`): Scientifically grounded test suite generation using formal test design techniques
+- **4 new specialist agents**: test-planner (equivalence class partitioning, boundary value analysis, property-based testing), test-writer (TDD red-phase code generation), test-rigor-reviewer (anti-pattern detection, per-test rigor scoring 0.0–1.0), coverage-analyst (native coverage tool integration)
+- **`--focus=testing`** for `/refactor`: Activates test-architect agents during refactoring to generate and evaluate test suites
+- **3 new commands**: `/test-gen` (full pipeline), `/test-plan` (plan only), `/test-eval` (evaluate existing tests)
+- **Language support**: Rust (proptest/tarpaulin/cargo-mutants), Python (hypothesis/coverage.py/mutmut), TypeScript (fast-check/c8/stryker), Go (rapid/go-tool-cover/go-mutesting)
+- **Reference documents**: property-testing.md, boundary-analysis.md, mutation-testing.md with per-language idiomatic examples
+- **Python detection scripts**: detect_project.py, run_tests.py, coverage_report.py, utils.py
+- **PostToolUse hook**: Detects test file writes and suggests red-phase validation commands
+- **Feature-dev integration**: Optional test-rigor-reviewer and coverage-analyst in Phase 6 (Quality Review)
+- **Atlatl memory integration**: Recall prior test patterns, capture strategies and anti-patterns
+- 7 test-architect eval cases in `evals/test-architect-evals.json`
+
 ## [4.0.0] - 2026-03-19
 
 ### Added

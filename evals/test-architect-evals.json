@@ -1,0 +1,86 @@
+[
+  {
+    "name": "rust_unit_gen",
+    "input": "Generate tests for src/lib.rs in my Rust project",
+    "expected_skill": "test-architect",
+    "expected_mode": "full_pipeline",
+    "assertions": [
+      "detects Rust as the project language",
+      "uses cargo test as the test runner",
+      "generates #[test] annotated functions",
+      "generated tests compile but fail (red phase)"
+    ]
+  },
+  {
+    "name": "python_spec_to_test",
+    "input": "Create tests from this spec document for the Python data processor",
+    "expected_skill": "test-architect",
+    "expected_mode": "full_pipeline",
+    "assertions": [
+      "detects Python as the project language",
+      "uses pytest as the test framework",
+      "includes hypothesis property-based tests",
+      "references the spec document in test rationale"
+    ]
+  },
+  {
+    "name": "ts_coverage_gap",
+    "input": "Analyze test coverage gaps in my TypeScript project",
+    "expected_skill": "test-architect",
+    "expected_mode": "coverage",
+    "assertions": [
+      "detects TypeScript as the project language",
+      "runs c8 for coverage analysis",
+      "identifies uncovered files and functions",
+      "suggests specific test cases for uncovered paths"
+    ]
+  },
+  {
+    "name": "go_boundary_analysis",
+    "input": "Generate boundary value tests for the Go parser package",
+    "expected_skill": "test-architect",
+    "expected_mode": "full_pipeline",
+    "assertions": [
+      "detects Go as the project language",
+      "includes boundary values (0, -1, max, empty string)",
+      "uses rapid for property-based tests",
+      "covers edge cases for parser input"
+    ]
+  },
+  {
+    "name": "multi_language_detection",
+    "input": "What test framework should I use for this project?",
+    "expected_skill": "test-architect",
+    "expected_mode": "plan_only",
+    "assertions": [
+      "correctly detects the project language from file analysis",
+      "returns framework mapping for detected language",
+      "shows language support table with available frameworks",
+      "recommends a primary test framework"
+    ]
+  },
+  {
+    "name": "plan_only_flow",
+    "input": "/test-plan for the authentication module",
+    "expected_skill": "test-architect",
+    "expected_mode": "plan_only",
+    "assertions": [
+      "produces a JSON test plan structure",
+      "includes equivalence class partitioning",
+      "does NOT generate test code",
+      "presents plan for user approval before proceeding"
+    ]
+  },
+  {
+    "name": "rigor_review",
+    "input": "Review my existing test suite for quality issues",
+    "expected_skill": "test-architect",
+    "expected_mode": "eval",
+    "assertions": [
+      "runs the test-reviewer analysis",
+      "flags tautological assertions if present",
+      "provides rigor scores per test file",
+      "suggests concrete improvements for weak tests"
+    ]
+  }
+]
