@@ -92,9 +92,9 @@ You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with te
    ```
    blackboard_create with task_id: "feature-dev-{scope-slug}" and TTL appropriate for the session
    ```
-   Store the returned blackboard ID as `blackboard_id`.
+   Store the returned blackboard ID as `blackboard_id`. **Immediately proceed to Step 0.1.3** — do not pause or wait after blackboard creation.
 
-**Step 0.1.3**: Use **TaskCreate** to create high-level phase tasks:
+**Step 0.1.3**: **CRITICAL — DO NOT SKIP.** Immediately after blackboard_create returns, use **TaskCreate** to create all 7 high-level phase tasks. Call TaskCreate 7 times in sequence — do not stop until all 7 are created:
    - "Phase 1: Discovery + Elicitation"
    - "Phase 2: Codebase Exploration"
    - "Phase 3: Clarifying Questions"
@@ -102,6 +102,8 @@ You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with te
    - "Phase 5: Implementation"
    - "Phase 6: Quality Review"
    - "Phase 7: Summary + Cleanup"
+
+   After all 7 tasks are created, **proceed immediately to Phase 1** (Phase 0.2 is a template reference, not an action step).
 
 ## Phase 0.2: Task Discovery Protocol Template
 

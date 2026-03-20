@@ -87,6 +87,37 @@
         "The convergence loop may reach perfect score quickly on a simple feature",
         "User approval is requested before starting autonomous implementation"
       ]
+    },
+    {
+      "id": 7,
+      "prompt": "add spec compliance validation to the CLI output parser",
+      "expected_output": "Regression test for Phase 0.1 initialization stall. The skill MUST complete ALL three Phase 0.1 steps in strict order: TeamCreate → blackboard_create → TaskCreate×7. The agent must not stall after blackboard creation — it must immediately proceed to creating the 7 phase tasks and then begin Phase 1 elicitation.",
+      "files": [],
+      "expectations": [
+        "Step 0.1.1: TeamCreate is called FIRST with team_name containing 'feature-dev' — this is a blocking prerequisite",
+        "Step 0.1.2: blackboard_create is called AFTER TeamCreate succeeds (not before, not without TeamCreate)",
+        "Step 0.1.3: TaskCreate is called 7 times AFTER blackboard_create succeeds — one for each phase (Discovery, Exploration, Clarifying Questions, Architecture, Implementation, Quality Review, Summary)",
+        "The agent does NOT stall between blackboard_create and TaskCreate — there is no pause, no extended thinking, no waiting",
+        "All 7 TaskCreate calls complete before the agent moves to Phase 1",
+        "Phase 1 elicitation begins after all Phase 0.1 steps complete — the agent asks clarifying questions about 'spec compliance validation' and 'CLI output parser'",
+        "The agent does NOT skip TeamCreate and jump directly to blackboard_create",
+        "If any Phase 0.1 step fails, the agent reports the error clearly rather than silently stalling"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "implement a retry queue for failed background jobs with exponential backoff and dead letter support",
+      "expected_output": "Regression test verifying the full Phase 0 → Phase 1 transition completes without stalling. The initialization sequence (config check, TeamCreate, blackboard, task creation) must flow without interruption into the elicitation phase.",
+      "files": [],
+      "expectations": [
+        "Phase 0.0: Config file is loaded or created with defaults before any swarm operations",
+        "Phase 0.1.1: TeamCreate is the FIRST swarm operation — called before any blackboard or task operations",
+        "Phase 0.1.2: blackboard_create is called with a scope-slug derived from the feature description (e.g., 'feature-dev-retry-queue-for-failed-background')",
+        "Phase 0.1.3: All 7 phase tasks are created via TaskCreate — the agent does not stop at fewer than 7",
+        "The transition from Phase 0 to Phase 1 is seamless — no stall, no repeated tool calls, no empty outputs",
+        "Phase 1 confidence assessment begins immediately after Phase 0 completes",
+        "The agent correctly assesses this as a moderately specified request and asks clarifying questions about backoff parameters, dead letter thresholds, job types, and persistence strategy"
+      ]
     }
   ]
 }
