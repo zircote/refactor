@@ -1,0 +1,50 @@
+[
+  {
+    "query": "fetch and rebase my branch onto main before I open the PR",
+    "should_trigger": true
+  },
+  {
+    "query": "pull --rebase from origin, keep my history linear",
+    "should_trigger": true
+  },
+  { "query": "/fr upstream release/2.0", "should_trigger": true },
+  {
+    "query": "rebase onto the latest main, I have local commits to replay",
+    "should_trigger": true
+  },
+  {
+    "query": "update my feature branch from origin/main via rebase",
+    "should_trigger": true
+  },
+  {
+    "query": "fetch origin and rebase, there might be conflicts in the API routes",
+    "should_trigger": true
+  },
+  {
+    "query": "fr my branch so it's current with upstream",
+    "should_trigger": true
+  },
+  {
+    "query": "I need to rebase onto origin/develop, haven't synced in a while",
+    "should_trigger": true
+  },
+  {
+    "query": "rebase on upstream main before I start new work",
+    "should_trigger": true
+  },
+  { "query": "fast-forward my branch to origin/main", "should_trigger": false },
+  { "query": "sync my branch and push it to remote", "should_trigger": false },
+  { "query": "push my rebased changes to origin", "should_trigger": false },
+  { "query": "force push my branch after the rebase", "should_trigger": false },
+  { "query": "commit and push my changes", "should_trigger": false },
+  { "query": "merge main into my feature branch", "should_trigger": false },
+  { "query": "create a new branch off of main", "should_trigger": false },
+  {
+    "query": "interactive rebase to squash my last 3 commits",
+    "should_trigger": false
+  },
+  {
+    "query": "cherry-pick that hotfix commit onto release",
+    "should_trigger": false
+  }
+]

@@ -1,0 +1,90 @@
+{
+  "skill_name": "ff",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "hey I haven't touched this branch in a week, upstream has moved -- can you just ff merge origin/main into it so I'm caught up?",
+      "expected_output": "Fetches from origin, verifies fast-forward is possible, and performs git merge --ff-only origin/main. Reports new commits pulled in.",
+      "files": [],
+      "expectations": [
+        "runs git fetch origin before attempting the merge",
+        "performs git merge --ff-only against origin/main",
+        "does NOT create a merge commit",
+        "reports how many new commits were pulled forward",
+        "checks for uncommitted changes before proceeding"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "catch up with remote, I just want the latest without any rebase shenanigans",
+      "expected_output": "Recognizes catch-up intent as fast-forward. Fetches and performs ff-only merge from the current branch's upstream tracking branch.",
+      "files": [],
+      "expectations": [
+        "recognizes 'catch up with remote' as a fast-forward intent",
+        "fetches from the default remote (origin)",
+        "uses --ff-only to prevent merge commits",
+        "fast-forwards to the upstream tracking branch"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/ff upstream develop",
+      "expected_output": "Uses 'upstream' as the remote and 'develop' as the target branch. Fetches from upstream and performs ff-only merge against upstream/develop.",
+      "files": [],
+      "expectations": [
+        "uses 'upstream' as the remote instead of the default origin",
+        "targets 'develop' as the branch to fast-forward from",
+        "fetches from the upstream remote before merging",
+        "performs --ff-only merge against upstream/develop"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "fast-forward to the latest main, I think there might be diverged commits though",
+      "expected_output": "Fetches and checks if fast-forward is possible. If histories have diverged, aborts without modifying the tree and suggests /fr as an alternative.",
+      "files": [],
+      "expectations": [
+        "checks whether local HEAD is an ancestor of the remote branch",
+        "if diverged, aborts without modifying the working tree",
+        "suggests /fr (fetch-rebase) as an alternative when fast-forward fails",
+        "explains why fast-forward is not possible"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "pull the latest from origin but I have some uncommitted work in progress, can you ff?",
+      "expected_output": "Detects dirty working directory via git status --porcelain. Refuses to fast-forward and advises committing or stashing first.",
+      "files": [],
+      "expectations": [
+        "checks git status --porcelain for uncommitted changes",
+        "refuses to fast-forward with a dirty working directory",
+        "advises the user to commit or stash changes first",
+        "does NOT lose any uncommitted work"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "ff to latest, pretty sure nothing changed on remote since my last pull",
+      "expected_output": "Fetches from remote, detects the branch is already up to date, and reports that no new commits were available.",
+      "files": [],
+      "expectations": [
+        "fetches from remote to check for updates even if user thinks nothing changed",
+        "detects that the branch is already up to date",
+        "reports 'already up to date' status without treating it as an error",
+        "does NOT create any unnecessary merge commits"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "I need to update my local release/3.2 branch from origin before I tag it, just fast-forward please",
+      "expected_output": "Fetches origin and fast-forwards the release/3.2 branch. Reports the updated HEAD position and new commits.",
+      "files": [],
+      "expectations": [
+        "fetches the latest from origin",
+        "performs a --ff-only merge for the release branch",
+        "reports the updated HEAD position after fast-forward",
+        "shows the new commits that were pulled in via git log"
+      ]
+    }
+  ]
+}

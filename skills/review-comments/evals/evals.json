@@ -1,0 +1,135 @@
+{
+  "skill_name": "review-comments",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "can you go through the review comments on PR #187? danny left a bunch of nits about naming and one real bug. just score them and let me decide what to do",
+      "expected_output": "Fetches all review comments on PR #187, scores each across 4 confidence dimensions (Technical Accuracy, Relevance, Impact, Feasibility), categorizes them, and presents them interactively for user decisions",
+      "files": [],
+      "expectations": [
+        "fetches review comments for PR #187 via gh api repos/{owner}/{repo}/pulls/187/comments",
+        "scores each comment on Technical Accuracy (40%), Relevance (25%), Impact (20%), and Feasibility (15%)",
+        "categorizes comments into Code Review, Questions, Suggestions, Blockers, Approvals, or Conversations",
+        "presents comments interactively with confidence scores and asks user for accept/reject/skip decisions",
+        "does NOT apply code fixes or push changes — read and respond only"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "/review-comments --auto --confidence=75",
+      "expected_output": "Runs review-comments in auto mode with a 75% confidence threshold, auto-accepting comments scoring 75+ and auto-rejecting below, then resolves accepted threads via GraphQL",
+      "files": [],
+      "expectations": [
+        "operates in non-interactive auto mode — does not prompt the user for decisions",
+        "uses 75 as the confidence threshold instead of the default 85",
+        "auto-accepts comments with composite score >= 75 and auto-rejects those below",
+        "resolves accepted comment threads via GitHub GraphQL resolveReviewThread mutation",
+        "posts reply comments for each accepted and rejected comment using response templates"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/review-comments --dry-run",
+      "expected_output": "Fetches and scores all comments but does not post replies, resolve threads, or make any changes",
+      "files": [],
+      "expectations": [
+        "fetches and categorizes all review comments on the current branch PR",
+        "scores each comment across all 4 confidence dimensions",
+        "does NOT post any reply comments to GitHub",
+        "does NOT resolve any review threads via GraphQL",
+        "displays what actions would be taken including proposed replies and planned resolutions"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "there are 6 review comments from alex on this PR, mostly about error handling in the auth middleware. go through them one by one and help me decide which ones to accept",
+      "expected_output": "Fetches comments, scores them, and presents each one interactively for user decision using AskUserQuestion, processing Blockers first then by descending confidence",
+      "files": [],
+      "expectations": [
+        "triggers review-comments skill in interactive mode (the default)",
+        "uses AskUserQuestion to present each comment for user decision with accept/reject/skip options",
+        "orders comments by priority — Blockers first, then by descending composite score",
+        "reads the referenced files to understand code context before scoring each comment",
+        "remediates accepted findings by editing source files, then posts replies and resolves threads"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "score the comments on PR #312 — I want to see which of maria's suggestions are actually worth implementing vs which are just style preferences",
+      "expected_output": "Fetches comments for PR #312, provides detailed per-comment scoring breakdown showing Technical Accuracy, Relevance, Impact, and Feasibility scores with classifications",
+      "files": [],
+      "expectations": [
+        "fetches comments specifically for PR #312 rather than inferring from current branch",
+        "provides per-comment breakdown showing all 4 dimension scores and the composite score",
+        "classifies each comment as Strong Accept (>=90), Accept (75-89), Uncertain (50-74), Likely Reject (25-49), or Strong Reject (<25)",
+        "distinguishes substantive suggestions from style/nit-level feedback via Impact and Technical Accuracy scoring",
+        "presents the comment summary table showing counts by category (Code Review, Suggestions, Questions, etc.)"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "the PR has 3 blocking comments from jake and 2 questions from nina. handle the blockers first, answer nina's questions, and resolve everything that gets addressed",
+      "expected_output": "Processes blockers with highest priority, answers questions, applies fixes for accepted blockers, posts replies, and resolves addressed threads via GraphQL",
+      "files": [],
+      "expectations": [
+        "processes Blocker-category comments before Questions (Blockers > Code Review > Suggestions > Questions priority order)",
+        "generates question responses using the Question Response template with direct answers",
+        "resolves addressed threads using gh api graphql resolveReviewThread mutation with proper thread IDs",
+        "does NOT resolve threads for rejected or skipped comments",
+        "fetches GraphQL thread IDs via the reviewThreads query to build the comment-to-thread mapping"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "/review-comments 42 --auto",
+      "expected_output": "Processes PR #42 in auto mode with default 85% confidence threshold, auto-accepting/rejecting based on scores, posting templated replies, and resolving threads",
+      "files": [],
+      "expectations": [
+        "uses PR #42 explicitly rather than inferring from current branch",
+        "applies default confidence threshold of 85 in auto mode",
+        "uses response templates: 'Fixed in this revision' for accepted, rejection explanation for rejected",
+        "posts replies via gh api repos/{owner}/{repo}/pulls/42/comments/{id}/replies for inline comments",
+        "generates a final summary report showing disposition counts, remediation stats, and thread resolution status"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "PR #88 has a mix of everything — some github suggestion blocks, a few questions about the design, and a LGTM from chen. can you triage all of it and respond appropriately?",
+      "expected_output": "Categorizes comments into Suggestions, Questions, and Approvals, scores actionable ones, remediates accepted suggestions, answers questions, acknowledges approvals, and resolves threads",
+      "files": [],
+      "expectations": [
+        "categorizes GitHub suggestion blocks as Suggestions, questions as Questions, and LGTM as Approvals",
+        "scores Suggestions and Questions on all 4 confidence dimensions but skips scoring for Approvals",
+        "acknowledges approval comments with brief natural responses and resolves their threads",
+        "fetches both inline review comments and issue-level comments from the PR",
+        "applies accepted suggestion fixes by editing source files before posting replies"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "I need to see what the reviewers said on my PR but don't change anything yet — I just want the breakdown with scores",
+      "expected_output": "Fetches and scores all comments, presents the full assessment with confidence scores and categories, but does not apply fixes or post replies",
+      "files": [],
+      "expectations": [
+        "triggers review-comments skill in a read-only assessment mode",
+        "fetches all review comments and categorizes them",
+        "presents confidence scores and classifications for each comment",
+        "does NOT edit any source files or apply code changes",
+        "does NOT post reply comments or resolve threads until user gives further instruction"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "review comments on this PR, but be careful — some of the feedback is from a junior dev and might not all be accurate. score everything and flag anything that looks wrong",
+      "expected_output": "Scores all comments with emphasis on Technical Accuracy dimension, flags low-accuracy comments, and presents in interactive mode for user validation",
+      "files": [],
+      "expectations": [
+        "scores Technical Accuracy (weighted 40%) as the primary filter for comment validity",
+        "reads referenced source files to verify whether each reviewer observation is factually correct",
+        "flags comments with low Technical Accuracy scores separately from high-scoring ones",
+        "presents comments in interactive mode for user decision with detailed reasoning for each assessment",
+        "classifies comments with scores 25-49 as Likely Reject and below 25 as Strong Reject"
+      ]
+    }
+  ]
+}

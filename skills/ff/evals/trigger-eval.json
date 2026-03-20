@@ -1,0 +1,44 @@
+[
+  {
+    "query": "fast-forward my branch to origin/main, I haven't made any local changes",
+    "should_trigger": true
+  },
+  {
+    "query": "catch up with remote, no rebase just ff",
+    "should_trigger": true
+  },
+  { "query": "/ff upstream develop", "should_trigger": true },
+  { "query": "ff merge origin into my branch", "should_trigger": true },
+  {
+    "query": "pull without merge commits, just fast-forward",
+    "should_trigger": true
+  },
+  {
+    "query": "update my branch from origin, I haven't committed anything locally",
+    "should_trigger": true
+  },
+  {
+    "query": "I need to fast-forward to the latest tag on main",
+    "should_trigger": true
+  },
+  {
+    "query": "can you ff my local copy to match what's on the remote?",
+    "should_trigger": true
+  },
+  {
+    "query": "just bring my branch up to date with origin, no rebase needed",
+    "should_trigger": true
+  },
+  { "query": "rebase my feature branch onto main", "should_trigger": false },
+  { "query": "fetch and rebase onto origin/develop", "should_trigger": false },
+  { "query": "sync my branch and push it", "should_trigger": false },
+  { "query": "merge this PR into main", "should_trigger": false },
+  { "query": "force push my branch after rebase", "should_trigger": false },
+  { "query": "create a new branch from main", "should_trigger": false },
+  {
+    "query": "cherry-pick commit abc123 onto my branch",
+    "should_trigger": false
+  },
+  { "query": "commit and push my changes", "should_trigger": false },
+  { "query": "pull --rebase from upstream", "should_trigger": false }
+]

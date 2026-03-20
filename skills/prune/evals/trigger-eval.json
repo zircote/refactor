@@ -1,0 +1,58 @@
+[
+  { "query": "prune branches", "should_trigger": true },
+  {
+    "query": "hey can you clean up all the stale branches in this repo? bunch of old feature branches with deleted remotes",
+    "should_trigger": true
+  },
+  { "query": "/prune", "should_trigger": true },
+  { "query": "/prune --force", "should_trigger": true },
+  {
+    "query": "I just merged a bunch of PRs, clean up the local branches that are gone on remote",
+    "should_trigger": true
+  },
+  {
+    "query": "delete gone branches — the remote tracking is stale on like 12 of them",
+    "should_trigger": true
+  },
+  {
+    "query": "remove merged branches from my local checkout",
+    "should_trigger": true
+  },
+  {
+    "query": "prune local branches that no longer exist on origin",
+    "should_trigger": true
+  },
+  {
+    "query": "clean up old feature branches, their remotes were deleted weeks ago",
+    "should_trigger": true
+  },
+  { "query": "docker system prune -af", "should_trigger": false },
+  {
+    "query": "prune unused Docker images to free up disk space",
+    "should_trigger": false
+  },
+  { "query": "npm cache clean --force", "should_trigger": false },
+  { "query": "git remote prune origin", "should_trigger": false },
+  { "query": "delete the feat/login branch", "should_trigger": false },
+  {
+    "query": "prune old npm packages from node_modules",
+    "should_trigger": false
+  },
+  { "query": "clean up unused container volumes", "should_trigger": false },
+  {
+    "query": "remove stale Docker containers that stopped running",
+    "should_trigger": false
+  },
+  {
+    "query": "can you trim the large files from git history using BFG?",
+    "should_trigger": false
+  },
+  {
+    "query": "delete this branch and switch back to main",
+    "should_trigger": false
+  },
+  {
+    "query": "prune the search index to remove orphaned entries",
+    "should_trigger": false
+  }
+]

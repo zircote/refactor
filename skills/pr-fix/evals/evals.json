@@ -1,0 +1,135 @@
+{
+  "skill_name": "pr-fix",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "sarah left 4 comments on PR #287, mostly about the error handling in the webhook handler. can you go through them, fix what makes sense, and reply to each one? skip the rebase, I already did that",
+      "expected_output": "Fetches comments on PR #287, triages by confidence, applies fixes for accepted comments, skips rebase phase, commits with conventional format, replies to reviewers, resolves threads, and pushes",
+      "files": [],
+      "expectations": [
+        "triggers pr-fix skill and fetches review comments for PR #287",
+        "skips Phase 5 (rebase) because --skip-rebase intent is expressed",
+        "applies code fixes to the webhook handler error handling based on accepted feedback",
+        "commits changes using conventional commit format (e.g., 'fix: address PR review feedback')",
+        "posts reply comments to each addressed comment and resolves their threads via GraphQL"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "/pr-fix --auto --confidence=90",
+      "expected_output": "Runs the full 10-phase remediation workflow in auto mode, accepting fixes scoring 90+ and skipping those below, then rebases, commits, replies, resolves threads, and pushes",
+      "files": [],
+      "expectations": [
+        "operates in non-interactive auto mode without prompting the user",
+        "uses 90 as the confidence threshold instead of the default 95",
+        "auto-accepts fixes scoring >= 90 and skips those below with a log entry",
+        "executes the full 10-phase workflow: fetch, analyze, rebase, apply, test, commit, push, reply, resolve, report",
+        "pushes with --force-with-lease after rebase rewrites history"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/pr-fix --dry-run",
+      "expected_output": "Analyzes and scores all comments, shows the remediation plan with proposed fixes and confidence breakdowns, but does not apply any changes, commit, or push",
+      "files": [],
+      "expectations": [
+        "fetches and categorizes all review comments with priority levels (P0-P3, Info)",
+        "computes confidence scores for each comment using Technical Accuracy (35%), Code Evidence (30%), Clear Remediation (20%), Scope Impact (15%)",
+        "displays the categorized comment list with proposed fixes and confidence scores",
+        "does NOT apply any code changes, create commits, or push to remote",
+        "labels the summary report as 'DRY RUN — no changes were made'"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "fix all the review comments on my PR end to end — the full pipeline, rebase, commit, push, everything",
+      "expected_output": "Executes the complete 10-phase workflow: fetch comments, triage by confidence, apply fixes, rebase onto base branch, commit, reply to reviewers, resolve threads, and push",
+      "files": [],
+      "expectations": [
+        "executes phases in order: init, fetch, triage, remediate, rebase, commit, reply, resolve, push, summary",
+        "rebase onto base branch happens BEFORE applying commits",
+        "commits use conventional commit format with fix:/refactor:/style: prefix",
+        "thread resolution via GraphQL happens AFTER pushing changes",
+        "generates a completion report showing comments processed, fixes applied/skipped/rejected, threads resolved"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "/pr-fix 123 --skip-rebase --force",
+      "expected_output": "Fixes comments on PR #123, skips the rebase phase, and pushes with --force-with-lease",
+      "files": [],
+      "expectations": [
+        "operates on PR #123 specifically, not the current branch PR",
+        "skips Phase 5 (rebase) entirely due to --skip-rebase flag",
+        "pushes with git push --force-with-lease (NOT bare --force) due to --force flag",
+        "stages only the files modified during remediation — never uses git add -A or git add .",
+        "checks out the correct branch for PR #123 if not already on it"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "the PR has 2 blocking comments from jake about a null pointer bug and a race condition. fix those ASAP, skip the style nits from other reviewers",
+      "expected_output": "Prioritizes P0 blocking comments, applies fixes for the null pointer and race condition issues, skips lower-priority suggestions, commits and pushes",
+      "files": [],
+      "expectations": [
+        "categorizes blocking comments as P0 priority and processes them first",
+        "applies fixes for the null pointer bug and race condition as high-priority remediations",
+        "skips or deprioritizes P2 style/nit suggestions per user intent",
+        "reads the referenced source files before applying fixes to verify code context",
+        "replies to fixed comments with 'Fixed in <commit-sha-short>' template"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "there are like 8 comments on PR #55 from the review. some are legit bugs, some are just opinions. fix the real issues, explain why I'm not changing the opinionated ones, and push it all up",
+      "expected_output": "Triages all 8 comments by confidence, fixes high-confidence bug reports, posts rejection explanations for opinion-based comments, resolves fixed threads, and pushes",
+      "files": [],
+      "expectations": [
+        "uses confidence scoring to distinguish legitimate bugs (high Technical Accuracy) from opinion-based comments (lower scores)",
+        "applies code fixes only for comments that pass the confidence threshold",
+        "posts rejection replies with technical reasoning for comments not applied",
+        "resolves threads only for comments that were actually fixed — leaves rejected threads open",
+        "generates the final summary report with disposition counts per priority category"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "/pr-fix --auto",
+      "expected_output": "Runs full remediation in auto mode with default 95% confidence threshold, auto-fixing high-confidence items and logging skipped ones",
+      "files": [],
+      "expectations": [
+        "uses the default confidence threshold of 95% in auto mode",
+        "auto-accepts fixes scoring >= 95 without prompting the user",
+        "skips all fixes below 95% with a log entry — does not prompt",
+        "verifies each fix after applying (syntax check, linter if available) and reverts if broken",
+        "never adds AI attribution lines to commits — no Co-Authored-By or Generated-with signatures"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "PR #200 got 12 comments across 6 files. address everything, but I want to see a confidence breakdown before you start fixing anything. also don't rebase, and use force push when done",
+      "expected_output": "Shows confidence breakdown for all 12 comments first, then applies accepted fixes interactively, skips rebase, commits, and force-pushes with --force-with-lease",
+      "files": [],
+      "expectations": [
+        "presents confidence breakdown with per-comment scores before applying any fixes",
+        "operates in interactive mode — prompts for sub-threshold comments with the breakdown visible",
+        "skips rebase phase as requested",
+        "pushes with git push --force-with-lease origin <branch> — NOT bare --force",
+        "fetches both inline code review comments and top-level PR conversation comments"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "mike asked 3 questions in the PR review and also left a suggestion about renaming the config struct. answer his questions and apply the rename if it makes sense",
+      "expected_output": "Answers the 3 questions with direct responses via reply comments, evaluates the rename suggestion by confidence, applies if accepted, commits and pushes",
+      "files": [],
+      "expectations": [
+        "categorizes the 3 questions as P3 (Question) and the rename as P2 (Suggestion)",
+        "posts direct answer replies to each question using the Question Response template",
+        "evaluates the rename suggestion with confidence scoring before applying",
+        "if rename is accepted, applies the change minimally without refactoring surrounding code",
+        "commits with appropriate conventional commit type (fix: or refactor: depending on changes)"
+      ]
+    }
+  ]
+}

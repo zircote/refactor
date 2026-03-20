@@ -1,0 +1,49 @@
+[
+  {
+    "query": "commit and push my changes, I just finished the auth middleware refactor",
+    "should_trigger": true
+  },
+  { "query": "ship it, everything's ready to go", "should_trigger": true },
+  {
+    "query": "push my changes to remote so CI picks them up",
+    "should_trigger": true
+  },
+  { "query": "/cp", "should_trigger": true },
+  {
+    "query": "send it up, I've been sitting on these changes all day",
+    "should_trigger": true
+  },
+  { "query": "cp everything and push it to origin", "should_trigger": true },
+  {
+    "query": "commit and push the migration files I just added",
+    "should_trigger": true
+  },
+  {
+    "query": "hey can you stage, commit, and push all my work on this branch?",
+    "should_trigger": true
+  },
+  {
+    "query": "save my progress and push to the remote",
+    "should_trigger": true
+  },
+  {
+    "query": "checkpoint and push, I want this backed up before I try something risky",
+    "should_trigger": true
+  },
+  {
+    "query": "just commit these changes locally, don't push anything",
+    "should_trigger": false
+  },
+  {
+    "query": "create a PR for the feature/oauth branch",
+    "should_trigger": false
+  },
+  { "query": "git status", "should_trigger": false },
+  { "query": "what changed in my working directory?", "should_trigger": false },
+  { "query": "diff my changes against main", "should_trigger": false },
+  { "query": "review my code before I commit", "should_trigger": false },
+  { "query": "rebase my branch on main", "should_trigger": false },
+  { "query": "sync my branch with upstream", "should_trigger": false },
+  { "query": "fast-forward to the latest main", "should_trigger": false },
+  { "query": "undo my last commit", "should_trigger": false }
+]

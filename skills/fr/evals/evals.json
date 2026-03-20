@@ -1,0 +1,92 @@
+{
+  "skill_name": "fr",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "fetch and rebase my branch, I need to get the latest from origin before I open a PR",
+      "expected_output": "Fetches from origin, shows divergence (commits behind/ahead), and rebases the current branch onto the upstream tracking branch. Reports rebase result. Does NOT push.",
+      "files": [],
+      "expectations": [
+        "fetches latest refs from origin",
+        "shows how many commits the branch is behind and ahead",
+        "rebases the current branch onto the updated upstream",
+        "preserves local commits on top of upstream changes",
+        "does NOT push to remote after rebasing"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "pull --rebase from main, I want a clean linear history",
+      "expected_output": "Recognizes pull --rebase as a fetch-rebase intent. Fetches from origin, rebases onto origin/main, and reports the result without pushing.",
+      "files": [],
+      "expectations": [
+        "recognizes 'pull --rebase' as a fetch-rebase intent for the fr skill",
+        "fetches from origin and rebases onto origin/main",
+        "does NOT create merge commits, maintaining linear history",
+        "does NOT push after the rebase"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/fr upstream release/2.0",
+      "expected_output": "Uses 'upstream' as the remote and 'release/2.0' as the target branch. Fetches from upstream and rebases onto upstream/release/2.0.",
+      "files": [],
+      "expectations": [
+        "uses 'upstream' as the remote instead of origin",
+        "targets 'release/2.0' as the branch to rebase onto",
+        "fetches from the upstream remote before rebasing",
+        "rebases current branch onto upstream/release/2.0"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "rebase onto latest main, I have some uncommitted changes in src/api.go that I don't want to lose",
+      "expected_output": "Detects uncommitted changes. Offers three options: stash and continue, abort, or proceed anyway. If stashing, restores stashed changes after successful rebase.",
+      "files": [],
+      "expectations": [
+        "detects uncommitted changes via git status --porcelain",
+        "offers options: stash and continue, abort, or proceed anyway",
+        "if stashing, runs git stash push before rebase and git stash pop after",
+        "does NOT silently discard uncommitted work",
+        "warns about potential conflicts with stashed changes"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "hey I need to rebase my feature/payments branch onto main, there's probably going to be conflicts in the checkout controller",
+      "expected_output": "Proceeds with fetch and rebase. If conflicts occur, lists conflicted files, explains conflict markers, and provides commands for --continue or --abort. Does NOT push.",
+      "files": [],
+      "expectations": [
+        "proceeds with fetch and rebase despite anticipated conflicts",
+        "if conflicts occur, lists the conflicted files",
+        "provides guidance on resolving conflicts with git add and git rebase --continue",
+        "explains how to abort with git rebase --abort",
+        "does NOT push after rebase, even if successful"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "update my feature branch with the latest from main, I've got 12 commits that need to go on top",
+      "expected_output": "Fetches latest main from remote, rebases the feature branch onto origin/main so all 12 local commits are replayed on top. Reports the number of commits replayed.",
+      "files": [],
+      "expectations": [
+        "fetches latest main from origin",
+        "rebases the current feature branch onto origin/main",
+        "replays local commits on top of the updated main",
+        "reports the number of commits replayed and new HEAD position"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "fr my branch, it should already be up to date with origin",
+      "expected_output": "Fetches from origin, checks for new upstream commits, and informs the user the branch is already up to date. Skips the rebase since no new changes exist.",
+      "files": [],
+      "expectations": [
+        "fetches from origin to verify current state",
+        "checks git log for new upstream commits not in the local branch",
+        "informs the user the branch is already up to date",
+        "does NOT perform an unnecessary rebase when already current"
+      ]
+    }
+  ]
+}

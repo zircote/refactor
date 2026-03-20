@@ -1,0 +1,107 @@
+{
+  "skill_name": "prune",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "hey I've got a ton of old feature branches cluttering up my local — can you clean them up? don't delete anything yet, just show me what's stale",
+      "expected_output": "Runs git fetch --prune, identifies branches with gone upstream, lists stale branches in dry-run mode without deleting anything, and shows how to run with --force to actually delete.",
+      "files": [],
+      "expectations": [
+        "Runs git fetch --prune to update remote tracking state",
+        "Identifies local branches whose upstream is marked as gone",
+        "Defaults to dry-run mode and does NOT delete any branches",
+        "Lists the stale branch candidates clearly",
+        "Shows instruction to re-run with --force to apply deletions"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "/prune --force",
+      "expected_output": "Fetches remote state, identifies stale branches, excludes protected branches, then prompts the user for confirmation before deleting the stale branches.",
+      "files": [],
+      "expectations": [
+        "Recognizes --force flag and sets mode to force",
+        "Runs git fetch --prune before identifying stale branches",
+        "Prompts user for explicit confirmation before deleting any branches",
+        "Deletes confirmed branches using git branch -d",
+        "Reports which branches were successfully deleted"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "prune all stale branches — nuke everything that's gone on the remote, including main if it shows up",
+      "expected_output": "Identifies stale branches but refuses to delete protected branches (main, master, develop, development, current branch) regardless of user request.",
+      "files": [],
+      "expectations": [
+        "Never deletes main or master branches under any circumstances",
+        "Never deletes develop or development branches",
+        "Excludes the currently checked-out branch from deletion candidates",
+        "Explicitly states which branches are protected and were skipped",
+        "Runs in dry-run mode since --force was not specified"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I just merged like 6 PRs on GitHub — can you clean up all the local branches that got merged? the remote branches are already gone",
+      "expected_output": "Fetches remote refs, detects branches whose upstream has been deleted after PR merges, and lists them as prune candidates in dry-run mode.",
+      "files": [],
+      "expectations": [
+        "Runs git fetch --prune to sync remote tracking state",
+        "Cross-references local branches with remote merge status via gone tracking",
+        "Lists merged-PR branches as prune candidates",
+        "Defaults to dry-run mode without deleting",
+        "Presents count of stale branches found"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "/prune",
+      "expected_output": "Performs a dry-run prune: fetches remote, identifies stale branches, lists them without deleting, and tells the user how to delete with --force.",
+      "files": [],
+      "expectations": [
+        "Defaults to dry-run mode without the --force flag",
+        "Runs git fetch --prune first",
+        "Lists all branches that would be pruned",
+        "Does NOT actually delete any branches",
+        "Displays instruction to run /prune --force to apply deletions"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "clean up old branches — I haven't touched this repo in a while so there might not be any stale ones",
+      "expected_output": "Fetches remote refs, checks for stale branches, and if none are found, reports cleanly that no branches need pruning.",
+      "files": [],
+      "expectations": [
+        "Runs git fetch --prune to update remote tracking info",
+        "Detects when no branches have a gone upstream",
+        "Reports 'No stale branches found' or equivalent message",
+        "Exits cleanly without errors or attempted deletions"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "/prune --force\n(repo where all stale branches happen to be main, master, and develop)",
+      "expected_output": "Identifies stale branches but finds that all of them are protected, reports that all stale branches are protected and nothing will be deleted.",
+      "files": [],
+      "expectations": [
+        "Filters out all protected branches from the stale list",
+        "Reports that all stale branches are protected",
+        "Prints 'nothing to delete' or equivalent message",
+        "Does NOT prompt for deletion confirmation since there are no eligible branches"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "I've got a branch feat/experiment-v2 that shows as gone but I never merged it — prune --force and let me decide if I want to force-delete unmerged ones",
+      "expected_output": "Attempts safe delete with git branch -d, and when it fails for an unmerged branch, warns the user and offers force-delete with git branch -D only upon explicit confirmation.",
+      "files": [],
+      "expectations": [
+        "Attempts deletion with git branch -d (safe delete) first",
+        "Detects when a branch is not fully merged and -d fails",
+        "Warns the user that the branch is not fully merged",
+        "Offers to force-delete with git branch -D only with explicit user consent",
+        "Never force-deletes an unmerged branch without user confirmation"
+      ]
+    }
+  ]
+}

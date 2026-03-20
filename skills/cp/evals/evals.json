@@ -1,0 +1,103 @@
+{
+  "skill_name": "cp",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "hey I just finished the login form validation, commit and push it up so the team can see it",
+      "expected_output": "Stages changed files, generates a conventional commit message (e.g. feat: add login form validation), commits, and pushes to the remote tracking branch. Reports commit SHA and remote ref.",
+      "files": [],
+      "expectations": [
+        "stages changed files using explicit file paths, not git add -A or git add .",
+        "generates a conventional commit message with an appropriate type prefix (feat:, fix:, etc.)",
+        "commit message subject line is under 70 characters",
+        "pushes to the current branch's remote tracking branch",
+        "does NOT include any AI attribution lines like Co-Authored-By in the commit"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "ship it",
+      "expected_output": "Recognizes 'ship it' as a commit-and-push intent. Analyzes the diff, stages files, generates a conventional commit message, and pushes to the upstream branch.",
+      "files": [],
+      "expectations": [
+        "recognizes 'ship it' as a commit-and-push intent triggering the cp skill",
+        "runs git diff to analyze the actual changes before generating a message",
+        "generates a meaningful conventional commit message from the diff, not a generic message like 'update files'",
+        "pushes to the current branch's upstream remote"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "push my changes to remote, I fixed the null pointer exception in the webhook handler",
+      "expected_output": "Commits the webhook handler fix with a fix: type conventional commit message and pushes to origin.",
+      "files": [],
+      "expectations": [
+        "uses fix: as the conventional commit type since the user described a bug fix",
+        "commit message references the webhook handler or null pointer fix",
+        "commits any uncommitted work before pushing",
+        "does NOT create a pull request, only pushes"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "commit and push everything, I've been working on models and also patched that API rate limiter bug",
+      "expected_output": "Analyzes the diff to identify logically separate changes. Creates separate commits for the new models (feat:) and the bug fix (fix:), then pushes all commits in a single push.",
+      "files": [],
+      "expectations": [
+        "analyzes the diff to identify logically separate changes (new models vs bug fix)",
+        "creates separate commits with appropriate types: feat: for new models, fix: for the bug fix",
+        "pushes all commits to remote in a single push operation",
+        "stages files using explicit paths, not git add -A"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "cp everything, make sure nothing sensitive gets in there - I have a .env.local and some new config files",
+      "expected_output": "Excludes .env.local and any other sensitive files from staging. Warns the user about skipped confidential files. Stages and commits only non-sensitive files, then pushes.",
+      "files": [],
+      "expectations": [
+        "excludes .env.local from staging",
+        "checks for and excludes other confidential files like credentials.json, *.key, *.pem",
+        "warns the user about which confidential files were skipped",
+        "stages only non-sensitive files for commit",
+        "does NOT silently include secrets in the commit"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "/cp \"fix: resolve race condition in session middleware\"",
+      "expected_output": "Uses the provided commit message verbatim instead of auto-generating one. Stages changes, commits with the exact message, and pushes.",
+      "files": [],
+      "expectations": [
+        "uses the provided commit message verbatim: 'fix: resolve race condition in session middleware'",
+        "does not auto-generate or modify the provided commit message",
+        "stages and commits the changes",
+        "pushes to the remote tracking branch"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "I updated the .claude/commands/deploy.md file with better instructions, ship it",
+      "expected_output": "Recognizes the .claude/ directory special commit rules. Uses perf: type for modified .claude/ markdown files, not docs:. Commits and pushes.",
+      "files": [],
+      "expectations": [
+        "uses perf: as the commit type for modified .claude/ markdown files, not docs:",
+        "commit message references the updated deploy command or instructions",
+        "does NOT include AI attribution lines in the commit",
+        "pushes the commit to remote"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "send it up, the branch doesn't have an upstream yet - it's feat/oauth-flow",
+      "expected_output": "Detects no upstream tracking branch. Stages, commits, and pushes using git push -u origin feat/oauth-flow to set the upstream.",
+      "files": [],
+      "expectations": [
+        "detects that the branch has no upstream tracking branch",
+        "uses git push -u origin to set the upstream on first push",
+        "generates a conventional commit message from the diff",
+        "reports success with the remote ref after push"
+      ]
+    }
+  ]
+}

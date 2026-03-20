@@ -1,0 +1,132 @@
+{
+  "skill_name": "pr",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "ok I think the auth refactor is ready for eyes — can you open a draft PR to main? the branch is feat/oauth-refresh-tokens",
+      "expected_output": "Pushes the branch if not already on remote, creates a draft PR targeting main with a generated title and body from commits, and reports the PR URL.",
+      "files": [],
+      "expectations": [
+        "Creates a draft PR by default (includes --draft flag)",
+        "Pushes the branch to remote with -u if not already pushed",
+        "Uses gh pr create to create the pull request",
+        "Generates a PR title and body from the commit history",
+        "Reports the PR URL and number on success"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "/pr --ready",
+      "expected_output": "Converts the existing draft PR on the current branch to ready for review using gh pr ready.",
+      "files": [],
+      "expectations": [
+        "Recognizes --ready flag and enters Ready workflow",
+        "Checks for an existing draft PR on the current branch",
+        "Runs gh pr ready to convert draft to ready for review",
+        "Does NOT create a new PR",
+        "Reports success with the PR URL"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/pr --update",
+      "expected_output": "Pushes any unpushed commits to the existing PR and optionally updates the title/body using gh pr edit.",
+      "files": [],
+      "expectations": [
+        "Recognizes --update flag and enters Update workflow",
+        "Checks for unpushed commits and pushes them if present",
+        "Verifies an existing PR exists before attempting update",
+        "Uses gh pr edit for title/body changes",
+        "Does NOT create a new PR"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "/pr --fill",
+      "expected_output": "Creates a draft PR with title and body auto-filled from commit messages using the --fill flag.",
+      "files": [],
+      "expectations": [
+        "Passes --fill to gh pr create to auto-fill from commits",
+        "Creates as draft PR by default",
+        "Pushes branch if not already on remote",
+        "Does not prompt user for manual title/body entry"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "this feature is done and reviewed locally — open a PR to develop, skip the draft, mark it ready immediately. branch is fix/connection-pooling",
+      "expected_output": "Creates a non-draft PR targeting the develop branch using --no-draft and --base develop.",
+      "files": [],
+      "expectations": [
+        "Uses develop as the base/target branch instead of main",
+        "Creates PR as ready-for-review (--no-draft, no --draft flag)",
+        "Pushes branch to remote if not already pushed",
+        "Generates title and body from commits against develop",
+        "Reports PR URL, number, and target branch"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "I've been working on this branch for a while and have some uncommitted stuff — can you open a PR anyway? just the committed changes",
+      "expected_output": "Warns about uncommitted changes, pushes committed work, and creates a draft PR with only the committed changes.",
+      "files": [],
+      "expectations": [
+        "Checks git status and warns about uncommitted changes",
+        "Warns that uncommitted changes will NOT be included in the PR",
+        "Still creates the PR with committed changes only",
+        "Creates as draft PR by default",
+        "Pushes the branch to remote before creating"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "make a pull request with my changes — I think there's already one open though, not sure",
+      "expected_output": "Checks for an existing PR on the current branch, and if one exists, informs the user and suggests using --update instead of creating a duplicate.",
+      "files": [],
+      "expectations": [
+        "Runs gh pr view to check for an existing PR",
+        "Detects the existing PR and informs the user",
+        "Does NOT create a duplicate PR",
+        "Suggests using --update to modify the existing PR",
+        "Shows the existing PR URL and number"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "/pr --web",
+      "expected_output": "Opens the PR creation form in the browser using gh pr create --web.",
+      "files": [],
+      "expectations": [
+        "Recognizes --web flag and sets web mode",
+        "Pushes branch to remote if not already pushed",
+        "Uses --web flag with gh pr create to open in browser",
+        "Does not generate title/body since the browser form handles it"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "send this for review — the work on feat/api-versioning is solid, push it up and open a PR to main please",
+      "expected_output": "Pushes the branch to remote and creates a draft PR targeting main with generated title and body.",
+      "files": [],
+      "expectations": [
+        "Pushes branch to remote with -u flag if not already pushed",
+        "Creates a draft PR by default",
+        "Targets main as the base branch",
+        "Analyzes commits to generate PR title under 70 characters",
+        "Generates PR body with summary, changes, and test plan sections"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "I'm on main right now — can you create a PR?",
+      "expected_output": "Detects that the current branch is the target branch and aborts with a clear error telling the user to switch to a feature branch.",
+      "files": [],
+      "expectations": [
+        "Detects current branch equals target branch",
+        "Aborts with clear error message",
+        "Tells user to switch to a feature branch first",
+        "Does NOT attempt to create a PR from the target branch"
+      ]
+    }
+  ]
+}

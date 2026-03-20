@@ -1,0 +1,61 @@
+[
+  { "query": "create a PR for this branch", "should_trigger": true },
+  {
+    "query": "ok I think the auth refactor is ready for eyes — can you open a draft PR to main?",
+    "should_trigger": true
+  },
+  { "query": "/pr", "should_trigger": true },
+  { "query": "/pr --ready", "should_trigger": true },
+  { "query": "/pr --update", "should_trigger": true },
+  {
+    "query": "push this up and open a pull request to develop",
+    "should_trigger": true
+  },
+  {
+    "query": "send this for review — the work on feat/api-versioning is solid",
+    "should_trigger": true
+  },
+  {
+    "query": "make a PR with my changes, auto-fill the description from commits",
+    "should_trigger": true
+  },
+  {
+    "query": "submit a pull request for the bugfix branch",
+    "should_trigger": true
+  },
+  {
+    "query": "mark the PR as ready for review, the draft is done",
+    "should_trigger": true
+  },
+  {
+    "query": "fix the PR comments — the reviewer wants me to rename the helper function",
+    "should_trigger": false
+  },
+  {
+    "query": "review the PR comments and summarize what needs to change",
+    "should_trigger": false
+  },
+  {
+    "query": "cherry-pick that commit onto the release branch",
+    "should_trigger": false
+  },
+  { "query": "merge the PR once CI passes", "should_trigger": false },
+  {
+    "query": "close the PR, we're going a different direction",
+    "should_trigger": false
+  },
+  { "query": "commit and push my changes", "should_trigger": false },
+  {
+    "query": "review this PR and leave feedback on the code",
+    "should_trigger": false
+  },
+  {
+    "query": "rebase my branch onto main before the PR",
+    "should_trigger": false
+  },
+  { "query": "address the review feedback on PR #42", "should_trigger": false },
+  {
+    "query": "squash the commits before merging the pull request",
+    "should_trigger": false
+  }
+]

@@ -1,0 +1,108 @@
+{
+  "skill_name": "sync",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "sync my branch, I need to pull in the latest from origin and push my stuff back up",
+      "expected_output": "Performs full sync cycle: fetches from origin, rebases onto upstream, confirms with user before pushing, then pushes. Reports fetch/rebase/push results.",
+      "files": [],
+      "expectations": [
+        "fetches latest refs from origin",
+        "rebases the current branch onto the upstream tracking branch",
+        "confirms with the user before pushing",
+        "pushes the rebased branch to remote after confirmation",
+        "reports the full sync result: commits fetched, rebased, and pushed"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "fetch rebase and push, I want my branch fully synced with remote",
+      "expected_output": "Recognizes the three-step workflow as a sync intent. Fetches, rebases, and pushes in sequence. Does NOT use --force; uses standard push.",
+      "files": [],
+      "expectations": [
+        "recognizes 'fetch rebase and push' as a sync intent",
+        "performs fetch, rebase, and push in sequence",
+        "does NOT create merge commits during rebase",
+        "asks for push confirmation before pushing",
+        "does NOT use --force push"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/sync upstream develop",
+      "expected_output": "Uses 'upstream' as the remote and 'develop' as the target. Fetches from upstream, rebases onto upstream/develop, confirms, then pushes.",
+      "files": [],
+      "expectations": [
+        "uses 'upstream' as the remote instead of origin",
+        "targets 'develop' as the branch to sync against",
+        "fetches from upstream and rebases onto upstream/develop",
+        "pushes to the correct remote after confirmation"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "sync my branch with main, I think the push might need a force since I rebased earlier",
+      "expected_output": "Completes fetch and rebase. Shows what will be pushed. Confirms with user before pushing. Does NOT use --force unless user explicitly confirms.",
+      "files": [],
+      "expectations": [
+        "completes fetch and rebase steps first",
+        "shows commits that will be pushed via git log",
+        "confirms with the user before pushing",
+        "does NOT use --force unless the user explicitly requests it",
+        "suggests re-running /sync if push is rejected"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "sync up my feature/billing branch, I have uncommitted changes in the invoice template though",
+      "expected_output": "Detects dirty working directory. Offers stash/abort/proceed options. If stashing, performs sync then pops stash after.",
+      "files": [],
+      "expectations": [
+        "detects uncommitted changes via git status --porcelain",
+        "offers three options: stash and sync, abort, or proceed with dirty tree",
+        "waits for user choice before continuing",
+        "if stashing, pops the stash after successful sync",
+        "does NOT silently discard uncommitted work"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "sync my branch to latest, there will probably be conflicts in the database migration files",
+      "expected_output": "Fetches and begins rebase. If conflicts occur, halts the sync pipeline, does NOT push, and provides conflict resolution guidance.",
+      "files": [],
+      "expectations": [
+        "fetches and begins the rebase operation",
+        "halts the sync pipeline if rebase conflicts occur",
+        "does NOT push if the rebase was not completed cleanly",
+        "provides conflict resolution guidance with git rebase --continue and --abort",
+        "shows the conflicted files"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "sync everything with remote, I think I'm already up to date but I have 2 local commits to push",
+      "expected_output": "Fetches and detects no new upstream changes. Skips unnecessary rebase. Shows 2 local commits to push, confirms, then pushes them.",
+      "files": [],
+      "expectations": [
+        "fetches and detects no new upstream changes to rebase",
+        "skips unnecessary rebase when already up to date",
+        "shows the 2 local commits that will be pushed",
+        "asks for confirmation before pushing",
+        "reports current sync status with pushed commit count"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "hey can you sync my branch? I need to pull latest from origin/main and then push so the CI pipeline runs against my updated code",
+      "expected_output": "Full sync cycle targeting origin/main. Fetches, rebases onto origin/main, confirms push, pushes. Reports everything so user knows CI will see the update.",
+      "files": [],
+      "expectations": [
+        "fetches from origin",
+        "rebases onto origin/main",
+        "confirms before pushing",
+        "pushes to remote so CI can run",
+        "reports success with commit details"
+      ]
+    }
+  ]
+}

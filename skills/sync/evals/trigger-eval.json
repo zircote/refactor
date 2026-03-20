@@ -1,0 +1,52 @@
+[
+  {
+    "query": "sync my branch with origin, I need to be current and push my work",
+    "should_trigger": true
+  },
+  { "query": "fetch rebase and push, full sync cycle", "should_trigger": true },
+  { "query": "/sync upstream develop", "should_trigger": true },
+  {
+    "query": "sync up my feature branch so CI runs against the latest",
+    "should_trigger": true
+  },
+  {
+    "query": "pull rebase and push my branch to origin",
+    "should_trigger": true
+  },
+  {
+    "query": "sync everything with remote, make sure my local and remote are identical",
+    "should_trigger": true
+  },
+  {
+    "query": "update and push my branch so it's current with main",
+    "should_trigger": true
+  },
+  {
+    "query": "sync my branch, I have local commits that need pushing and I'm behind upstream",
+    "should_trigger": true
+  },
+  {
+    "query": "can you do a full sync? fetch, rebase onto main, then push it all up",
+    "should_trigger": true
+  },
+  {
+    "query": "sync up with origin and push so the nightly build has my changes",
+    "should_trigger": true
+  },
+  {
+    "query": "just rebase my branch on main, don't push anything",
+    "should_trigger": false
+  },
+  { "query": "fast-forward to the latest main", "should_trigger": false },
+  { "query": "commit and push my changes", "should_trigger": false },
+  { "query": "fetch and rebase only, no push", "should_trigger": false },
+  { "query": "force push my branch to origin", "should_trigger": false },
+  {
+    "query": "create a pull request for my feature branch",
+    "should_trigger": false
+  },
+  { "query": "merge main into my branch", "should_trigger": false },
+  { "query": "pull the latest without rebasing", "should_trigger": false },
+  { "query": "git status", "should_trigger": false },
+  { "query": "rebase my last 5 commits interactively", "should_trigger": false }
+]

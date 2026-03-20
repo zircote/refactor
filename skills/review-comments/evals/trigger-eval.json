@@ -1,0 +1,64 @@
+[
+  {
+    "query": "review comments on PR #287 — sarah left 4 nits about error handling",
+    "should_trigger": true
+  },
+  {
+    "query": "go through the review feedback on my PR and help me decide what to accept",
+    "should_trigger": true
+  },
+  {
+    "query": "score the PR comments and tell me which ones are valid",
+    "should_trigger": true
+  },
+  { "query": "/review-comments 42 --auto", "should_trigger": true },
+  {
+    "query": "respond to all the reviewer comments on this pull request",
+    "should_trigger": true
+  },
+  {
+    "query": "triage the PR review findings — I want confidence scores before I do anything",
+    "should_trigger": true
+  },
+  {
+    "query": "address PR feedback — just read through what people said and categorize it",
+    "should_trigger": true
+  },
+  {
+    "query": "there are blocking comments from jake on my PR, can you go through them?",
+    "should_trigger": true
+  },
+  {
+    "query": "process PR feedback on #99, answer the questions and acknowledge the LGTMs",
+    "should_trigger": true
+  },
+  { "query": "/review-comments --dry-run", "should_trigger": true },
+  { "query": "create a PR for this feature branch", "should_trigger": false },
+  {
+    "query": "fix the PR — apply all the review feedback and push",
+    "should_trigger": false
+  },
+  {
+    "query": "fix review findings, rebase, and push the changes",
+    "should_trigger": false
+  },
+  {
+    "query": "write a code review for this pull request",
+    "should_trigger": false
+  },
+  { "query": "check CI status on PR #42", "should_trigger": false },
+  { "query": "just rebase my branch onto main", "should_trigger": false },
+  { "query": "commit and push my changes", "should_trigger": false },
+  {
+    "query": "fix what the reviewers said, commit, and force push",
+    "should_trigger": false
+  },
+  {
+    "query": "generate a PR description for my changes",
+    "should_trigger": false
+  },
+  {
+    "query": "remediate PR findings, run tests, and push the fixes",
+    "should_trigger": false
+  }
+]

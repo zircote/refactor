@@ -1,0 +1,64 @@
+[
+  {
+    "query": "fix PR comments on #287 — sarah left feedback about error handling",
+    "should_trigger": true
+  },
+  {
+    "query": "address the PR feedback and push the fixes",
+    "should_trigger": true
+  },
+  {
+    "query": "fix review findings, rebase onto main, and push",
+    "should_trigger": true
+  },
+  { "query": "/pr-fix --auto --confidence=90", "should_trigger": true },
+  {
+    "query": "remediate PR #55 — fix the bugs jake found and reply to everything",
+    "should_trigger": true
+  },
+  {
+    "query": "fix what the reviewers said on this PR, commit, and force push",
+    "should_trigger": true
+  },
+  {
+    "query": "there are blocking comments on my PR, fix them and push",
+    "should_trigger": true
+  },
+  {
+    "query": "handle PR feedback — apply the changes, skip rebase, push up",
+    "should_trigger": true
+  },
+  {
+    "query": "resolve PR comments by fixing the code and replying to each one",
+    "should_trigger": true
+  },
+  { "query": "/pr-fix 42 --skip-rebase --dry-run", "should_trigger": true },
+  { "query": "create a PR for my feature branch", "should_trigger": false },
+  {
+    "query": "review comments without fixing anything — just score them",
+    "should_trigger": false
+  },
+  {
+    "query": "just read the comments on my PR and tell me what people said",
+    "should_trigger": false
+  },
+  { "query": "just rebase my branch onto main", "should_trigger": false },
+  { "query": "commit and push my changes", "should_trigger": false },
+  {
+    "query": "go through the review feedback and help me decide what to accept",
+    "should_trigger": false
+  },
+  {
+    "query": "score the PR comments and categorize them",
+    "should_trigger": false
+  },
+  { "query": "check CI status on PR #42", "should_trigger": false },
+  {
+    "query": "write a code review for this pull request",
+    "should_trigger": false
+  },
+  {
+    "query": "triage PR review findings — I just want the confidence breakdown, don't fix anything",
+    "should_trigger": false
+  }
+]
