@@ -2,10 +2,10 @@
 
 ![Version](https://img.shields.io/badge/version-4.0.0-blue)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-plugin-7C3AED)
-![Agents](https://img.shields.io/badge/agents-8_specialists-FF8C42)
+![Agents](https://img.shields.io/badge/agents-12_specialists-FF8C42)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Swarm-orchestrated code refactoring and feature development with specialized AI agents. Two skills — `/refactor` for iterative quality improvement and `/feature-dev` for guided new feature development — sharing 8 specialist agents with autonomous convergence mode, multi-instance parallel spawning, blackboard context sharing, and interactive approval gates.
+Swarm-orchestrated code refactoring, feature development, and test architecture with specialized AI agents. Three skills — `/refactor` for iterative quality improvement, `/feature-dev` for guided new feature development, and `/test-gen` for scientifically grounded test generation — sharing 12 specialist agents with autonomous convergence mode, multi-instance parallel spawning, blackboard context sharing, and interactive approval gates.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme-infographic-dark.svg">
@@ -15,13 +15,16 @@ Swarm-orchestrated code refactoring and feature development with specialized AI 
 
 ## Overview
 
-The Refactor plugin provides two skills sharing eight specialist agents:
+The Refactor plugin provides three skills sharing twelve specialist agents:
 
 ### `/refactor` — Iterative Code Improvement
 Systematically improves code quality while preserving functionality through iterative architect → code → test → review → simplify cycles.
 
 ### `/feature-dev` — Guided Feature Development
 Builds new features through interactive phases: requirement elicitation (95% confidence gate), parallel codebase exploration, architecture design with user selection, implementation, and multi-perspective quality review.
+
+### `/test-gen` — Test Architecture
+Generates scientifically grounded test suites using equivalence class partitioning, boundary value analysis, property-based testing, and mutation-aware assertions. Also available as `/test-plan` (plan only) and `/test-eval` (evaluate existing tests).
 
 ### Agents
 
@@ -33,6 +36,10 @@ Builds new features through interactive phases: requirement elicitation (95% con
 - **feature-code** — Implements new features from architecture blueprints
 - **simplifier** — Simplifies code for clarity, consistency, and maintainability
 - **convergence-reporter** — Analyzes autonomous convergence loop results and produces reports
+- **test-planner** — Analyzes source code to produce JSON test plans using formal testing techniques
+- **test-writer** — Generates idiomatic TDD red-phase test code from test plans
+- **test-rigor-reviewer** — Scores test quality (0.0-1.0) and detects anti-patterns
+- **coverage-analyst** — Runs native coverage tools and recommends gap-closing tests
 
 ## How It Works
 
@@ -101,6 +108,12 @@ Both workflows use swarm orchestration (TeamCreate, TaskCreate/TaskUpdate, SendM
 # Feature development
 /feature-dev "add webhook support for event notifications"
 /feature-dev "implement rate limiting middleware"
+
+# Test architecture
+/test-gen src/utils/
+/test-plan src/auth/
+/test-eval tests/
+/test-gen --coverage src/
 ```
 
 ## Installation
@@ -119,9 +132,10 @@ claude --plugin-dir /path/to/refactor
 
 ## Features
 
-- **Two Skills** — `/refactor` for iterative quality improvement, `/feature-dev` for guided new feature development.
+- **Three Skills** — `/refactor` for iterative quality improvement, `/feature-dev` for guided new feature development, `/test-gen` for scientifically grounded test generation.
 - **Autonomous Convergence** — `--autonomous` flag for Karpathy autoresearch-style improvement loops with composite scoring, keep/discard gating, and automatic convergence detection.
-- **8 Specialist Agents** — Shared agent pool with multi-instance parallel spawning.
+- **12 Specialist Agents** — Shared agent pool with multi-instance parallel spawning.
+- **Test Architecture** — Formal test design: equivalence class partitioning, boundary value analysis, property-based testing, mutation-aware assertions with rigor scoring.
 - **Blackboard Context Sharing** — All agents read/write to a shared blackboard for context distribution.
 - **Interactive Gates** — Feature-dev includes 95% confidence elicitation, architecture selection, and review disposition.
 - **Multi-Instance Spawning** — Same agent runs as N parallel instances with different focuses (e.g., 3 explorers, 3 architects).
@@ -133,22 +147,28 @@ claude --plugin-dir /path/to/refactor
 
 ## Documentation
 
+Full documentation index with coverage matrix: **[docs/README.md](docs/README.md)**
+
 | Document | Quadrant | Description |
 |----------|----------|-------------|
-| [Tutorial: Your First Refactor](docs/tutorial.md) | Tutorial | Guided walkthrough from install to report review |
-| [Tutorial: Your First Feature Development](docs/tutorial-feature-dev.md) | Tutorial | Build a new feature with /feature-dev |
-| [Tutorial: Your First Autonomous Refactor](docs/tutorial-autonomous.md) | Tutorial | Run an unattended convergence loop with --autonomous |
-| [How to Configure Commit Strategies](docs/guides/configure-commits.md) | How-to | Set up commits, PRs, and report publishing |
-| [How to Scope Refactoring](docs/guides/scope-refactoring.md) | How-to | Choose effective scopes for different project sizes |
-| [How to Run Focused Refactoring](docs/guides/focus-refactoring.md) | How-to | Constrain runs to specific disciplines with --focus |
-| [How to Develop Features](docs/guides/use-feature-dev.md) | How-to | Practical guide to /feature-dev scenarios |
+| [Your First Refactor](docs/tutorials/tutorial.md) | Tutorial | Guided walkthrough from install to report review |
+| [Your First Feature Development](docs/tutorials/tutorial-feature-dev.md) | Tutorial | Build a new feature with /feature-dev |
+| [Your First Autonomous Refactor](docs/tutorials/tutorial-autonomous.md) | Tutorial | Run an unattended convergence loop with --autonomous |
+| [Your First Test Architecture](docs/tutorials/tutorial-test-architect.md) | Tutorial | Generate a scientifically grounded test suite with /test-gen |
+| [Configure Commit Strategies](docs/guides/configure-commits.md) | How-to | Set up commits, PRs, and report publishing |
+| [Scope Refactoring](docs/guides/scope-refactoring.md) | How-to | Choose effective scopes for different project sizes |
+| [Run Focused Refactoring](docs/guides/focus-refactoring.md) | How-to | Constrain runs to specific disciplines with --focus |
+| [Develop Features](docs/guides/use-feature-dev.md) | How-to | Practical guide to /feature-dev scenarios |
+| [Use Autonomous Mode](docs/guides/use-autonomous-mode.md) | How-to | Configure weights, thresholds, and iteration counts |
+| [Generate and Evaluate Tests](docs/guides/use-test-gen.md) | How-to | Run /test-gen, /test-plan, and /test-eval |
+| [Evaluate Test Quality](docs/guides/evaluate-test-quality.md) | How-to | Interpret rigor scores and fix anti-patterns |
 | [Troubleshooting](docs/guides/troubleshooting.md) | How-to | Diagnose and resolve common problems |
-| [Configuration Reference](docs/reference/configuration.md) | Reference | Full config schema, fields, and examples |
-| [Agent Reference](docs/reference/agents.md) | Reference | Agent specifications, tools, and invocation points |
-| [Quality Score Reference](docs/reference/quality-scores.md) | Reference | Scoring rubrics and criteria |
-| [How to Use Autonomous Mode](docs/guides/use-autonomous-mode.md) | How-to | Run unattended convergence loops with --autonomous |
-| [Swarm Orchestration Design](docs/explanation/architecture.md) | Explanation | Why the plugin works this way |
+| [Configuration Reference](docs/reference/configuration.md) | Reference | Full config schema, CLI flags, and examples |
+| [Agent Reference](docs/reference/agents.md) | Reference | All 12 agent specifications, tools, and invocation points |
+| [Quality Score Reference](docs/reference/quality-scores.md) | Reference | Scoring rubrics: Clean Code, Architecture, Security, Rigor, Coverage |
+| [Swarm Orchestration Design](docs/explanation/architecture.md) | Explanation | Agent roles, parallel execution, version history |
 | [Autonomous Convergence](docs/explanation/autonomous-convergence.md) | Explanation | The keep/discard scoring pattern and convergence detection |
+| [Test Design Techniques](docs/explanation/test-design-techniques.md) | Explanation | Why formal testing techniques produce better tests |
 
 ## FAQ
 
