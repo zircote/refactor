@@ -52,6 +52,21 @@ Parse `$ARGUMENTS` for the following flags **before** any other processing:
 
 After extracting flags, the remaining `$ARGUMENTS` is interpreted as the target branch name. If empty, the target branch defaults to the repository's default branch (usually `main`).
 
+### Natural Language Intent Mapping
+
+When the user's prompt is natural language (not a `/pr` slash command), infer flag equivalents from their intent **before** entering the workflow:
+
+| User says (examples) | Equivalent flag | Variable to set |
+|---|---|---|
+| "skip the draft", "mark it ready", "not a draft", "ready immediately", "no draft" | `--no-draft` | `no_draft = true` |
+| "update the PR", "push new commits to the PR", "add to the existing PR" | `--update` | `mode = "update"` |
+| "mark PR ready", "convert to ready", "ready for review" (existing PR) | `--ready` | `mode = "ready"` |
+| "open in browser", "use the web form" | `--web` | `web_mode = true` |
+| "auto-fill from commits", "use commit messages" | `--fill` | `fill_mode = true` |
+| "PR to develop", "target staging", "base branch is release" | (target branch) | `TARGET_BRANCH = <branch>` |
+
+Apply these inferences alongside explicit flag parsing. When the user mentions a specific branch name as the target (e.g., "open a PR to develop"), use that as the target branch regardless of whether it was passed as `$ARGUMENTS` or mentioned in natural language.
+
 ## Phase 0: Pre-flight Checks
 
 Run these checks sequentially. Abort with a clear error if any fail.

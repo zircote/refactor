@@ -81,17 +81,45 @@ Remove any protected branches (see list above) from the stale branch list. Deter
 git branch --show-current
 ```
 
-### Step 4: Display Results
+### Step 4: Count and Categorize Results
 
-If no stale branches remain after filtering:
-- Print "No stale branches found." and stop.
+After filtering, compute these counts:
+- **total_stale**: Number of branches with gone upstream (before filtering)
+- **protected_stale**: Number of stale branches that are protected (filtered out)
+- **eligible**: Number of stale branches eligible for deletion (total_stale - protected_stale)
 
-If all stale branches are protected:
-- Print "All stale branches are protected — nothing to delete." and stop.
+Report the count: "Found N stale branch(es)." (where N = total_stale)
 
-Otherwise, list the stale branches clearly, marking any that were filtered as protected.
+Also show a brief **branch summary table** listing all local branches with their tracking status. This helps the user understand the overall state. Example format:
 
-### Step 5: Dry-Run vs Force
+```
+Branch Summary:
+  main                    → origin/main (tracking)
+  feat/old-feature        → origin/feat/old-feature [gone] ← STALE
+  feat/current-work       → origin/feat/current-work (tracking, current)
+```
+
+This table makes the prune candidates visible at a glance, even when the list is empty.
+
+### Step 5: Display Results Based on Counts
+
+**Case A — No stale branches found** (total_stale == 0):
+- Print "No stale branches found."
+- If MODE is `dry-run`, ALWAYS print: "Run `/prune --force` to delete stale branches when they exist."
+- If MODE is `force`, explain: "No stale branches to delete. When stale branches exist, `/prune --force` will prompt for confirmation before deleting each one with `git branch -d`, and report results."
+- Stop.
+
+**Case B — All stale branches are protected** (eligible == 0, protected_stale > 0):
+- List the protected stale branches and explain they are protected.
+- Print "All stale branches are protected — nothing to delete."
+- Do NOT prompt for deletion confirmation since there are no eligible branches.
+- Stop.
+
+**Case C — Some eligible stale branches exist** (eligible > 0):
+- List the eligible stale branches clearly.
+- If any stale branches were filtered as protected, list them separately with a note that they are protected and were skipped.
+
+### Step 6: Dry-Run vs Force (only reached in Case C)
 
 **If MODE is `dry-run`** (default):
 - Display the list of stale branches that would be deleted.
@@ -100,28 +128,32 @@ Otherwise, list the stale branches clearly, marking any that were filtered as pr
 
 **If MODE is `force`**:
 - Display the list of branches that will be deleted.
-- Ask the user for confirmation before proceeding: "Delete these N branches? (y/n)"
+- Ask the user for explicit confirmation before proceeding: "Delete these N branches? (y/n)"
 - Wait for explicit user confirmation before deleting anything.
+- Do NOT delete anything without the user saying yes.
 
-### Step 6: Delete Branches
+### Step 7: Delete Branches (force mode only, after user confirms)
 
-For each confirmed branch, attempt deletion with safe delete:
+For each confirmed branch, attempt deletion with safe delete first:
 
 ```bash
 git branch -d <branch>
 ```
 
-If a branch is not fully merged and `-d` fails:
-- Warn the user that the branch is not fully merged.
-- Offer to force-delete with `git branch -D <branch>`.
-- Only force-delete if the user explicitly confirms.
+**Critical: Handle unmerged branches safely.** If `git branch -d` fails because the branch is not fully merged:
+1. Warn the user clearly: "Branch `<name>` is not fully merged and cannot be safely deleted."
+2. Ask the user explicitly: "Force-delete `<name>` with `git branch -D`? This cannot be undone. (y/n)"
+3. Only run `git branch -D <branch>` if the user explicitly confirms with yes.
+4. If the user declines, skip that branch and continue to the next.
+5. **NEVER force-delete an unmerged branch without explicit per-branch user consent.**
 
-### Step 7: Report Results
+### Step 8: Report Results
 
 After all deletions are attempted, report:
-- **Deleted**: branches successfully removed
-- **Skipped**: branches the user chose not to force-delete
-- **Protected**: branches that were excluded from deletion
+- **Deleted**: branches successfully removed (list names)
+- **Skipped**: branches the user chose not to force-delete (list names)
+- **Protected**: branches that were excluded from deletion (list names)
+- **Total**: summary count of each category
 
 ## Edge Cases
 

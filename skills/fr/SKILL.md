@@ -121,13 +121,15 @@ On success, show the result:
 git log --oneline -5
 ```
 
-Report: number of commits rebased, current HEAD position, and whether a stash pop is pending.
+To compute the number of commits replayed, count the local commits identified in Step 2 (the output of `git log --oneline ${REMOTE}/${BRANCH}..HEAD` before the rebase). Report this count explicitly, e.g., "Rebased 3 commits onto origin/main." Also report the current HEAD position from the log output above.
 
 If a stash was created in pre-flight, pop it now:
 
 ```bash
 git stash pop
 ```
+
+**Warning**: If the stash pop encounters conflicts (because the rebased code changed the same files you had uncommitted changes in), git will report merge conflicts. Resolve them manually. The stash will remain in the stash list — use `git stash drop` after resolving, or `git stash pop` again once conflicts are resolved.
 
 ## Conflict Resolution
 

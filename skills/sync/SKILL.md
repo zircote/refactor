@@ -35,21 +35,25 @@ Related:
 
 ## Arguments
 
-- **REMOTE**: First argument. Defaults to `origin`.
-- **BRANCH**: Second argument. Defaults to the current branch's upstream tracking branch. If no upstream is configured, fall back to the current branch name.
+Parse the user's input to extract remote and branch:
+
+- **REMOTE**: First positional argument, OR extracted from context (e.g., "origin/main" means REMOTE=origin). Defaults to `origin`.
+- **BRANCH**: Second positional argument, OR extracted from context (e.g., "origin/main" means BRANCH=main, "with main" means BRANCH=main). Defaults to the current branch's upstream tracking branch. If no upstream is configured, fall back to the current branch name.
+
+When the user says things like "sync with main", "sync against develop", or "pull from origin/main", parse these naturally to extract REMOTE and BRANCH.
 
 ## Pre-flight Checks
 
 ### 1. Uncommitted Changes
 
-Run `git status --porcelain`. If output is non-empty:
+Run `git status --porcelain`. If output is non-empty (any modified, added, or deleted tracked files):
 
 Present the user with three options:
 - **A) Stash, sync, pop** — Run `git stash push -m "sync-auto-stash"`, perform the sync, then `git stash pop`.
 - **B) Abort** — Stop immediately.
 - **C) Proceed anyway** — Continue with dirty working tree (warn that rebase may fail).
 
-Wait for the user's choice before continuing.
+**IMPORTANT**: You MUST wait for the user's explicit choice before continuing. Do NOT assume a choice. Do NOT skip this step. Present the options and stop until the user responds.
 
 ### 2. Rebase in Progress
 
@@ -66,56 +70,73 @@ If BRANCH was not specified:
 
 ## Workflow
 
+Execute ALL steps in sequence. Report the result of EVERY step to the user, even when the result is "nothing to do". This is critical for the user to understand what happened.
+
 ### Step 1: Fetch
 
 ```bash
 git fetch ${REMOTE}
 ```
 
-Report the fetch result. If fetch fails, abort with the error message.
+Report the fetch result explicitly. State how many new objects/commits were fetched, or that the fetch found no new changes. If fetch fails (e.g., remote doesn't exist), abort with the error message and suggest fixes.
 
 ### Step 2: Show Divergence
 
+Always run BOTH commands and show their output:
+
+**Commits behind (upstream has, we don't):**
 ```bash
 git log --oneline HEAD..${REMOTE}/${BRANCH} | head -10
 ```
 
-Show the user how many commits they are behind. If zero commits behind, inform the user the branch is already up to date but continue (there may still be local commits to push).
-
-Also show how many local commits will be pushed:
-
+**Commits ahead (we have, upstream doesn't — these will be pushed):**
 ```bash
 git log --oneline ${REMOTE}/${BRANCH}..HEAD | head -10
 ```
 
+Report clearly:
+- "You are N commits behind ${REMOTE}/${BRANCH}" (or "Already up to date — no upstream changes")
+- "You have N local commits to push" (or "No local commits to push")
+
 ### Step 3: Rebase
 
+If there are upstream commits to incorporate:
 ```bash
 git rebase ${REMOTE}/${BRANCH}
 ```
 
-If the rebase completes cleanly, proceed to Step 4.
+If already up to date (0 commits behind), you may skip the rebase and report: "Skipping rebase — already up to date with ${REMOTE}/${BRANCH}."
 
 **Conflict Resolution**: If rebase encounters conflicts:
-1. Show the conflicting files: `git diff --name-only --diff-filter=U`
-2. Show the conflict markers in each file.
-3. Ask the user how to proceed:
+1. **HALT the sync pipeline immediately** — do NOT proceed to push.
+2. Show the conflicting files: `git diff --name-only --diff-filter=U`
+3. Show the conflict markers in each file.
+4. Provide conflict resolution guidance:
    - **Resolve manually** — The user will edit files; wait for them to indicate readiness, then `git add` resolved files and `git rebase --continue`.
    - **Abort** — Run `git rebase --abort` and stop the sync.
    - **Skip this commit** — Run `git rebase --skip` (warn about skipped changes).
-4. Repeat for each conflicting commit until the rebase completes or is aborted.
+5. Explicitly state: "The sync pipeline is halted. No push will happen until the rebase completes cleanly."
+6. Repeat for each conflicting commit until the rebase completes or is aborted.
 
 If the rebase was aborted, stop. If a stash was saved in pre-flight, pop it before stopping.
 
 ### Step 4: Confirm Before Push
 
-Show the user what will be pushed:
+**ALWAYS execute this step**, even if there are zero commits to push.
 
+Show the user what will be pushed:
 ```bash
 git log --oneline ${REMOTE}/${BRANCH}..HEAD
 ```
 
-Ask the user to confirm the push. Do NOT push without explicit confirmation.
+If there are commits to push:
+- List them clearly
+- Ask the user to confirm: "Push these N commit(s) to ${REMOTE}? (yes/no)"
+- Do NOT push without explicit confirmation.
+
+If there are zero commits to push:
+- Report: "No commits to push — your branch is already fully in sync with ${REMOTE}/${BRANCH}."
+- Skip the push step (no confirmation needed when nothing to push).
 
 If the user declines, stop. If a stash was saved in pre-flight, pop it.
 
@@ -125,9 +146,11 @@ If the user declines, stop. If a stash was saved in pre-flight, pop it.
 git push ${REMOTE} HEAD
 ```
 
-Do NOT use `--force` unless the user explicitly requests it. If the push is rejected (e.g., non-fast-forward), inform the user and suggest options:
-- Re-run `/sync` to incorporate new remote changes.
-- Use `--force` only if they are certain (and warn about the risks).
+Do NOT use `--force` or `--force-with-lease` unless the user has EXPLICITLY and DIRECTLY requested force-pushing. Speculative mentions like "I think the push might need a force" or "it might need --force" are NOT explicit requests — they are observations. Only treat a clear directive like "force push it" or "use --force" as an explicit request.
+
+If the push is rejected (e.g., non-fast-forward), inform the user and suggest:
+- **Primary recommendation**: Re-run `/sync` to incorporate new remote changes that may have caused the rejection.
+- **Secondary note**: Mention that `--force` exists as an option but do NOT offer to run it. Instead, tell the user they can re-invoke `/sync` with an explicit force flag if needed. Warn about the risks of rewriting remote history.
 
 ### Step 6: Report
 
@@ -137,16 +160,16 @@ Show final status:
 git status
 ```
 
-Report success. Summarize what happened:
-- How many commits were fetched/rebased.
-- How many commits were pushed.
-- Current branch and tracking status.
+Report success with a clear summary. ALWAYS include these details:
+- How many commits were fetched/rebased (even if 0)
+- How many commits were pushed (even if 0)
+- Current branch and tracking status
 
 If a stash was saved in pre-flight, pop it now with `git stash pop` and report any stash-pop conflicts.
 
 ## Notes
 
-- Always confirm before pushing.
+- Always confirm before pushing (when there are commits to push).
 - Do NOT use `--force` push unless the user explicitly requests it.
 - This is the full cycle; use `/fr` for just fetch+rebase without the push step.
 - Use `/ff` for fast-forward merge workflows instead of rebase.

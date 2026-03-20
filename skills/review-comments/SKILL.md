@@ -26,6 +26,7 @@ OPTIONS
   --interactive       Interactive mode (default); prompt for each comment below threshold
   --confidence=N      Minimum confidence (0-100) to auto-accept in --auto mode (default: 85)
   --dry-run           Show proposed actions without executing any changes or replies
+  --score-only        Fetch, categorize, and score comments; do not remediate, reply, or resolve
 
 DESCRIPTION
   Fetches all review comments on a PR, scores each for validity, remediates
@@ -53,6 +54,7 @@ EXAMPLES
   /review-comments --auto              # current branch PR, auto mode
   /review-comments 42 --auto --confidence=75
   /review-comments --dry-run           # preview without changes
+  /review-comments --score-only        # just show scores, no changes
 
 SEE ALSO
   /pr        Create and manage pull requests
@@ -75,7 +77,16 @@ Parse `$ARGUMENTS` for the following **before** any other processing:
 
 - `--dry-run` — Show all proposed actions (edits, replies, resolutions) without executing them. No files are modified, no comments are posted, no threads are resolved.
 
+- `--score-only` — Assessment-only mode. Fetch, categorize, and score all comments, then stop after presenting the results. Do NOT proceed to remediation (Phase 4), response posting (Phase 5), or thread resolution (Phase 6). This mode is read-only — no files are edited, no comments are posted, no threads are resolved. Use this when the user just wants to see the breakdown and scores without taking action.
+
+**Intent detection**: If the user's natural language prompt indicates they only want to see scores or assessments WITHOUT taking action (e.g., "just score them", "I just want the breakdown", "don't change anything yet", "show me what they said"), treat the request as if `--score-only` was passed, even if the flag was not explicitly provided. Look for these signals:
+  - "just score" / "just show" / "just want to see"
+  - "don't change anything" / "don't fix anything"
+  - "let me decide" (without "help me decide" which implies interactive processing)
+  - "read-only" / "assessment only" / "breakdown only"
+
 If both `--auto` and `--interactive` are present, `--interactive` wins.
+If `--score-only` is present, it overrides both `--auto` and `--interactive` — only Phases 1-2 execute, plus a score presentation.
 
 ## Phase 1: Context Gathering
 
@@ -213,6 +224,16 @@ Score each comment on four dimensions (0-100 each):
 
 **Composite score** = (Technical Accuracy * 0.40) + (Relevance * 0.25) + (Impact * 0.20) + (Feasibility * 0.15)
 
+### Step 2.2.1: Per-Dimension Flagging
+
+After scoring, flag comments that have notably low scores on individual dimensions, regardless of composite score. This helps users quickly identify specific quality concerns:
+
+- **Low Technical Accuracy flag** (< 50): The reviewer's observation may be factually incorrect. Flag with "⚠ Low accuracy — reviewer claim may be wrong". This is especially important when users indicate they want to validate reviewer accuracy.
+- **Low Relevance flag** (< 40): The comment may not be relevant to this PR's changes.
+- **Low Impact flag** (< 30): The issue is likely cosmetic or stylistic rather than substantive.
+
+When presenting comments (in Phase 3 or score-only output), show dimension flags prominently alongside the composite classification. Group or highlight low-accuracy comments separately when the user's prompt suggests accuracy validation is a priority (e.g., "flag anything that looks wrong", "might not be accurate").
+
 ### Step 2.3: Classify Disposition
 
 Based on the composite score:
@@ -238,6 +259,17 @@ Store the assessment for each comment:
 }
 ```
 
+### Score-Only Gate
+
+If `--score-only` mode is active (either via flag or intent detection):
+
+1. Present the Phase 1 summary (comment counts by category).
+2. Present each comment's full assessment: category, all 4 dimension scores, composite score, classification, reasoning, and any dimension flags from Step 2.2.1.
+3. Show a summary table of all comments sorted by composite score.
+4. **STOP HERE**. Do NOT proceed to Phase 3 or any subsequent phase. No decisions are made, no files are edited, no comments are posted, no threads are resolved.
+
+The user can then follow up with further instructions to act on specific comments.
+
 ## Phase 3: Decision Workflow
 
 ### Step 3.1: Process Decisions
@@ -245,10 +277,13 @@ Store the assessment for each comment:
 Iterate through all assessed comments, ordered by classification (Blockers first, then by descending composite score):
 
 **Interactive mode** (default):
+
+Use the `AskUserQuestion` tool (or equivalent user-prompting mechanism) to present each comment that requires a decision. For each comment below Strong Accept and above Strong Reject, explicitly ask the user and wait for their response before proceeding.
+
 - **Strong Accept** (>= 90): Accept automatically. Inform user: "Auto-accepting: [comment summary] (confidence: N%)"
-- **Accept** (75-89): Present to user with assessment. Ask: "Accept this finding? [Yes/No/Skip]"
-- **Uncertain** (50-74): Present to user with detailed reasoning. Ask: "This finding is uncertain. Accept, reject, or skip? [Accept/Reject/Skip]"
-- **Likely Reject** (25-49): Present to user with reasoning for rejection. Ask: "This finding is likely invalid. Accept anyway, reject, or skip? [Accept/Reject/Skip]"
+- **Accept** (75-89): Present to user with assessment and all 4 dimension scores. Use AskUserQuestion: "Accept this finding? [Yes/No/Skip]"
+- **Uncertain** (50-74): Present to user with detailed reasoning and dimension breakdown. Use AskUserQuestion: "This finding is uncertain. Accept, reject, or skip? [Accept/Reject/Skip]"
+- **Likely Reject** (25-49): Present to user with reasoning for rejection and dimension breakdown. Use AskUserQuestion: "This finding is likely invalid. Accept anyway, reject, or skip? [Accept/Reject/Skip]"
 - **Strong Reject** (< 25): Reject automatically. Inform user: "Auto-rejecting: [comment summary] (confidence: N%)"
 
 **Auto mode** (`--auto`):
@@ -367,6 +402,8 @@ gh api repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments \
 ## Phase 6: Resolution and Summary
 
 ### Step 6.1: Resolve Addressed Threads (MANDATORY)
+
+**Dry-run mode**: Skip this step entirely — do NOT resolve any threads. Instead, list the threads that would be resolved and proceed to Step 6.3.
 
 For every comment with disposition `accepted`, `accepted-modified`, or `acknowledged` (for approvals), resolve the corresponding review thread using the GraphQL mutation.
 

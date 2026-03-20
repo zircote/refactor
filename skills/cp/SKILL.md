@@ -96,8 +96,10 @@ If `$ARGUMENTS` provided a commit message, use it directly. Otherwise:
 
 ## Step 3: Stage and Commit
 
-1. Stage files using `git add` with explicit file paths (never `git add -A` or `git add .`).
+1. Stage files using `git add` with explicit **individual file paths** (never `git add -A`, `git add .`, or directory paths like `git add src/models/`).
+   - List every file individually: `git add path/to/file1.ts path/to/file2.ts`
    - Stage only the files identified in Step 1, excluding any confidential files.
+   - Even when adding many files in a new directory, enumerate each file explicitly.
 2. Commit using `git commit -m` with a HEREDOC for proper formatting:
    ```bash
    git commit -m "$(cat <<'EOF'
