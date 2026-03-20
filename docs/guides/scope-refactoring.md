@@ -11,7 +11,7 @@ This guide shows you how to choose the right refactoring scope to get the best r
 
 ## Prerequisites
 
-- Refactor plugin installed and working (see [Tutorial](../tutorial.md))
+- Refactor plugin installed and working (see [Tutorial](../tutorials/tutorial.md))
 - Familiarity with your project's directory structure
 
 ## Steps

@@ -203,9 +203,10 @@ You have:
 ## Next steps
 
 - [Tutorial: Your First Refactor](tutorial.md) — learn the /refactor workflow
-- [Configuration Reference](reference/configuration.md) — customize agent counts, commit strategy, and PR settings in `featureDev` config
-- [Agent Reference](reference/agents.md) — details on each specialist agent's role
-- [Architecture: Swarm Orchestration Design](explanation/architecture.md) — understand how blackboard sharing and multi-instance spawning work under the hood
+- [Configuration Reference](../reference/configuration.md) — customize agent counts, commit strategy, and PR settings in `featureDev` config
+- [Agent Reference](../reference/agents.md) — details on each specialist agent's role
+- [Architecture: Swarm Orchestration Design](../explanation/architecture.md) — understand how blackboard sharing and multi-instance spawning work under the hood
 - [Tutorial: Your First Autonomous Refactor](tutorial-autonomous.md) — run unattended convergence loops
-- [How to Use Autonomous Mode](guides/use-autonomous-mode.md) — use `--autonomous` with `/feature-dev`
-- [How to Scope Refactoring Effectively](guides/scope-refactoring.md) — strategies for large codebases (applies to both skills)
+- [How to Use Autonomous Mode](../guides/use-autonomous-mode.md) — use `--autonomous` with `/feature-dev`
+- [How to Scope Refactoring Effectively](../guides/scope-refactoring.md) — strategies for large codebases (applies to both skills)
+- [Tutorial: Your First Test Architecture](tutorial-test-architect.md) — generate and evaluate tests with `/test-gen` and `/test-eval`

@@ -220,12 +220,28 @@ Valid focus values and their effect on agent spawning:
 | `simplification` | simplifier |
 | `code` | architect + code-reviewer |
 | `discovery` | code-explorer |
+| `testing` | test-planner, test-writer, test-rigor-reviewer, coverage-analyst |
 
 The refactor-test and refactor-code agents always spawn regardless of focus.
 
 When `--focus` is provided, the default iteration count changes to **1** (overridable with `--iterations=N`).
 
 Multiple focus values are combined as a union: `--focus=security,architecture` spawns both code-reviewer and architect in addition to the always-present pair.
+
+## Test-Architect Configuration (`testArchitect`)
+
+The `/test-gen`, `/test-plan`, and `/test-eval` commands use project auto-detection and require no configuration file. Language, test framework, and coverage tool are detected automatically from project files (Cargo.toml, pyproject.toml, package.json, go.mod).
+
+### Detection Defaults
+
+| Language | Test Runner | Coverage Tool | Property Library |
+|----------|------------|---------------|-----------------|
+| Rust | cargo test | cargo-tarpaulin | proptest |
+| Python | pytest | coverage.py | hypothesis |
+| TypeScript | vitest | c8 | fast-check |
+| Go | go test | go tool cover | rapid |
+
+No configuration key exists in `.claude/refactor.config.json` for test-architect — all settings are auto-detected. If you need to override detection, specify the target path explicitly in the command arguments.
 
 ## Autonomous Mode Configuration (`autonomous`)
 
@@ -280,4 +296,5 @@ Weights must sum to 1.0.
 - [How to Use Autonomous Mode](../guides/use-autonomous-mode.md)
 - [Understanding Autonomous Convergence](../explanation/autonomous-convergence.md)
 - [How to Configure Commit Strategies](../guides/configure-commits.md)
-- [Tutorial: Your First Refactor](../tutorial.md)
+- [How to Generate and Evaluate Tests](../guides/use-test-gen.md)
+- [Tutorial: Your First Refactor](../tutorials/tutorial.md)

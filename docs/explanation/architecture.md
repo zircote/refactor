@@ -25,9 +25,9 @@ The refactoring process has a natural structure: some tasks are independent (tes
 
 The alternative — a linear pipeline where each agent waits for the previous one — wastes time during independent phases. In the swarm model, Phase 1 and Phase 3 each run up to three agents in parallel, reducing wall-clock time for those phases.
 
-## The eight agents and their roles
+## The twelve agents and their roles
 
-The decision to use eight specialized agents (six for /refactor standard mode, seven with convergence-reporter in autonomous mode, five+ for /feature-dev) rather than a single general-purpose agent reflects a separation of concerns:
+The decision to use twelve specialized agents (six for /refactor standard mode, seven with convergence-reporter in autonomous mode, five+ for /feature-dev, four for /test-architect) rather than a single general-purpose agent reflects a separation of concerns:
 
 - **Code-Explorer** — Runs first (Phase 0.5). Deep codebase analysis producing a structured map consumed by all downstream agents. This eliminates redundant discovery work — agents start with shared understanding rather than each independently exploring the codebase.
 - **Architect** — Read-only analysis. Cannot modify files. This constraint prevents the planning agent from making changes that bypass the test-verify cycle.
@@ -183,8 +183,33 @@ The eighth agent was added specifically for autonomous mode. It reads the result
 
 For deeper coverage of the autonomous convergence pattern, see [Autonomous Convergence](autonomous-convergence.md).
 
+## v4.1.0: Test architecture and formal testing techniques
+
+**v4.1.0** adds the `/test-architect` skill with three commands (`/test-gen`, `/test-plan`, `/test-eval`) and four new specialist agents (test-planner, test-writer, test-rigor-reviewer, coverage-analyst).
+
+### Why add test architecture to a refactoring plugin?
+
+The agents developed for refactoring and feature development produce code — but who tests the tests? The existing refactor-test agent runs tests and checks coverage, but it does not evaluate *test quality*. A test suite with 100% coverage can still be worthless if every assertion is tautological.
+
+The test-architect skill addresses this gap with formal test design techniques: equivalence class partitioning, boundary value analysis, property-based testing, and mutation-aware assertions. These techniques produce tests that are systematically derived rather than ad-hoc, and the rigor reviewer scores each test on a 0.0-1.0 scale to quantify quality.
+
+### Four specialist agents
+
+The test-architect follows the same swarm orchestration pattern as /refactor and /feature-dev:
+
+- **Test-planner** (read-only) — analyzes source code to produce JSON test plans using formal techniques. Analogous to the architect agent: it plans but does not implement.
+- **Test-writer** (write-capable) — transforms JSON plans into idiomatic test code. Analogous to feature-code: it creates new files from specifications.
+- **Test-rigor-reviewer** (read-only) — audits test suites for scientific rigor. Analogous to code-reviewer: it gates quality without modifying code.
+- **Coverage-analyst** (read-only) — runs native coverage tools and recommends gap-closing tests. A new role without direct analogue in /refactor.
+
+### Swarm orchestration reuse
+
+The test-architect skill reuses the same orchestration primitives (TeamCreate, TaskCreate/TaskUpdate, SendMessage, blackboard) and team coordination patterns established in v2.0.0. The parallel execution point is Phase 3, where rigor review and coverage analysis run simultaneously — mirroring Phase 1 of /refactor where test analysis and architecture review run in parallel.
+
 ## Further reading
 
 - [Agent Reference](../reference/agents.md) — detailed agent specifications and tool lists
 - [Quality Score Reference](../reference/quality-scores.md) — scoring rubrics and criteria
-- [Tutorial: Your First Refactor](../tutorial.md) — see the orchestration in action
+- [Tutorial: Your First Refactor](../tutorials/tutorial.md) — see the orchestration in action
+- [Understanding Test Design Techniques](test-design-techniques.md) — formal testing technique rationale
+- [Tutorial: Your First Test Architecture](../tutorials/tutorial-test-architect.md) — see the test-architect in action

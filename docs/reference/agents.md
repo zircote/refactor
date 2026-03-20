@@ -5,10 +5,11 @@ diataxis_describes: refactor plugin agent specifications
 
 # Agent Reference
 
-The refactor plugin provides eight specialized agents shared between the `/refactor` and `/feature-dev` skills. Each agent has a defined role, tool set, and model assignment.
+The refactor plugin provides twelve specialized agents shared between the `/refactor`, `/feature-dev`, and `/test-architect` skills. Each agent has a defined role, tool set, and model assignment.
 
 The `/refactor` skill uses 6 agents (+ convergence-reporter in autonomous mode): code-explorer, architect, code-reviewer, refactor-test, refactor-code, simplifier.
 The `/feature-dev` skill uses 5 agents (+ convergence-reporter in autonomous mode): code-explorer, architect, code-reviewer, feature-code, refactor-test (plus simplifier and refactor-code for fix-ups).
+The `/test-architect` skill uses 4 agents: test-planner, test-writer, test-rigor-reviewer, coverage-analyst.
 
 ## Code-Explorer Agent
 
@@ -187,6 +188,10 @@ Some agents support multi-instance parallel spawning, where the same agent defin
 | refactor-test | No | `refactor-test` | Both skills |
 | simplifier | No | `simplifier` | /refactor Phase 2-3 |
 | convergence-reporter | No | `convergence-reporter` | Both skills (autonomous mode) |
+| test-planner | Yes | `test-planner-1`, `test-planner-2`, ... | /test-architect (multi-module) |
+| test-writer | No | `test-writer` | /test-architect |
+| test-rigor-reviewer | No | `test-rigor-reviewer` | /test-architect |
+| coverage-analyst | No | `coverage-analyst` | /test-architect |
 
 Instance counts are configurable via `config.featureDev.explorerCount`, `.architectCount`, `.reviewerCount` (default: 3 each). The skill scales counts based on feature complexity — simple features may use 1 instance instead of 3.
 
@@ -204,6 +209,10 @@ All agents share context through the Atlatl blackboard. Each agent has documente
 | refactor-test | `codebase_context` | `test_report` |
 | simplifier | `codebase_context` | `simplification_report` |
 | convergence-reporter | `convergence_data` | `convergence_report` |
+| test-planner | `codebase_context`, `feature_spec` | `test_plan` |
+| test-writer | `codebase_context`, `test_plan` | `test_generation_report` |
+| test-rigor-reviewer | `codebase_context`, `test_plan` | `test_rigor_report` |
+| coverage-analyst | `codebase_context`, `test_plan` | `coverage_report` |
 
 The blackboard enables write-once, read-many context sharing — the code-explorer writes the codebase map once and all downstream agents read it as needed.
 
@@ -228,6 +237,103 @@ The blackboard enables write-once, read-many context sharing — the code-explor
 **Output:** Convergence report (score trajectory, diff, weaknesses, recommendation) written to workspace and blackboard
 
 **Spawn timing:** Deferred — not spawned with the initial team, only when the convergence loop completes
+
+## Test-Planner Agent
+
+| Property | Value |
+|----------|-------|
+| Name | `test-planner` |
+| Model | `sonnet` |
+| Color | gold |
+
+**Role:** Read-only analysis producing JSON test plans from source code using formal techniques
+
+**Capabilities:** Equivalence class partitioning, boundary value analysis, state transition coverage, property-based test identification, JSON test plan generation
+
+**Tools:** Bash, Glob, Grep, Read, TodoWrite
+
+**Invoked during (/test-architect):**
+- Phase 1: Analyze target code and produce structured JSON test plan
+- Modes: `full`, `plan`
+
+**Output:** JSON test plan with test_cases, property_tests, coverage_targets, and technique_summary
+
+**Blackboard protocol:** Reads `codebase_context`, `feature_spec`. Writes `test_plan`.
+
+## Test-Writer Agent
+
+| Property | Value |
+|----------|-------|
+| Name | `test-writer` |
+| Model | `sonnet` |
+| Color | orange |
+
+**Role:** TDD red-phase test code generation from JSON test plans
+
+**Capabilities:** Idiomatic test code generation across Rust/Python/TypeScript/Go, mutation-aware assertions, property-based test implementation, framework-specific conventions
+
+**Tools:** Bash, Glob, Grep, Read, Write, Edit, TodoWrite
+
+**Invoked during (/test-architect):**
+- Phase 2: Generate test files implementing all planned test cases
+- Mode: `full` only
+
+**Output:** Test files following language conventions (Rust: `#[cfg(test)]` modules, Python: `test_*.py`, TypeScript: `*.test.ts`, Go: `*_test.go`)
+
+**Blackboard protocol:** Reads `codebase_context`, `test_plan`. Writes `test_generation_report`.
+
+## Test-Rigor-Reviewer Agent
+
+| Property | Value |
+|----------|-------|
+| Name | `test-rigor-reviewer` |
+| Model | `sonnet` |
+| Color | amber |
+
+**Role:** Read-only test quality auditor scoring tests against formal rigor criteria
+
+**Capabilities:** Anti-pattern detection (tautological assertions, weak generators, mutation-susceptible patterns), per-test 0.0-1.0 scoring, test plan cross-referencing, verdict assignment (PASS/NEEDS IMPROVEMENT/FAIL)
+
+**Tools:** Bash, Glob, Grep, Read, TodoWrite
+
+**Invoked during (/test-architect):**
+- Phase 3: Rigor review of generated or existing test suites
+- Modes: `full`, `eval`
+
+**Scoring rubric:** 1.0 (excellent, mutation-resistant) → 0.0 (useless, tautological)
+
+**Verdict criteria:**
+- PASS: Overall rigor >= 0.70, zero tautological tests
+- NEEDS IMPROVEMENT: Rigor 0.50-0.69 or 1-2 weak tests
+- FAIL: Rigor < 0.50 or any tautological assertions
+
+**Blackboard protocol:** Reads `codebase_context`, `test_plan`. Writes `test_rigor_report`.
+
+## Coverage-Analyst Agent
+
+| Property | Value |
+|----------|-------|
+| Name | `coverage-analyst` |
+| Model | `sonnet` |
+| Color | teal |
+
+**Role:** Coverage measurement, gap identification, and targeted test case recommendation
+
+**Capabilities:** Native coverage tool execution (cargo-tarpaulin, coverage.py, c8, go tool cover), coverage parsing, gap severity classification (critical/important/nice-to-have), test plan correlation, targeted test recommendations
+
+**Tools:** Bash, Glob, Grep, Read, TodoWrite
+
+**Invoked during (/test-architect):**
+- Phase 3: Coverage analysis (parallel with rigor review)
+- Phase 4: Standalone coverage analysis
+- Modes: `full`, `eval`, `coverage`
+
+**Verdict criteria:**
+- MEETS TARGET: Line >= 90% AND Branch >= 85% AND zero critical gaps
+- BELOW TARGET: Line or Branch below target but no critical gaps
+- CRITICAL GAPS: Any critical-severity uncovered regions
+
+**Blackboard protocol:** Reads `codebase_context`, `test_plan`. Writes `coverage_report`.
 
 ## Code-Reviewer Mode 5: Autonomous Scoring
 
@@ -262,3 +368,5 @@ When running in autonomous mode, refactor-test writes a standardized `test-resul
 - [Architecture: Swarm Orchestration Design](../explanation/architecture.md)
 - [Quality Score Reference](quality-scores.md)
 - [How to Develop Features](../guides/use-feature-dev.md)
+- [Quality Score Reference: Rigor Scores](quality-scores.md#test-rigor-score) — rigor scoring rubric for test quality
+- [Tutorial: Your First Test Architecture](../tutorials/tutorial-test-architect.md) — see the test-architect in action

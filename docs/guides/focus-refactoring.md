@@ -11,7 +11,7 @@ The `--focus` flag constrains a refactoring run to specific disciplines, spawnin
 
 ## Prerequisites
 
-- Refactor plugin installed and working (see [Tutorial](../tutorial.md))
+- Refactor plugin installed and working (see [Tutorial](../tutorials/tutorial.md))
 - Familiarity with the agent roles (see [Agent Reference](../reference/agents.md))
 
 ## Focus areas
@@ -23,6 +23,7 @@ The `--focus` flag constrains a refactoring run to specific disciplines, spawnin
 | `simplification` | refactor-test, refactor-code, simplifier | Simplification |
 | `code` | refactor-test, refactor-code, architect, code-reviewer | Clean Code, Architecture, Security Posture |
 | `discovery` | refactor-test, refactor-code, code-explorer | (Discovery only — codebase map) |
+| `testing` | test-planner, test-writer, test-rigor-reviewer, coverage-analyst | Test Rigor, Coverage |
 | (none) | all 6 | Clean Code, Architecture, Security Posture |
 
 The refactor-test and refactor-code agents always spawn regardless of focus. They provide the safety net (tests must pass) and fix capability (resolve failures).
@@ -86,6 +87,7 @@ Focused runs default to 1 iteration. Override with `--iterations`:
 | Quick cleanup of messy code | `--focus=simplification` |
 | Full refactor with code improvements | `--focus=code` or no flag |
 | Pre-merge security + architecture check | `--focus=security,architecture` |
+| Test quality audit and gap analysis | `--focus=testing` |
 
 ## Related
 
@@ -93,3 +95,4 @@ Focused runs default to 1 iteration. Override with `--iterations`:
 - [Quality Score Reference](../reference/quality-scores.md) — scoring rubrics for each focus mode
 - [How to Scope Refactoring Effectively](scope-refactoring.md) — complementary to focus narrowing
 - [Troubleshooting](troubleshooting.md) — common focus mode issues
+- [How to Generate and Evaluate Tests](use-test-gen.md) — test-architect commands and workflows

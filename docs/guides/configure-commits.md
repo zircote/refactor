@@ -11,7 +11,7 @@ This guide shows you how to set up automatic commits, pull requests, and report 
 
 ## Prerequisites
 
-- Refactor plugin installed and working (see [Tutorial](../tutorial.md))
+- Refactor plugin installed and working (see [Tutorial](../tutorials/tutorial.md))
 - Git repository with a remote configured
 - [GitHub CLI](https://cli.github.com/) (`gh`) installed and authenticated (for PR and publishing features)
 
@@ -114,4 +114,4 @@ All GitHub operations are non-blocking — failures log a warning but do not sto
 ## Related
 
 - [Configuration Reference](../reference/configuration.md) — full schema and field details
-- [Tutorial: Your First Refactor](../tutorial.md) — getting started
+- [Tutorial: Your First Refactor](../tutorials/tutorial.md) — getting started

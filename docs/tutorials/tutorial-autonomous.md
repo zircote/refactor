@@ -145,7 +145,8 @@ You have:
 
 ## Next steps
 
-- [How to Use Autonomous Mode](guides/use-autonomous-mode.md) — configure weights, thresholds, and iteration counts
-- [Understanding Autonomous Convergence](explanation/autonomous-convergence.md) — the design rationale behind the pattern
+- [How to Use Autonomous Mode](../guides/use-autonomous-mode.md) — configure weights, thresholds, and iteration counts
+- [Understanding Autonomous Convergence](../explanation/autonomous-convergence.md) — the design rationale behind the pattern
 - [Tutorial: Your First Refactor](tutorial.md) — learn the standard (non-autonomous) workflow
-- [Configuration Reference](reference/configuration.md) — all autonomous config options
+- [Configuration Reference](../reference/configuration.md) — all autonomous config options
+- [Tutorial: Your First Test Architecture](tutorial-test-architect.md) — generate scientifically grounded test suites with `/test-gen`

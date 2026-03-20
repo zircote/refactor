@@ -11,7 +11,7 @@ The `--autonomous` flag replaces the fixed iteration loop with a Karpathy autore
 
 ## Prerequisites
 
-- Refactor plugin v4.0.0+ installed and working (see [Tutorial](../tutorial.md))
+- Refactor plugin v4.0.0+ installed and working (see [Tutorial](../tutorials/tutorial.md))
 - A git repository with source code (autonomous mode uses git branches for snapshots)
 - Familiarity with the standard `/refactor` or `/feature-dev` workflow
 

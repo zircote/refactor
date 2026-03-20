@@ -104,6 +104,69 @@ Evaluates: naming clarity, control flow simplicity, redundancy, style consistenc
 - `--focus=simplification`: yes
 - All other modes: no (simplifier runs but does not produce a standalone score)
 
+## Test Rigor Score (0.0--1.0)
+
+Evaluates: assertion strength, boundary coverage, mutation resistance, anti-pattern absence, property test quality. Produced by the test-rigor-reviewer agent during `/test-gen` and `/test-eval`.
+
+| Score | Rating | Criteria |
+|-------|--------|----------|
+| 0.9--1.0 | Excellent | Grounded in formal technique, mutation-resistant, tests one clear behavior |
+| 0.8--0.89 | Good | Solid test with minor improvements possible |
+| 0.6--0.79 | Adequate | Tests real behavior but has gaps (missing boundary, weak assertion) |
+| 0.4--0.59 | Weak | Susceptible to mutations or missing key scenarios |
+| 0.2--0.39 | Poor | Minimal value — identity check, overly broad assertion |
+| 0.0--0.19 | Useless | Tautological, cannot fail, or tests nothing meaningful |
+
+### Anti-Pattern Taxonomy
+
+| Anti-Pattern | Score Range | Example |
+|-------------|------------|---------|
+| Tautological assertion | 0.0--0.2 | `assert x == x`, `assert len(result) >= 0` |
+| Identity check | 0.1--0.3 | Calling function without asserting on result |
+| Weak property generator | 0.2--0.4 | Generator restricted to tiny range, excludes boundaries |
+| Missing boundary cases | 0.3--0.5 | No tests for empty input, zero, MAX_INT |
+| Missing error paths | 0.3--0.5 | Only success paths tested, no `pytest.raises` |
+| Mutation-susceptible | 0.4--0.6 | Uses `>=` when `==` would be more precise |
+
+### Verdict Criteria
+
+| Verdict | Condition |
+|---------|-----------|
+| **PASS** | Overall rigor >= 0.70 AND zero tautological tests |
+| **NEEDS IMPROVEMENT** | Overall rigor 0.50--0.69 OR 1--2 weak tests |
+| **FAIL** | Overall rigor < 0.50 OR any tautological assertions |
+
+### Produced by
+
+- `/test-gen`: always (Phase 3)
+- `/test-eval`: always
+- `/refactor`, `/feature-dev`: not produced (use `/test-eval` separately)
+
+## Coverage Verdict
+
+Evaluates: line coverage, branch coverage, critical gap presence. Produced by the coverage-analyst agent during `/test-gen`, `/test-gen --coverage`, and `/test-eval`.
+
+| Verdict | Condition |
+|---------|-----------|
+| **MEETS TARGET** | Line >= 90% AND Branch >= 85% AND zero critical gaps |
+| **BELOW TARGET** | Line or Branch below target but no critical gaps |
+| **CRITICAL GAPS** | Any critical-severity uncovered regions regardless of percentage |
+
+### Gap Severity Classification
+
+| Severity | Examples |
+|----------|---------|
+| **Critical** | Error handling, input validation, security checks |
+| **Important** | Core business logic, state transitions |
+| **Nice-to-have** | Logging, debug paths, rarely-hit branches |
+
+### Produced by
+
+- `/test-gen`: always (Phase 3 or Phase 4 in coverage-only mode)
+- `/test-gen --coverage`: always
+- `/test-eval`: always
+- `/refactor`, `/feature-dev`: not produced
+
 ## Report Output
 
 Scores appear in the generated `refactor-result-{timestamp}.md` report, which includes:
@@ -118,4 +181,5 @@ In focused runs, the report includes only scores from active agents. See [Config
 ## See Also
 
 - [Agent Reference](agents.md) — Architect agent specification
-- [Tutorial: Your First Refactor](../tutorial.md) — See scores in action
+- [Tutorial: Your First Refactor](../tutorials/tutorial.md) — See scores in action
+- [How to Evaluate Test Quality](../guides/evaluate-test-quality.md) — interpreting and acting on rigor scores

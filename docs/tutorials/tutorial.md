@@ -165,11 +165,12 @@ You have:
 ## Next steps
 
 - [Tutorial: Your First Feature Development](tutorial-feature-dev.md) — build a new feature with `/feature-dev`
-- [How to Configure Commit Strategies](guides/configure-commits.md) — automate commits and PRs
-- [How to Scope Refactoring Effectively](guides/scope-refactoring.md) — strategies for large codebases
-- [How to Run Focused Refactoring](guides/focus-refactoring.md) — constrain runs to specific disciplines
-- [How to Develop Features](guides/use-feature-dev.md) — practical guide to `/feature-dev` scenarios
-- [Configuration Reference](reference/configuration.md) — all config options
-- [How to Use Autonomous Mode](guides/use-autonomous-mode.md) — run unattended convergence loops
-- [Architecture: Swarm Orchestration Design](explanation/architecture.md) — understand why the plugin works this way
-- [Autonomous Convergence](explanation/autonomous-convergence.md) — the keep/discard scoring pattern
+- [How to Configure Commit Strategies](../guides/configure-commits.md) — automate commits and PRs
+- [How to Scope Refactoring Effectively](../guides/scope-refactoring.md) — strategies for large codebases
+- [How to Run Focused Refactoring](../guides/focus-refactoring.md) — constrain runs to specific disciplines
+- [How to Develop Features](../guides/use-feature-dev.md) — practical guide to `/feature-dev` scenarios
+- [Configuration Reference](../reference/configuration.md) — all config options
+- [How to Use Autonomous Mode](../guides/use-autonomous-mode.md) — run unattended convergence loops
+- [Architecture: Swarm Orchestration Design](../explanation/architecture.md) — understand why the plugin works this way
+- [Autonomous Convergence](../explanation/autonomous-convergence.md) — the keep/discard scoring pattern
+- [Tutorial: Your First Test Architecture](tutorial-test-architect.md) — generate scientifically grounded test suites with `/test-gen`
