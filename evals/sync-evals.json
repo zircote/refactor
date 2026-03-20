@@ -1,0 +1,88 @@
+[
+  {
+    "name": "basic_sync_branch",
+    "input": "sync my branch",
+    "expected_skill": "sync",
+    "assertions": [
+      "fetches latest refs from the remote",
+      "rebases the current branch onto the upstream",
+      "pushes the rebased branch to the remote",
+      "reports the full sync result (fetch, rebase, push)"
+    ]
+  },
+  {
+    "name": "fetch_rebase_and_push",
+    "input": "fetch rebase and push",
+    "expected_skill": "sync",
+    "assertions": [
+      "recognizes the three-step workflow as a sync intent",
+      "performs fetch, rebase, and push in sequence",
+      "uses force-with-lease for safe push after rebase",
+      "does NOT create merge commits"
+    ]
+  },
+  {
+    "name": "custom_remote_branch_args",
+    "input": "/sync upstream develop",
+    "expected_skill": "sync",
+    "assertions": [
+      "uses 'upstream' as the remote",
+      "targets 'develop' as the branch to sync against",
+      "fetches from upstream, rebases onto upstream/develop",
+      "pushes to the correct remote after rebase"
+    ]
+  },
+  {
+    "name": "push_confirmation_check",
+    "input": "sync my branch with main",
+    "expected_skill": "sync",
+    "assertions": [
+      "completes fetch and rebase steps first",
+      "confirms with the user before pushing (if force-push required)",
+      "uses --force-with-lease instead of --force",
+      "reports push success with remote ref and commit range"
+    ]
+  },
+  {
+    "name": "negative_just_rebase",
+    "input": "just rebase my branch, don't push",
+    "expected_skill": null,
+    "assertions": [
+      "does NOT trigger the sync skill",
+      "recognizes the explicit no-push intent",
+      "routes to the /fr skill for fetch-and-rebase only"
+    ]
+  },
+  {
+    "name": "negative_fast_forward",
+    "input": "fast-forward to latest main",
+    "expected_skill": null,
+    "assertions": [
+      "does NOT trigger the sync skill",
+      "recognizes fast-forward as a different operation (/ff)",
+      "does NOT perform a rebase or push"
+    ]
+  },
+  {
+    "name": "sync_with_conflicts",
+    "input": "sync my feature branch to latest",
+    "expected_skill": "sync",
+    "assertions": [
+      "fetches and begins the rebase",
+      "halts the sync pipeline if rebase conflicts occur",
+      "does NOT push if rebase was not completed cleanly",
+      "provides conflict resolution guidance before retrying"
+    ]
+  },
+  {
+    "name": "sync_up_to_date",
+    "input": "sync everything with remote",
+    "expected_skill": "sync",
+    "assertions": [
+      "fetches and detects no new upstream changes",
+      "skips unnecessary rebase when already up to date",
+      "pushes any local commits that are ahead of remote",
+      "reports current sync status clearly"
+    ]
+  }
+]

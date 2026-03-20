@@ -1,0 +1,78 @@
+[
+  {
+    "name": "basic_fast_forward",
+    "input": "fast-forward my branch",
+    "expected_skill": "ff",
+    "assertions": [
+      "fetches latest refs from the remote",
+      "performs a fast-forward merge (--ff-only)",
+      "does NOT create a merge commit",
+      "reports the updated HEAD position"
+    ]
+  },
+  {
+    "name": "catch_up_with_remote",
+    "input": "catch up with remote",
+    "expected_skill": "ff",
+    "assertions": [
+      "recognizes 'catch up' as a fast-forward intent",
+      "fetches from the default remote (origin)",
+      "fast-forwards the current branch to match upstream",
+      "reports how many commits were pulled forward"
+    ]
+  },
+  {
+    "name": "custom_remote_branch",
+    "input": "/ff upstream develop",
+    "expected_skill": "ff",
+    "assertions": [
+      "uses 'upstream' as the remote instead of origin",
+      "targets 'develop' as the branch to fast-forward from",
+      "fetches from the specified remote before merging",
+      "performs --ff-only merge against upstream/develop"
+    ]
+  },
+  {
+    "name": "diverged_history_handling",
+    "input": "fast-forward to the latest main",
+    "expected_skill": "ff",
+    "assertions": [
+      "detects when local and remote have diverged",
+      "aborts the fast-forward without modifying the working tree",
+      "suggests using /fr (fetch-rebase) as an alternative",
+      "explains why fast-forward is not possible"
+    ]
+  },
+  {
+    "name": "dirty_working_directory",
+    "input": "fast-forward my branch to origin",
+    "expected_skill": "ff",
+    "assertions": [
+      "checks for uncommitted changes before proceeding",
+      "refuses to fast-forward with a dirty working directory",
+      "advises the user to commit or stash changes first",
+      "does NOT lose any uncommitted work"
+    ]
+  },
+  {
+    "name": "negative_rebase_intent",
+    "input": "rebase my branch on main",
+    "expected_skill": null,
+    "assertions": [
+      "does NOT trigger the ff skill",
+      "recognizes rebase as a different operation than fast-forward",
+      "routes to the appropriate rebase workflow (/fr)"
+    ]
+  },
+  {
+    "name": "already_up_to_date",
+    "input": "fast-forward to latest",
+    "expected_skill": "ff",
+    "assertions": [
+      "fetches from remote to check for updates",
+      "detects that the branch is already up to date",
+      "reports 'already up to date' without error",
+      "does NOT create any unnecessary merge commits"
+    ]
+  }
+]

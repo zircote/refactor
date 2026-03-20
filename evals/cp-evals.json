@@ -1,0 +1,89 @@
+[
+  {
+    "name": "basic_commit_and_push",
+    "input": "commit and push my changes",
+    "expected_skill": "cp",
+    "assertions": [
+      "stages changed files with git add",
+      "creates a commit with a conventional commit message",
+      "pushes to the remote tracking branch",
+      "reports success with commit SHA and remote ref"
+    ]
+  },
+  {
+    "name": "ship_it_slang",
+    "input": "ship it",
+    "expected_skill": "cp",
+    "assertions": [
+      "recognizes 'ship it' as a commit-and-push intent",
+      "stages all relevant changed files",
+      "generates a conventional commit message from diff analysis",
+      "pushes to the current branch's upstream"
+    ]
+  },
+  {
+    "name": "push_my_changes",
+    "input": "push my changes to remote",
+    "expected_skill": "cp",
+    "assertions": [
+      "triggers the cp skill for push intent",
+      "commits any uncommitted work before pushing",
+      "pushes to the correct remote branch",
+      "does NOT create a pull request"
+    ]
+  },
+  {
+    "name": "negative_just_commit_no_push",
+    "input": "just commit these changes, don't push",
+    "expected_skill": null,
+    "assertions": [
+      "does NOT trigger the cp skill",
+      "recognizes the explicit no-push intent",
+      "performs a local commit only without pushing"
+    ]
+  },
+  {
+    "name": "negative_create_pr",
+    "input": "create a PR for my feature branch",
+    "expected_skill": null,
+    "assertions": [
+      "does NOT trigger the cp skill",
+      "recognizes PR creation as a different workflow",
+      "does NOT auto-push as part of PR creation"
+    ]
+  },
+  {
+    "name": "conventional_commit_message",
+    "input": "commit and push the login form validation I just added",
+    "expected_skill": "cp",
+    "assertions": [
+      "generates a conventional commit message (feat:, fix:, chore:, etc.)",
+      "commit message summarizes the actual diff content",
+      "commit message is concise (under 72 characters for subject line)",
+      "does NOT use generic messages like 'update files'"
+    ]
+  },
+  {
+    "name": "confidential_file_exclusion",
+    "input": "commit and push everything",
+    "expected_skill": "cp",
+    "assertions": [
+      "excludes .env files from staging",
+      "excludes credentials.json and similar secret files",
+      "warns the user about skipped confidential files",
+      "stages only non-sensitive files for commit",
+      "does NOT silently include secrets in the commit"
+    ]
+  },
+  {
+    "name": "split_commits_mixed_files",
+    "input": "ship all my work, I added new models and fixed a bug in the API",
+    "expected_skill": "cp",
+    "assertions": [
+      "analyzes the diff to identify logically separate changes",
+      "creates separate commits for new features vs bug fixes",
+      "uses appropriate conventional commit prefixes (feat: vs fix:)",
+      "pushes all commits to remote in a single push"
+    ]
+  }
+]

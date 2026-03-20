@@ -1,0 +1,89 @@
+[
+  {
+    "name": "basic_fetch_and_rebase",
+    "input": "fetch and rebase my branch",
+    "expected_skill": "fr",
+    "assertions": [
+      "fetches latest refs from the remote",
+      "rebases the current branch onto the updated upstream",
+      "preserves local commits on top of upstream changes",
+      "reports the rebase result with updated commit range"
+    ]
+  },
+  {
+    "name": "pull_rebase_trigger",
+    "input": "pull --rebase from main",
+    "expected_skill": "fr",
+    "assertions": [
+      "recognizes 'pull --rebase' as a fetch-rebase intent",
+      "fetches from the default remote",
+      "rebases onto the specified branch (main)",
+      "does NOT create merge commits"
+    ]
+  },
+  {
+    "name": "custom_remote_branch_args",
+    "input": "/fr upstream release/2.0",
+    "expected_skill": "fr",
+    "assertions": [
+      "uses 'upstream' as the remote",
+      "targets 'release/2.0' as the branch to rebase onto",
+      "fetches the specified remote before rebasing",
+      "rebases current branch onto upstream/release/2.0"
+    ]
+  },
+  {
+    "name": "uncommitted_changes_handling",
+    "input": "rebase onto latest main, I have uncommitted changes",
+    "expected_skill": "fr",
+    "assertions": [
+      "detects uncommitted changes in the working directory",
+      "offers options: stash changes, abort, or proceed",
+      "if stashing, restores stashed changes after successful rebase",
+      "does NOT silently discard uncommitted work",
+      "warns about potential conflicts with stashed changes"
+    ]
+  },
+  {
+    "name": "conflict_resolution_guidance",
+    "input": "fetch and rebase, there might be conflicts",
+    "expected_skill": "fr",
+    "assertions": [
+      "proceeds with the fetch and rebase operation",
+      "detects rebase conflicts if they occur",
+      "provides guidance on resolving each conflict",
+      "explains how to continue (git rebase --continue) or abort (git rebase --abort)"
+    ]
+  },
+  {
+    "name": "negative_push_intent",
+    "input": "push my rebased changes to remote",
+    "expected_skill": null,
+    "assertions": [
+      "does NOT trigger the fr skill",
+      "recognizes push intent belongs to /sync or /cp",
+      "does NOT perform a fetch or rebase operation"
+    ]
+  },
+  {
+    "name": "negative_fast_forward_intent",
+    "input": "fast-forward merge to latest",
+    "expected_skill": null,
+    "assertions": [
+      "does NOT trigger the fr skill",
+      "recognizes fast-forward as a different operation (/ff)",
+      "does NOT perform a rebase"
+    ]
+  },
+  {
+    "name": "update_feature_branch",
+    "input": "update my feature branch with the latest from main",
+    "expected_skill": "fr",
+    "assertions": [
+      "fetches latest main from remote",
+      "rebases the current feature branch onto origin/main",
+      "maintains a linear commit history",
+      "reports the number of commits replayed"
+    ]
+  }
+]

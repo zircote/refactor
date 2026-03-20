@@ -1,0 +1,124 @@
+[
+  {
+    "name": "basic_fix_pr_comments",
+    "input": "fix PR comments",
+    "expected_skill": "pr-fix",
+    "assertions": [
+      "triggers the pr-fix skill",
+      "fetches review comments from the current PR",
+      "executes the 10-phase remediation workflow",
+      "resolves threads after applying fixes"
+    ]
+  },
+  {
+    "name": "address_pr_feedback",
+    "input": "address the PR feedback and push fixes",
+    "expected_skill": "pr-fix",
+    "assertions": [
+      "triggers the pr-fix skill from natural language",
+      "applies code changes based on review feedback",
+      "creates a conventional commit for remediation",
+      "pushes changes to remote branch"
+    ]
+  },
+  {
+    "name": "specific_pr_number",
+    "input": "/pr-fix 123",
+    "expected_skill": "pr-fix",
+    "assertions": [
+      "triggers the pr-fix skill with PR number argument",
+      "fetches comments for PR #123 specifically",
+      "does not auto-detect PR from current branch",
+      "checks out the correct branch for PR #123"
+    ]
+  },
+  {
+    "name": "auto_mode",
+    "input": "/pr-fix --auto",
+    "expected_skill": "pr-fix",
+    "assertions": [
+      "triggers the pr-fix skill in auto mode",
+      "applies fixes without user confirmation for high-confidence items",
+      "uses default confidence threshold",
+      "skips interactive prompts for accepted changes",
+      "still flags low-confidence items for review"
+    ]
+  },
+  {
+    "name": "custom_confidence_threshold",
+    "input": "/pr-fix --confidence=85",
+    "expected_skill": "pr-fix",
+    "assertions": [
+      "triggers the pr-fix skill with custom confidence threshold",
+      "uses 85 as the confidence cutoff instead of default",
+      "auto-applies fixes scoring above 85",
+      "flags fixes scoring below 85 for manual review"
+    ]
+  },
+  {
+    "name": "skip_rebase_flag",
+    "input": "/pr-fix --skip-rebase",
+    "expected_skill": "pr-fix",
+    "assertions": [
+      "triggers the pr-fix skill with --skip-rebase flag",
+      "skips the rebase-onto-base-branch phase",
+      "applies fixes directly on current branch state",
+      "still executes all other phases of the workflow"
+    ]
+  },
+  {
+    "name": "dry_run_mode",
+    "input": "/pr-fix --dry-run",
+    "expected_skill": "pr-fix",
+    "assertions": [
+      "triggers the pr-fix skill in dry-run mode",
+      "analyzes and scores all comments",
+      "does NOT apply any code changes",
+      "does NOT create commits or push",
+      "shows planned actions for each comment"
+    ]
+  },
+  {
+    "name": "force_push_flag",
+    "input": "/pr-fix --force",
+    "expected_skill": "pr-fix",
+    "assertions": [
+      "triggers the pr-fix skill with --force flag",
+      "uses git push --force-with-lease for pushing",
+      "does NOT use bare --force for safety",
+      "force push is required after rebase rewrites history"
+    ]
+  },
+  {
+    "name": "ten_phase_workflow_order",
+    "input": "fix all the review comments on my PR end to end",
+    "expected_skill": "pr-fix",
+    "assertions": [
+      "triggers the pr-fix skill with full pipeline",
+      "executes phases in order: fetch, analyze, rebase, apply, test, commit, push, reply, resolve, report",
+      "rebase onto base branch happens before applying fixes",
+      "thread resolution happens after pushing changes",
+      "uses conventional commit message for remediation"
+    ]
+  },
+  {
+    "name": "negative_create_pr",
+    "input": "create a PR",
+    "expected_skill": "pr",
+    "assertions": [
+      "does NOT trigger the pr-fix skill",
+      "triggers the pr skill instead",
+      "recognized as a creation task not a remediation task"
+    ]
+  },
+  {
+    "name": "negative_just_rebase",
+    "input": "just rebase my branch",
+    "expected_skill": "rebase",
+    "assertions": [
+      "does NOT trigger the pr-fix skill",
+      "recognized as a standalone rebase task",
+      "no PR comment remediation involved"
+    ]
+  }
+]

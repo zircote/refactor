@@ -1,0 +1,90 @@
+[
+  {
+    "name": "basic_prune_branches",
+    "input": "prune branches",
+    "expected_skill": "prune",
+    "assertions": [
+      "identifies branches that have been merged or deleted on remote",
+      "runs in dry-run mode by default (no deletions without confirmation)",
+      "lists stale branches that would be removed",
+      "does NOT delete any branches without explicit confirmation"
+    ]
+  },
+  {
+    "name": "clean_up_old_branches",
+    "input": "clean up old branches",
+    "expected_skill": "prune",
+    "assertions": [
+      "recognizes 'clean up old branches' as a prune intent",
+      "fetches remote refs to detect stale tracking branches",
+      "identifies local branches whose upstream has been deleted",
+      "presents the list of candidates for deletion before acting"
+    ]
+  },
+  {
+    "name": "dry_run_default",
+    "input": "/prune",
+    "expected_skill": "prune",
+    "assertions": [
+      "defaults to dry-run mode without --force flag",
+      "lists all branches that would be pruned",
+      "does NOT actually delete any branches",
+      "displays the count of stale branches found",
+      "shows how to re-run with --force to apply deletions"
+    ]
+  },
+  {
+    "name": "force_flag_with_confirmation",
+    "input": "/prune --force",
+    "expected_skill": "prune",
+    "assertions": [
+      "recognizes the --force flag to perform actual deletions",
+      "prompts for final confirmation before deleting branches",
+      "deletes only the identified stale branches",
+      "reports which branches were successfully deleted"
+    ]
+  },
+  {
+    "name": "protected_branches_never_deleted",
+    "input": "prune all stale branches including everything",
+    "expected_skill": "prune",
+    "assertions": [
+      "never deletes main or master branches",
+      "never deletes the currently checked-out branch",
+      "excludes protected branches from the prune candidate list",
+      "explicitly states which branches are protected and skipped"
+    ]
+  },
+  {
+    "name": "negative_docker_prune",
+    "input": "docker prune unused images",
+    "expected_skill": null,
+    "assertions": [
+      "does NOT trigger the prune skill",
+      "recognizes 'docker prune' as a Docker operation, not git",
+      "does NOT attempt to delete any git branches"
+    ]
+  },
+  {
+    "name": "no_stale_branches_found",
+    "input": "prune any stale branches",
+    "expected_skill": "prune",
+    "assertions": [
+      "fetches remote refs to check for stale branches",
+      "detects that no branches are stale",
+      "reports that no branches need pruning",
+      "exits cleanly without errors or deletions"
+    ]
+  },
+  {
+    "name": "prune_after_pr_merge",
+    "input": "clean up branches from merged PRs",
+    "expected_skill": "prune",
+    "assertions": [
+      "identifies branches whose PRs have been merged",
+      "cross-references local branches with remote merge status",
+      "lists merged-PR branches as prune candidates",
+      "runs in dry-run mode by default"
+    ]
+  }
+]

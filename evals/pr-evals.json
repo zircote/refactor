@@ -1,0 +1,111 @@
+[
+  {
+    "name": "basic_create_pr",
+    "input": "create a PR",
+    "expected_skill": "pr",
+    "assertions": [
+      "triggers the pr skill",
+      "creates a draft PR by default",
+      "pushes branch to remote if not already pushed",
+      "uses gh pr create command"
+    ]
+  },
+  {
+    "name": "open_pull_request_trigger",
+    "input": "open a pull request for this branch",
+    "expected_skill": "pr",
+    "assertions": [
+      "triggers the pr skill from natural language",
+      "detects current branch name",
+      "creates draft PR by default",
+      "generates title and body from commits"
+    ]
+  },
+  {
+    "name": "ready_flag_draft_to_ready",
+    "input": "/pr --ready",
+    "expected_skill": "pr",
+    "assertions": [
+      "triggers the pr skill with --ready flag",
+      "converts existing draft PR to ready for review",
+      "uses gh pr ready command",
+      "does NOT create a new PR if one already exists"
+    ]
+  },
+  {
+    "name": "update_existing_pr",
+    "input": "/pr --update",
+    "expected_skill": "pr",
+    "assertions": [
+      "triggers the pr skill with --update flag",
+      "updates the existing PR title or body",
+      "does NOT create a new PR",
+      "uses gh pr edit command"
+    ]
+  },
+  {
+    "name": "fill_from_commits",
+    "input": "/pr --fill",
+    "expected_skill": "pr",
+    "assertions": [
+      "triggers the pr skill with --fill flag",
+      "auto-fills PR title and body from commit messages",
+      "passes --fill to gh pr create",
+      "creates draft PR by default"
+    ]
+  },
+  {
+    "name": "draft_default_behavior",
+    "input": "make a pull request with my changes",
+    "expected_skill": "pr",
+    "assertions": [
+      "triggers the pr skill",
+      "creates PR as draft by default without explicit flag",
+      "includes --draft flag in gh pr create",
+      "user must explicitly use --ready to mark as non-draft"
+    ]
+  },
+  {
+    "name": "negative_fix_pr_comments",
+    "input": "fix PR comments",
+    "expected_skill": "pr-fix",
+    "assertions": [
+      "does NOT trigger the pr skill",
+      "triggers the pr-fix skill instead",
+      "recognized as a remediation task not a creation task"
+    ]
+  },
+  {
+    "name": "negative_review_pr_comments",
+    "input": "review PR comments",
+    "expected_skill": "review-comments",
+    "assertions": [
+      "does NOT trigger the pr skill",
+      "triggers the review-comments skill instead",
+      "recognized as a review task not a creation task"
+    ]
+  },
+  {
+    "name": "push_before_create",
+    "input": "create a PR for my local changes",
+    "expected_skill": "pr",
+    "assertions": [
+      "triggers the pr skill",
+      "checks if branch has been pushed to remote",
+      "pushes branch with -u flag if not already pushed",
+      "creates PR only after branch is on remote",
+      "creates draft PR by default"
+    ]
+  },
+  {
+    "name": "custom_target_branch",
+    "input": "/pr develop",
+    "expected_skill": "pr",
+    "assertions": [
+      "triggers the pr skill with target branch argument",
+      "uses develop as the base branch instead of main",
+      "passes --base develop to gh pr create",
+      "creates draft PR by default"
+    ]
+  }
+]

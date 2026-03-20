@@ -1,0 +1,113 @@
+[
+  {
+    "name": "basic_review_comments",
+    "input": "review comments on this PR",
+    "expected_skill": "review-comments",
+    "assertions": [
+      "triggers the review-comments skill",
+      "fetches PR review comments via gh API",
+      "scores each comment across confidence dimensions",
+      "presents comments with confidence scores for user decision"
+    ]
+  },
+  {
+    "name": "address_pr_feedback",
+    "input": "address PR feedback",
+    "expected_skill": "review-comments",
+    "assertions": [
+      "triggers the review-comments skill from natural language",
+      "fetches pending review comments",
+      "categorizes feedback by confidence level",
+      "uses interactive mode by default with AskUserQuestion"
+    ]
+  },
+  {
+    "name": "specific_pr_number",
+    "input": "/review-comments 42",
+    "expected_skill": "review-comments",
+    "assertions": [
+      "triggers the review-comments skill with PR number argument",
+      "fetches comments for PR #42 specifically",
+      "does not auto-detect PR from current branch",
+      "uses gh api to fetch comments for the specified PR"
+    ]
+  },
+  {
+    "name": "auto_mode_with_threshold",
+    "input": "/review-comments --auto",
+    "expected_skill": "review-comments",
+    "assertions": [
+      "triggers the review-comments skill in auto mode",
+      "applies confidence threshold for auto-accept decisions",
+      "accepts comments above threshold without user input",
+      "flags comments below threshold for manual review",
+      "does NOT prompt user for high-confidence comments"
+    ]
+  },
+  {
+    "name": "dry_run_mode",
+    "input": "/review-comments --dry-run",
+    "expected_skill": "review-comments",
+    "assertions": [
+      "triggers the review-comments skill in dry-run mode",
+      "fetches and scores all comments",
+      "does NOT resolve any threads",
+      "does NOT post any replies",
+      "shows what actions would be taken"
+    ]
+  },
+  {
+    "name": "interactive_default_mode",
+    "input": "go through the PR review comments one by one",
+    "expected_skill": "review-comments",
+    "assertions": [
+      "triggers the review-comments skill in interactive mode",
+      "uses AskUserQuestion for each comment decision",
+      "presents confidence scores before asking for user input",
+      "supports accept, reject, and question responses"
+    ]
+  },
+  {
+    "name": "confidence_scoring_dimensions",
+    "input": "score the PR comments and tell me which to accept",
+    "expected_skill": "review-comments",
+    "assertions": [
+      "triggers the review-comments skill",
+      "scores Technical Accuracy dimension",
+      "scores Relevance dimension",
+      "scores Impact dimension",
+      "scores Feasibility dimension"
+    ]
+  },
+  {
+    "name": "thread_resolution_graphql",
+    "input": "/review-comments --auto accept all high-confidence comments",
+    "expected_skill": "review-comments",
+    "assertions": [
+      "triggers the review-comments skill",
+      "resolves accepted comment threads via GitHub GraphQL API",
+      "uses resolveReviewThread mutation",
+      "thread resolution is mandatory not optional"
+    ]
+  },
+  {
+    "name": "negative_create_pr",
+    "input": "create a PR",
+    "expected_skill": "pr",
+    "assertions": [
+      "does NOT trigger the review-comments skill",
+      "triggers the pr skill instead",
+      "recognized as a creation task not a review task"
+    ]
+  },
+  {
+    "name": "negative_fix_ci",
+    "input": "fix CI failures",
+    "expected_skill": "ci-fix",
+    "assertions": [
+      "does NOT trigger the review-comments skill",
+      "recognized as a CI remediation task",
+      "no overlap with review-comments scope"
+    ]
+  }
+]
