@@ -1,12 +1,12 @@
 ---
 name: pr-fix
-description: "Complete PR remediation workflow — fetch all review comments, triage by confidence, fix findings, rebase, commit, reply to reviewers, resolve threads, and push. Use this skill when the user wants to address PR feedback, fix review comments, remediate PR findings, resolve PR threads, or act on reviewer suggestions. Triggers on: 'fix PR comments', 'address PR feedback', 'fix review findings', 'pr-fix', 'remediate PR', 'resolve PR comments', 'fix the PR', 'address reviewer comments', 'fix what reviewers said', 'handle PR feedback'. Anti-triggers (do NOT match): 'create a PR' (use /pr), 'review this PR' (use /review-comments), 'commit and push' without PR context (use /cp), 'just push' (use /cp), 'rebase only' (use /fr), 'read PR comments' without fix intent (use /review-comments)."
+description: "Complete PR remediation workflow — fetch all review comments, triage by confidence, fix findings, rebase, commit, reply to reviewers, push, and resolve threads. Use this skill when the user wants to address PR feedback, fix review comments, remediate PR findings, resolve PR threads, or act on reviewer suggestions. Triggers on: 'fix PR comments', 'address PR feedback', 'fix review findings', 'pr-fix', 'remediate PR', 'resolve PR comments', 'fix the PR', 'address reviewer comments', 'fix what reviewers said', 'handle PR feedback'. Anti-triggers (do NOT match): 'create a PR' (use /pr), 'review this PR' (use /review-comments), 'commit and push' without PR context (use /cp), 'just push' (use /cp), 'rebase only' (use /fr), 'read PR comments' without fix intent (use /review-comments)."
 argument-hint: "[pr-number] [--auto] [--confidence=N] [--skip-rebase] [--dry-run] [--force]"
 ---
 
 # PR Fix Skill — Complete PR Remediation Workflow
 
-You are a PR remediation agent. Your job is to fetch all review feedback on a pull request, triage it by confidence, apply fixes, rebase, commit, reply to reviewers, resolve threads, and push — all using the `gh` and `git` CLIs.
+You are a PR remediation agent. Your job is to fetch all review feedback on a pull request, triage it by confidence, apply fixes, rebase, commit, reply to reviewers, push, and resolve threads — all using the `gh` and `git` CLIs.
 
 ## Arguments
 
@@ -379,6 +379,8 @@ gh pr comment ${PR_NUMBER} --body "<reply text>"
 
 ## Phase 8: Resolve Threads
 
+Resolve threads in two stages: first prepare (fetch thread IDs), then execute (after push in Phase 9). The actual GraphQL resolution mutations execute after pushing because reviewers need to see the fix in the PR diff before the thread is marked resolved.
+
 ### Step 8.1: Get Thread IDs
 
 Retrieve the thread IDs for resolved comments using GraphQL:
@@ -406,24 +408,7 @@ query {
 }'
 ```
 
-Match threads to the comments that were fixed in Phase 4 using the comment `databaseId`.
-
-### Step 8.2: Resolve Threads
-
-For each matched, unresolved thread, resolve it via GraphQL mutation:
-
-```bash
-gh api graphql -f query='
-mutation {
-  resolveReviewThread(input: {threadId: "<thread_id>"}) {
-    thread {
-      isResolved
-    }
-  }
-}'
-```
-
-Only resolve threads for comments that were actually fixed. Do not resolve threads for rejected comments or questions.
+Match threads to the comments that were fixed in Phase 4 using the comment `databaseId`. Store the thread IDs for resolution after push.
 
 ---
 
@@ -456,6 +441,25 @@ gh pr view ${PR_NUMBER} --json commits --jq '.commits | length'
 ```
 
 Confirm the push succeeded and the PR reflects the new commits.
+
+### Step 9.3: Execute Thread Resolution
+
+Now that changes are pushed and visible in the PR, resolve the threads identified in Phase 8. Thread resolution via GraphQL happens AFTER pushing changes.
+
+For each matched, unresolved thread, resolve it via GraphQL mutation:
+
+```bash
+gh api graphql -f query='
+mutation {
+  resolveReviewThread(input: {threadId: "<thread_id>"}) {
+    thread {
+      isResolved
+    }
+  }
+}'
+```
+
+Only resolve threads for comments that were actually fixed. Do not resolve threads for rejected comments or questions.
 
 ---
 

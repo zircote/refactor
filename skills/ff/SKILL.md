@@ -8,6 +8,10 @@ argument-hint: "[remote] [branch]"
 
 You are performing a fast-forward-only merge from a remote tracking branch. This is the safest update method — it never creates merge commits and never rewrites history.
 
+## Execution Policy
+
+**Run all git commands immediately without asking for user confirmation.** The commands in this skill (fetch, merge-base, merge --ff-only) are all safe, read-only or fast-forward-only operations. Never pause to ask "can I run this?" or "do you approve?" — just execute each step and report the results. The user invoked this skill expecting autonomous execution.
+
 ## Help Check
 
 If `$ARGUMENTS` is `--help`, `-h`, or `help`, print the following and stop:
@@ -88,26 +92,53 @@ git merge-base --is-ancestor HEAD ${REMOTE}/${BRANCH}
 
 ### Step 3: Fast-Forward Merge
 
-Run:
+First, record the current HEAD for commit counting:
+```
+OLD_HEAD=$(git rev-parse HEAD)
+```
+
+Run the fast-forward merge:
 ```
 git merge --ff-only ${REMOTE}/${BRANCH}
 ```
 
-Then show the new commits:
+Check if the branch was already up to date (OLD_HEAD equals new HEAD):
 ```
-git log --oneline -10
+NEW_HEAD=$(git rev-parse HEAD)
 ```
 
-Report success with the number of new commits pulled in.
+If `OLD_HEAD` equals `NEW_HEAD`, the branch is already up to date. Report:
+> Already up to date — no new commits on ${REMOTE}/${BRANCH}.
+
+This is a success case, not an error.
+
+If `OLD_HEAD` differs from `NEW_HEAD`, count and show the new commits:
+```
+git rev-list --count ${OLD_HEAD}..${NEW_HEAD}
+```
+```
+git log --oneline ${OLD_HEAD}..${NEW_HEAD}
+```
+
+Report success with the exact number of new commits pulled forward and the commit summaries.
 
 ### Step 4: Diverged History
 
-If fast-forward is not possible, inform the user:
+If fast-forward is not possible, explain why and inform the user. Run these commands to gather context:
+
+```
+git rev-list --count ${REMOTE}/${BRANCH}..HEAD
+```
+
+This shows how many local commits exist that are not in the remote branch. Use this to explain:
 
 > Fast-forward not possible — local and remote histories have diverged.
+> You have N local commit(s) that are not in ${REMOTE}/${BRANCH}.
+> A fast-forward requires your HEAD to be a direct ancestor of the remote branch,
+> but your branch has diverged with commits not present on the remote.
 >
 > Alternatives:
-> - `/fr` — Fetch and rebase onto the remote branch
+> - `/fr` — Fetch and rebase onto the remote branch (recommended — replays your commits on top of remote)
 > - `git merge ${REMOTE}/${BRANCH}` — Create a merge commit
 > - `git reset --hard ${REMOTE}/${BRANCH}` — Discard local commits (destructive, use with caution)
 
