@@ -8,7 +8,7 @@ diataxis_describes: refactor plugin agent specifications
 The refactor plugin provides twelve specialized agents shared between the `/refactor`, `/feature-dev`, and `/test-architect` skills. Each agent has a defined role, tool set, and model assignment.
 
 The `/refactor` skill uses 6 agents (+ convergence-reporter in autonomous mode): code-explorer, architect, code-reviewer, refactor-test, refactor-code, simplifier.
-The `/feature-dev` skill uses 5 agents (+ convergence-reporter in autonomous mode): code-explorer, architect, code-reviewer, feature-code, refactor-test (plus simplifier and refactor-code for fix-ups).
+The `/feature-dev` skill uses 8 agents (+ convergence-reporter in autonomous mode): code-explorer, architect, test-planner, feature-code, test-writer, code-reviewer, test-rigor-reviewer, coverage-analyst (plus simplifier and refactor-code for fix-ups).
 The `/test-architect` skill uses 4 agents: test-planner, test-writer, test-rigor-reviewer, coverage-analyst.
 
 ## Code-Explorer Agent
@@ -185,13 +185,13 @@ Some agents support multi-instance parallel spawning, where the same agent defin
 | code-reviewer | Yes | `code-reviewer-1`, `code-reviewer-2`, ... | /feature-dev Phase 6 |
 | feature-code | No | `feature-code` | /feature-dev Phase 5 |
 | refactor-code | No | `refactor-code` | /refactor Phase 2 |
-| refactor-test | No | `refactor-test` | Both skills |
+| refactor-test | No | `refactor-test` | /refactor |
 | simplifier | No | `simplifier` | /refactor Phase 2-3 |
 | convergence-reporter | No | `convergence-reporter` | Both skills (autonomous mode) |
-| test-planner | Yes | `test-planner-1`, `test-planner-2`, ... | /test-architect (multi-module) |
-| test-writer | No | `test-writer` | /test-architect |
-| test-rigor-reviewer | No | `test-rigor-reviewer` | /test-architect |
-| coverage-analyst | No | `coverage-analyst` | /test-architect |
+| test-planner | Yes | `test-planner-1`, `test-planner-2`, ... | /feature-dev Phase 4.5, /test-architect (multi-module) |
+| test-writer | No | `test-writer` | /feature-dev Phase 5, /test-architect |
+| test-rigor-reviewer | No | `test-rigor-reviewer` | /feature-dev Phase 6, /test-architect |
+| coverage-analyst | No | `coverage-analyst` | /feature-dev Phase 6, /test-architect |
 
 Instance counts are configurable via `config.featureDev.explorerCount`, `.architectCount`, `.reviewerCount` (default: 3 each). The skill scales counts based on feature complexity — simple features may use 1 instance instead of 3.
 
@@ -256,9 +256,12 @@ The blackboard enables write-once, read-many context sharing — the code-explor
 - Phase 1: Analyze target code and produce structured JSON test plan
 - Modes: `full`, `plan`
 
+**Invoked during (/feature-dev):**
+- Phase 4.5: Produce formal test plan against the chosen architecture blueprint
+
 **Output:** JSON test plan with test_cases, property_tests, coverage_targets, and technique_summary
 
-**Blackboard protocol:** Reads `codebase_context`, `feature_spec`. Writes `test_plan`.
+**Blackboard protocol:** Reads `codebase_context`, `feature_spec`, `chosen_architecture` (feature-dev). Writes `test_plan`.
 
 ## Test-Writer Agent
 
@@ -277,6 +280,9 @@ The blackboard enables write-once, read-many context sharing — the code-explor
 **Invoked during (/test-architect):**
 - Phase 2: Generate test files implementing all planned test cases
 - Mode: `full` only
+
+**Invoked during (/feature-dev):**
+- Phase 5: Generate test code from the Phase 4.5 test plan
 
 **Output:** Test files following language conventions (Rust: `#[cfg(test)]` modules, Python: `test_*.py`, TypeScript: `*.test.ts`, Go: `*_test.go`)
 
@@ -299,6 +305,9 @@ The blackboard enables write-once, read-many context sharing — the code-explor
 **Invoked during (/test-architect):**
 - Phase 3: Rigor review of generated or existing test suites
 - Modes: `full`, `eval`
+
+**Invoked during (/feature-dev):**
+- Phase 6: Mandatory rigor review of feature tests (runs in parallel with code-reviewers)
 
 **Scoring rubric:** 1.0 (excellent, mutation-resistant) → 0.0 (useless, tautological)
 
@@ -327,6 +336,9 @@ The blackboard enables write-once, read-many context sharing — the code-explor
 - Phase 3: Coverage analysis (parallel with rigor review)
 - Phase 4: Standalone coverage analysis
 - Modes: `full`, `eval`, `coverage`
+
+**Invoked during (/feature-dev):**
+- Phase 6: Mandatory coverage analysis of feature code (runs in parallel with code-reviewers)
 
 **Verdict criteria:**
 - MEETS TARGET: Line >= 90% AND Branch >= 85% AND zero critical gaps
@@ -360,8 +372,8 @@ When running in autonomous mode, refactor-test writes a standardized `test-resul
 - `pass_rate` (float 0.0-1.0)
 
 **Test freeze behavior:**
-- Refactor `--autonomous`: Tests are frozen (run only)
-- Feature-dev `--autonomous`: Tests are mutable (create + run)
+- Refactor `--autonomous`: Tests are frozen (run only, via refactor-test)
+- Feature-dev `--autonomous`: Test plan is fixed from Phase 4.5 (via test-writer). Tests are NOT rewritten per iteration — the plan is the stable fitness function.
 
 ## See Also
 

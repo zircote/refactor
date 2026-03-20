@@ -64,19 +64,35 @@ When evaluating proposals, focus on:
 
 The skill presents a recommendation with reasoning. You can accept it, pick a different option, or ask for a hybrid ("Use approach 2 but with the error handling from approach 1").
 
-### 4. Handle the quality review phase
+### 4. Review the test plan (Phase 4.5)
 
-Phase 6 spawns parallel reviewers focused on simplicity/DRY, bugs/correctness, and conventions/abstractions. Findings are presented grouped by severity with three options:
+After you choose an architecture, the `test-planner` agent produces a formal test plan using equivalence class partitioning, boundary value analysis, and property-based testing. The plan is created against the architecture blueprint -- before any code is written.
 
-**"Fix critical issues now"** -- Address only high-severity findings (bugs, security issues, broken integrations). Use this when you want to ship quickly and handle polish later.
+You will see a checkpoint: "Test plan complete. {N} unit tests, {M} property tests planned." This plan becomes the contract that `test-writer` uses in Phase 5.
 
-**"Fix all issues"** -- The feature-code agent addresses every finding. Use this for production-critical features where you want clean code from the start.
+**If you want to skip test planning** (e.g., for a quick prototype), set `testArchitect.enabled: false` in your config. The skill falls back to ad-hoc test generation from the feature spec.
 
-**"Proceed as-is"** -- Accept the implementation without changes. Use this when review findings are minor style preferences or when you plan to iterate.
+### 5. Handle the quality review phase
+
+Phase 6 spawns three types of agents in parallel:
+
+**Code reviewers** -- focused on simplicity/DRY, bugs/correctness, and conventions/abstractions.
+
+**Test-rigor-reviewer** -- scores each generated test 0.0–1.0 for scientific rigor, checking for tautological assertions, weak generators, and mutation-susceptible patterns.
+
+**Coverage-analyst** -- runs native coverage tools and reports line/branch coverage percentages.
+
+**Quality gate:** The skill checks rigor score against `testArchitect.minimumRigorScore` (default: 0.7) and coverage against `testArchitect.minimumCoverage` (default: 80%). If either threshold is not met, you get three options:
+
+- **"Fix now"** -- Improvement tasks are assigned to feature-code and test-writer, then quality is re-validated (max 2 loops).
+- **"Override"** -- Proceed with a documented exception (surfaces in the final summary for auditability).
+- **"Abandon"** -- Stop the workflow.
+
+If the gate passes, findings are presented grouped by severity with standard options: "Fix critical issues now", "Fix all issues", "Proceed as-is".
 
 After fixes, the test suite runs again automatically. If tests fail after 3 fix attempts, the skill asks you for guidance rather than looping.
 
-### 5. Configure agent counts and behavior
+### 6. Configure agent counts and behavior
 
 Edit `.claude/refactor.config.json` to tune the `featureDev` section:
 
@@ -89,7 +105,12 @@ Edit `.claude/refactor.config.json` to tune the `featureDev` section:
     "reviewerCount": 3,
     "commitStrategy": "single-final",
     "createPR": false,
-    "prDraft": true
+    "prDraft": true,
+    "testArchitect": {
+      "enabled": true,
+      "minimumRigorScore": 0.7,
+      "minimumCoverage": 80
+    }
   }
 }
 ```
@@ -102,6 +123,14 @@ Edit `.claude/refactor.config.json` to tune the `featureDev` section:
 | `architectCount` | 3 | Parallel architecture proposals with different philosophies |
 | `reviewerCount` | 3 | Parallel reviewers with different quality lenses |
 
+**Test quality settings** (under `testArchitect`):
+
+| Setting | Default | Effect |
+|---------|---------|--------|
+| `enabled` | `true` | Enable Phase 4.5 test planning and Phase 6 quality gates |
+| `minimumRigorScore` | `0.7` | Minimum rigor score (0.0–1.0) to pass quality gate |
+| `minimumCoverage` | `80` | Minimum coverage percentage to pass quality gate |
+
 **Commit and PR settings**:
 
 | Setting | Default | Effect |
@@ -112,7 +141,7 @@ Edit `.claude/refactor.config.json` to tune the `featureDev` section:
 
 Higher agent counts produce more diverse exploration and proposals but consume more resources. Lower counts finish faster.
 
-### 6. Scale for simple vs complex features
+### 7. Scale for simple vs complex features
 
 The skill automatically scales agent counts based on feature complexity, even if your config sets higher defaults:
 

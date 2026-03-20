@@ -227,6 +227,33 @@ The full iteration default from your config file (typically 3) only applies to u
    ```
 4. If the issue persists, use `/test-plan` first to review the plan, then `/test-gen` to regenerate
 
+## Feature-dev: Test plan is empty or missing
+
+**Problem:** Phase 4.5 completes but reports "Test plan complete. 0 unit tests, 0 property tests planned."
+
+**Steps to resolve:**
+
+1. The test-planner may not have understood the architecture blueprint. Check that the `chosen_architecture` blackboard key contains a detailed implementation plan with inputs, outputs, and error paths.
+2. If the feature is a simple configuration change with no testable behavior, set `testArchitect.enabled: false` in your config to skip Phase 4.5.
+3. Re-run `/feature-dev` with a more detailed feature description that explicitly mentions expected behaviors and edge cases.
+
+## Feature-dev: Quality gate fails repeatedly
+
+**Problem:** The rigor score or coverage falls below the configured threshold after 2 fix attempts.
+
+**Steps to resolve:**
+
+1. Check the specific gaps: low rigor usually means weak assertions (tautological or mutation-susceptible); low coverage means untested code paths.
+2. Lower the thresholds temporarily in `.claude/refactor.config.json`:
+   ```json
+   "testArchitect": {
+     "minimumRigorScore": 0.5,
+     "minimumCoverage": 60
+   }
+   ```
+3. Use "Override" to proceed with a documented exception, then address test quality separately with `/test-eval`.
+4. If coverage tools are not installed for your language, the coverage gate will be skipped automatically. Check the troubleshooting output for tool installation instructions.
+
 ## Related
 
 - [Configuration Reference](../reference/configuration.md) — config options affecting behavior

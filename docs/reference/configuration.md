@@ -33,7 +33,12 @@ On subsequent runs, the config file is loaded silently.
     "reviewerCount": 3,
     "commitStrategy": "single-final",
     "createPR": false,
-    "prDraft": true
+    "prDraft": true,
+    "testArchitect": {
+      "enabled": true,
+      "minimumRigorScore": 0.7,
+      "minimumCoverage": 80
+    }
   }
 }
 ```
@@ -169,6 +174,18 @@ These fields configure the `/feature-dev` skill. They live under the `featureDev
 
 **Complexity-based scaling:** The skill may reduce instance counts for simple features (e.g., 1 explorer instead of 3 for a trivial endpoint). The configured values are maximums.
 
+### Test Architecture Integration (`testArchitect`)
+
+The `testArchitect` sub-key under `featureDev` controls the mandatory test architecture pipeline integrated into the feature-dev workflow.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `boolean` | `true` | Enable Phase 4.5 test planning and Phase 6 quality gates. When `false`, Phase 4.5 is skipped and test-writer generates tests from the feature spec only. |
+| `minimumRigorScore` | `float` | `0.7` | Minimum test rigor score (0.0–1.0) to pass the Phase 6 quality gate |
+| `minimumCoverage` | `integer` | `80` | Minimum test coverage percentage to pass the Phase 6 quality gate |
+
+When quality gates fail, the user can choose to fix (max 2 re-validation loops), override (proceed with documented exception), or abandon. Overrides surface in the Phase 7 summary.
+
 **Example — feature-dev with PR creation:**
 ```json
 {
@@ -181,7 +198,12 @@ These fields configure the `/feature-dev` skill. They live under the `featureDev
     "reviewerCount": 3,
     "commitStrategy": "single-final",
     "createPR": true,
-    "prDraft": true
+    "prDraft": true,
+    "testArchitect": {
+      "enabled": true,
+      "minimumRigorScore": 0.7,
+      "minimumCoverage": 80
+    }
   }
 }
 ```
@@ -241,7 +263,9 @@ The `/test-gen`, `/test-plan`, and `/test-eval` commands use project auto-detect
 | TypeScript | vitest | c8 | fast-check |
 | Go | go test | go tool cover | rapid |
 
-No configuration key exists in `.claude/refactor.config.json` for test-architect — all settings are auto-detected. If you need to override detection, specify the target path explicitly in the command arguments.
+The standalone `/test-gen`, `/test-plan`, `/test-eval` commands require no configuration key — all settings are auto-detected. If you need to override detection, specify the target path explicitly in the command arguments.
+
+When test-architect agents run as part of `/feature-dev` (Phase 4.5 and Phase 6), they use the `featureDev.testArchitect` configuration section for quality gate thresholds. See [Test Architecture Integration](#test-architecture-integration-testarchitect) above.
 
 ## Autonomous Mode Configuration (`autonomous`)
 

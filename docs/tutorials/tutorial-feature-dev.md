@@ -6,11 +6,13 @@ diataxis_learning_goals:
   - Navigate the interactive approval gates
   - Observe multi-instance agent spawning and blackboard context sharing
   - Choose between competing architecture designs
+  - See how test-planner produces a formal test plan against the chosen architecture
+  - Understand the mandatory quality gates (rigor score + coverage thresholds)
 ---
 
 # Tutorial: Building a Feature with /feature-dev
 
-In this tutorial, we will use the `/feature-dev` skill to add a webhook notification system to a project. By the end, you will understand the seven-phase workflow, how parallel agents collaborate through a shared blackboard, and where your input steers the process.
+In this tutorial, we will use the `/feature-dev` skill to add a webhook notification system to a project. By the end, you will understand the eight-phase workflow (including test architecture planning), how parallel agents collaborate through a shared blackboard, and where your input steers the process.
 
 ## What you'll learn
 
@@ -18,7 +20,9 @@ In this tutorial, we will use the `/feature-dev` skill to add a webhook notifica
 - How the elicitation protocol adapts to the detail you provide
 - How parallel agent instances explore, design, and review from different perspectives
 - How to pick an architecture from competing proposals
-- Where the five interactive approval gates occur and what they expect from you
+- How test-planner creates a scientifically grounded test plan before implementation begins
+- How mandatory quality gates (rigor score + coverage) ensure robust test coverage
+- Where the six interactive approval gates occur and what they expect from you
 
 ## Prerequisites
 
@@ -113,7 +117,18 @@ Which approach would you like to proceed with? (1, 2, or 3)
 
 Pick the one that fits your project. You can also ask for a hybrid: "Use approach 3 but with the separate domain module from approach 2."
 
-### Step 6: Approve and watch implementation (Phase 5)
+### Step 6: Watch the test plan generation (Phase 4.5)
+
+After you pick an architecture, the `test-planner` agent analyzes it and produces a formal test plan using scientific techniques (equivalence class partitioning, boundary value analysis, property-based testing). You will see:
+
+```
+Test plan complete. 18 unit tests, 4 property tests planned against the chosen architecture.
+Proceeding to implementation.
+```
+
+This plan captures the intended behavioral contract at design time — before any code is written. The `test-writer` agent will use it to generate tests in the next phase.
+
+### Step 7: Approve and watch implementation (Phase 5)
 
 Before writing code, the skill asks for explicit confirmation:
 
@@ -126,38 +141,43 @@ Ready to implement using the Pragmatic architecture. This will:
 Proceed? (yes/no)
 ```
 
-After approval, the `feature-code` agent implements the design while the `refactor-test` agent writes tests and runs the full suite. If tests fail, the agents coordinate fixes automatically (up to three attempts before asking you).
+After approval, the `feature-code` agent implements the design while the `test-writer` agent generates test code from the Phase 4.5 test plan. Tests are written with mutation-aware assertions using the project's testing framework. If tests fail, the agents coordinate fixes automatically (up to three attempts before asking you).
 
-### Step 7: Review the quality assessment (Phase 6)
+### Step 8: Review the quality assessment (Phase 6)
 
-Three code-reviewer agents examine the implementation from different angles:
+Three code-reviewer agents examine the implementation from different angles, and two test quality agents run **in parallel**:
 
+**Code reviewers:**
 - **Reviewer 1** focuses on simplicity, DRY principles, and code elegance
 - **Reviewer 2** focuses on bugs, edge cases, and functional correctness
 - **Reviewer 3** focuses on convention adherence and abstraction quality
 
-The skill consolidates their findings:
+**Test quality agents (mandatory):**
+- **test-rigor-reviewer** scores each test 0.0–1.0 for scientific rigor
+- **coverage-analyst** measures line and branch coverage
+
+The skill consolidates all findings and presents a quality gate:
 
 ```
-Quality review complete. Findings:
+Quality Review Results for webhook notification system
 
-Critical (0):
-  None
+Code Review:
+  Critical (0): None
+  Moderate (2):
+    - [Reviewer 2] Missing timeout on outgoing HTTP requests
+    - [Reviewer 3] Retry delay should use exponential backoff
 
-Moderate (2):
-  - [Reviewer 2] Missing timeout on outgoing HTTP requests in WebhookDispatcher
-  - [Reviewer 3] Retry delay should use exponential backoff, not fixed interval
+Test Quality Gate: PASSED ✓
+  - Rigor score: 0.82/1.0 (minimum: 0.7) ✓
+  - Coverage: 87% (minimum: 80%) ✓
 
-Minor (1):
-  - [Reviewer 1] WebhookRegistration model has an unused `metadata` field
-
-Recommendation: Fix the 2 moderate issues before finalizing.
+Recommendation: Fix the 2 moderate code issues.
 Options: (a) Fix critical+moderate, (b) Fix all, (c) Proceed as-is
 ```
 
-Choose your preference. If you select (a) or (b), the feature-code agent applies fixes and tests run again.
+If the quality gate **fails** (rigor or coverage below configured thresholds), you get different options: Fix now, Override (proceed with documented exception), or Abandon. The override surfaces in the final summary for auditability.
 
-### Step 8: Finalize (Phase 7)
+### Step 9: Finalize (Phase 7)
 
 The skill commits the changes (if configured) and presents a summary:
 
@@ -169,7 +189,8 @@ Summary:
 - Architecture: Pragmatic (async dispatch + job runner retries)
 - Files created: 4
 - Files modified: 2
-- Tests: 12 new, all passing
+- Tests: 18 new, all passing
+- Test quality: 0.82/1.0 rigor, 87% coverage
 - Review: 2 moderate issues fixed, 1 minor deferred
 
 Key decisions made:
@@ -188,9 +209,11 @@ You have:
 - Observed three parallel code-explorers mapping your codebase from different angles
 - Resolved post-exploration ambiguities through the clarifying questions gate
 - Chosen between three competing architecture designs with different trade-offs
-- Watched an implementation agent build the feature following the approved blueprint
-- Reviewed consolidated findings from three quality-focused reviewers
-- Navigated all five interactive approval gates in the workflow
+- Seen test-planner produce a formal test plan against the chosen architecture
+- Watched feature-code implement the feature and test-writer generate tests from the plan
+- Reviewed consolidated findings from code reviewers, rigor reviewer, and coverage analyst
+- Passed the mandatory quality gate (rigor score + coverage thresholds)
+- Navigated all six interactive approval gates in the workflow
 
 ## /refactor vs /feature-dev: when to use which
 

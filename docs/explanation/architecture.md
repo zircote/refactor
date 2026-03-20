@@ -206,6 +206,40 @@ The test-architect follows the same swarm orchestration pattern as /refactor and
 
 The test-architect skill reuses the same orchestration primitives (TeamCreate, TaskCreate/TaskUpdate, SendMessage, blackboard) and team coordination patterns established in v2.0.0. The parallel execution point is Phase 3, where rigor review and coverage analysis run simultaneously — mirroring Phase 1 of /refactor where test analysis and architecture review run in parallel.
 
+## v4.2.0: Mandatory test-architect integration in feature-dev
+
+**v4.2.0** promotes the four test-architect agents from a standalone skill to a mandatory core pipeline within `/feature-dev`. The test-planner, test-writer, test-rigor-reviewer, and coverage-analyst now run as part of every feature development workflow, replacing the previous `refactor-test` agent.
+
+### Why integrate test-architect into feature-dev?
+
+The original feature-dev workflow used `refactor-test` for ad-hoc test generation — tests were written without formal techniques and without quality validation. This produced tests that compiled and passed but were often tautological or mutation-susceptible. A feature could ship with 100% coverage yet have worthless assertions.
+
+By integrating the test-architect pipeline, tests are now:
+- **Planned against the architecture** (Phase 4.5) — behavioral contracts are defined at design time, not reverse-engineered from implementation
+- **Written from formal test plans** (Phase 5) — using equivalence class partitioning, boundary value analysis, and property-based testing
+- **Quality-gated** (Phase 6) — rigor scores and coverage percentages must meet configurable thresholds before the feature can complete
+
+### Why plan tests at Phase 4.5?
+
+The test plan is most valuable when created against the *architecture blueprint*, not the implementation. At this point:
+- The intended behavior is fresh and well-defined
+- Design-level edge cases are visible (error paths, state transitions, integration contracts)
+- The plan captures what the code *should* do, independent of how it actually does it
+
+This is the highest-leverage moment for test design. A plan written after implementation tends to mirror the code rather than challenge it.
+
+### The test_plan as a stable interface contract
+
+In autonomous mode, the test plan from Phase 4.5 serves as the fixed fitness function. Unlike the previous design where `refactor-test` rewrote tests each iteration (allowing test drift), the test plan is now immutable once created. Implementations improve toward a stable target, keeping the convergence signal clean.
+
+### Configurable quality gates
+
+Quality gates are enforced via `featureDev.testArchitect` configuration:
+- `minimumRigorScore` (default: 0.7) — tests must demonstrate scientific rigor
+- `minimumCoverage` (default: 80%) — code must be adequately covered
+
+The `enabled` flag allows operators to disable gates without editing the SKILL.md — useful for prototyping or CI environments where test planning adds unwanted latency. Gate overrides are explicitly auditable in the Phase 7 summary.
+
 ## Further reading
 
 - [Agent Reference](../reference/agents.md) — detailed agent specifications and tool lists

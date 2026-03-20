@@ -65,7 +65,7 @@ Each skill has documentation across all four Diataxis quadrants:
 | Skill | Tutorial | How-to | Reference | Explanation |
 |-------|----------|--------|-----------|-------------|
 | Refactor | [tutorial](tutorials/tutorial.md) | [scope](guides/scope-refactoring.md), [focus](guides/focus-refactoring.md), [commits](guides/configure-commits.md) | [agents](reference/agents.md), [scores](reference/quality-scores.md), [config](reference/configuration.md) | [architecture](explanation/architecture.md) |
-| Feature-Dev | [tutorial](tutorials/tutorial-feature-dev.md) | [use](guides/use-feature-dev.md) | [agents](reference/agents.md), [config](reference/configuration.md) | [architecture](explanation/architecture.md) |
+| Feature-Dev | [tutorial](tutorials/tutorial-feature-dev.md) | [use](guides/use-feature-dev.md), [evaluate tests](guides/evaluate-test-quality.md) | [agents](reference/agents.md), [scores](reference/quality-scores.md), [config](reference/configuration.md) | [architecture](explanation/architecture.md), [test techniques](explanation/test-design-techniques.md) |
 | Autonomous | [tutorial](tutorials/tutorial-autonomous.md) | [use](guides/use-autonomous-mode.md) | [config](reference/configuration.md) | [convergence](explanation/autonomous-convergence.md) |
 | Test-Architect | [tutorial](tutorials/tutorial-test-architect.md) | [generate](guides/use-test-gen.md), [evaluate](guides/evaluate-test-quality.md) | [agents](reference/agents.md), [scores](reference/quality-scores.md), [config](reference/configuration.md) | [techniques](explanation/test-design-techniques.md) |
 
