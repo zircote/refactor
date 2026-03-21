@@ -1,0 +1,411 @@
+{
+  "skill_name": "refactor",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "refactor src/utils/helpers.ts — focus on cleaning up the helper functions, there's a lot of duplication and dead code in there",
+      "expected_output": "The skill creates a swarm team with default agents (code-explorer, architect, refactor-test, refactor-code, simplifier, code-reviewer), runs discovery, foundation analysis, 3 iteration cycles, final assessment, and produces a timestamped markdown report.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "TeamCreate.*refactor-team",
+          "description": "Creates a swarm team named refactor-team"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "blackboard_create",
+          "description": "Creates a shared blackboard for cross-agent context"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "code-explorer",
+          "description": "Spawns code-explorer agent"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "architect",
+          "description": "Spawns architect agent"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "refactor-test",
+          "description": "Spawns refactor-test agent"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "refactor-code",
+          "description": "Spawns refactor-code agent"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "simplifier",
+          "description": "Spawns simplifier agent"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "code-reviewer",
+          "description": "Spawns code-reviewer agent"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "refactor-result-.*\\.md",
+          "description": "Generates a timestamped refactor result markdown report"
+        }
+      ],
+      "expectations": [
+        "The skill runs Phase 0.5 (Discovery) where code-explorer maps the codebase before any changes begin",
+        "The skill runs Phase 1 (Foundation) with parallel tasks for test coverage, architecture review, and quality+security baseline",
+        "The skill runs 3 iterations (the default) of the Phase 2 loop with architect review, implementation, test verification, code review, and simplification steps",
+        "The skill produces a final report with quality scores (Clean Code, Architecture, Security Posture) in refactor-result-{timestamp}.md"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "--autonomous --iterations=5 refactor the API layer in src/api/",
+      "expected_output": "The skill runs in fully autonomous mode with no interactive prompts, creates snapshot branches, scores each iteration, applies keep/discard gating, detects convergence, spawns convergence-reporter, and cleans up workspace.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "autonomous",
+          "description": "Skill recognizes autonomous mode flag"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "git_snapshot\\.sh baseline",
+          "description": "Creates baseline snapshot branch in autonomous mode"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "score\\.sh",
+          "description": "Runs scoring script for composite evaluation"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "results_log\\.sh",
+          "description": "Logs iteration results to TSV"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "convergence-reporter",
+          "description": "Spawns convergence-reporter agent for autonomous mode"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "git_snapshot\\.sh cleanup",
+          "description": "Cleans up snapshot branches after convergence"
+        }
+      ],
+      "expectations": [
+        "The skill does NOT prompt the user for any interactive questions (Q0-Q6 in Phase 0, scope confirmation in Phase 1, assessment gates in Phase 3, or commit/report confirmation in Phase 4)",
+        "The skill uses 5 as max_iterations (from --iterations=5), not the default 20",
+        "Each iteration follows the MODIFY -> EVALUATE -> KEEP/DISCARD -> LOG -> CONVERGENCE CHECK sequence",
+        "Tests are FROZEN during autonomous mode — refactor-test is instructed to run tests only, never create or modify test files",
+        "The workspace directory is removed after finalization (rm -rf) and not committed"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "--focus=security review the authentication module in src/auth/",
+      "expected_output": "The skill runs a security-focused refactoring with only code-reviewer, refactor-test, and refactor-code agents active. No architect or simplifier. Single iteration by default for focused runs.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "code-reviewer",
+          "description": "Spawns code-reviewer agent for security focus"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "refactor-test",
+          "description": "Always spawns refactor-test regardless of focus"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "parameter": "refactor-code",
+          "pattern": "refactor-code",
+          "description": "Always spawns refactor-code regardless of focus"
+        }
+      ],
+      "expectations": [
+        "The skill does NOT spawn an architect agent (architecture is not in the focus set)",
+        "The skill does NOT spawn a simplifier agent (simplification is not in the focus set)",
+        "The skill does NOT spawn a code-explorer agent (discovery is not in the focus set)",
+        "The code-reviewer performs both quality review with confidence scoring and security review with OWASP, secrets scanning, and severity classification",
+        "Default iteration count for focused runs is 1 (not 3), unless overridden by --iterations",
+        "The final report includes a 'Focus Mode: security' header and only security-relevant scores"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "--focus=security,architecture,simplification refactor the payment processing pipeline",
+      "expected_output": "The skill spawns the union of agents for all three focus areas: code-reviewer (security), architect (architecture), simplifier (simplification), plus the always-included refactor-test and refactor-code.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "architect",
+          "description": "Spawns architect for architecture focus"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "code-reviewer",
+          "description": "Spawns code-reviewer for security focus"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "simplifier",
+          "description": "Spawns simplifier for simplification focus"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "refactor-test",
+          "description": "Always spawns refactor-test"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "refactor-code",
+          "description": "Always spawns refactor-code"
+        }
+      ],
+      "expectations": [
+        "The skill correctly parses multi-focus comma-separated values and spawns the union of all agents from the spawn matrix",
+        "The skill does NOT spawn code-explorer (discovery not in focus set)",
+        "The final report header includes 'Focus Mode: security, architecture, simplification' and includes scores from all three active specialist agents",
+        "The skill sets is_focused = true, resulting in default iteration count of 1"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "--focus=testing refactor src/core/engine.ts",
+      "expected_output": "The skill spawns all 4 test-architect agents (test-planner, test-rigor-reviewer, coverage-analyst, test-writer) along with always-included refactor-test and refactor-code. Runs the sequential test-architect follow-up in Phase 1.3.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "test-planner",
+          "description": "Spawns test-planner for testing focus"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "test-writer",
+          "description": "Spawns test-writer for testing focus"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "test-rigor-reviewer",
+          "description": "Spawns test-rigor-reviewer for testing focus"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "coverage-analyst",
+          "description": "Spawns coverage-analyst for testing focus"
+        }
+      ],
+      "expectations": [
+        "The test-planner produces a structured JSON test plan using equivalence class partitioning and boundary value analysis, written to blackboard key 'test_plan'",
+        "The test-writer generates test code in TDD red phase (tests must compile but FAIL) using the test plan from the blackboard",
+        "The test-rigor-reviewer scores each test 0.0-1.0 for scientific rigor after test-writer completes",
+        "The coverage-analyst runs native coverage tools and targets 90% coverage",
+        "Phase 1.3 runs test-architect steps sequentially: test-writer after test-planner, then test-rigor-reviewer",
+        "The skill does NOT spawn architect, simplifier, or code-explorer (not in testing focus set)"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "--focus=invalid_thing refactor src/",
+      "expected_output": "The skill reports an error for the invalid focus area and stops without spawning agents or performing any refactoring work.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "Invalid focus area",
+          "description": "Skill reports invalid focus area error"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "security.*architecture.*simplification.*code.*discovery.*testing",
+          "description": "Error message lists valid focus area values"
+        }
+      ],
+      "expectations": [
+        "The skill stops immediately after detecting the invalid focus area — no team is created, no agents are spawned, no refactoring occurs",
+        "The error message includes the specific invalid value and the full list of valid options: security, architecture, simplification, code, discovery, testing"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "clean up and simplify the database access layer, I'd like 5 iterations since there's a lot to improve. the code is in src/db/",
+      "expected_output": "The skill detects '5 iterations' in natural language as cli_iterations=5, runs the interactive configuration setup (first run without config file), then executes 5 iterations of the refactoring loop.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "TeamCreate",
+          "description": "Creates the swarm team"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "refactor\\.config\\.json",
+          "description": "Checks for or creates refactor.config.json"
+        }
+      ],
+      "expectations": [
+        "The skill extracts '5 iterations' from natural language and uses 5 as max_iterations (not the default 3)",
+        "The skill parses the remaining text as the scope: the database access layer in src/db/",
+        "In the absence of .claude/refactor.config.json, the skill runs interactive setup (Q0-Q3 questions about iterations, commits, PR, report) before proceeding",
+        "The skill executes exactly 5 iterations of the Phase 2 loop, each with architect review, implementation, test verification, code review, and simplification",
+        "Each iteration checkpoint message shows the correct iteration number out of 5 (e.g., 'Iteration 3 of 5 complete')"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "--autonomous refactor the entire codebase",
+      "expected_output": "The skill runs in autonomous mode with default config values (no interactive prompts), default 20 max iterations, and performs keep/discard convergence gating until convergence is detected.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "autoresearch/v0",
+          "description": "Creates baseline snapshot branch autoresearch/v0"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "(KEPT|REVERTED)",
+          "description": "Each iteration produces a KEPT or REVERTED decision"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "(perfect|stuck|plateau|max_iterations)",
+          "description": "Loop terminates with a convergence reason"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "rm -rf",
+          "description": "Workspace directory is cleaned up after convergence"
+        }
+      ],
+      "expectations": [
+        "The skill uses default max_iterations of 20 for autonomous mode (not 3)",
+        "The skill creates a config file with all defaults silently without prompting the user",
+        "Each iteration scores the codebase using composite weights (tests: 0.50, quality: 0.25, security: 0.25)",
+        "The convergence loop checks in order: perfect score, stuck (3 consecutive reverts), plateau (delta < 0.01 over 3 iterations), max iterations",
+        "The final report includes a Convergence Summary section with score trajectory, convergence reason, and kept/reverted counts"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "refactor src/services/notification.ts",
+      "expected_output": "The skill runs a standard refactoring on a single file with all default agents and default 3 iterations. It correctly handles the per-iteration commit strategy if configured, and does NOT commit when commitStrategy is 'none'.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "team_name.*refactor-team",
+          "description": "All agents are spawned with team_name parameter for persistent teammates"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "blackboard_write.*codebase_context",
+          "description": "Discovery results are written to blackboard with key codebase_context"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "SendMessage",
+          "description": "Team lead communicates with agents via SendMessage"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "TaskCreate",
+          "description": "Tasks are created via TaskCreate for swarm coordination"
+        }
+      ],
+      "expectations": [
+        "The skill uses mandatory swarm orchestration (TeamCreate, TaskCreate, Agent with team_name, SendMessage) — not plain agent spawns",
+        "Code-explorer writes codebase map to blackboard key 'codebase_context' and downstream agents read from it",
+        "Each agent follows the task discovery protocol: TaskList -> TaskGet -> work -> TaskUpdate -> SendMessage -> TaskList",
+        "No agent commits code via git — only the team lead handles commits",
+        "Phase 3 (Final Assessment) runs parallel final tasks for simplifier, architect, and code-reviewer before the final test run"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "--focus=code refactor the request handler middleware",
+      "expected_output": "The --focus=code flag spawns architect + code-reviewer (from the spawn matrix for 'code') plus always-included refactor-test and refactor-code. Code-explorer and simplifier are excluded.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "architect",
+          "description": "Spawns architect for code focus"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "code-reviewer",
+          "description": "Spawns code-reviewer for code focus"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "refactor-test",
+          "description": "Always spawns refactor-test"
+        },
+        {
+          "type": "regex_match",
+          "source": "transcript",
+          "pattern": "refactor-code",
+          "description": "Always spawns refactor-code"
+        }
+      ],
+      "expectations": [
+        "The skill correctly maps --focus=code to the agent set: architect + code-reviewer + refactor-test + refactor-code (per the spawn matrix)",
+        "The skill does NOT spawn simplifier (simplification is not in the code focus mapping)",
+        "The skill does NOT spawn code-explorer (discovery is not in the code focus mapping)",
+        "The code-reviewer performs confidence-scored quality review (reporting only issues with confidence >= 80) AND security review with severity classification",
+        "If code-reviewer reports FAIL with blocking findings (Critical/High), refactor-code fixes them and code-reviewer re-verifies (Step 2.E.1 loop, max 3 attempts)"
+      ]
+    }
+  ]
+}

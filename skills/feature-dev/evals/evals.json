@@ -1,0 +1,510 @@
+{
+  "skill_name": "feature-dev",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "add a webhook notification system that fires on repo sync events — it should support multiple endpoints, retry on failure, and include HMAC signature verification",
+      "expected_output": "Full feature development lifecycle: elicitation, exploration with multiple explorers, architecture with multiple architects presented to user, test planning, implementation, quality review with rigor/coverage gates, and final summary",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "TeamCreate",
+          "description": "Skill creates a swarm team via TeamCreate"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "blackboard_create",
+          "description": "Skill creates a shared blackboard for cross-agent context"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "feature-dev-team",
+          "description": "Team is named feature-dev-team"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "code-explorer-1",
+          "description": "At least one code-explorer instance is spawned"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "architect-",
+          "description": "Architect instances are spawned for architecture design"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test-planner",
+          "description": "Test planner agent is spawned for Phase 4.5"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "feature_spec",
+          "description": "Feature spec is written to blackboard"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "chosen_architecture",
+          "description": "Chosen architecture is written to blackboard"
+        }
+      ],
+      "expectations": [
+        {
+          "description": "Phase 1 elicitation asks targeted clarifying questions about the webhook feature before proceeding — covering scope, acceptance criteria, or integration points",
+          "check": "transcript_behavior",
+          "criteria": "The skill asks the user at least one clarifying question about the webhook feature requirements before spawning explorers"
+        },
+        {
+          "description": "Phase 4 presents multiple architecture approaches with trade-offs and a recommendation",
+          "check": "transcript_behavior",
+          "criteria": "The skill presents at least 2 distinct architecture approaches (e.g., minimal, clean, pragmatic) with trade-offs and asks the user to choose"
+        },
+        {
+          "description": "Phase 6 quality review includes test rigor score and coverage percentage",
+          "check": "transcript_behavior",
+          "criteria": "The skill reports a rigor score (X/1.0) and coverage percentage, and evaluates them against configured minimums"
+        },
+        {
+          "description": "Phase 7 summary includes all required sections",
+          "check": "transcript_behavior",
+          "criteria": "Final summary includes: feature description, architecture chosen, files created/modified counts, test status, review findings, and suggested next steps"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "--autonomous add a CLI command that exports project metrics to a JSON dashboard file",
+      "expected_output": "Autonomous mode: all interactive gates skipped, convergence loop runs with keep/discard scoring, no user prompts for decisions, automatic architecture selection, convergence report generated",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "autonomous",
+          "description": "Autonomous mode is detected and acknowledged"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "TeamCreate",
+          "description": "Swarm team is created even in autonomous mode"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "blackboard_create",
+          "description": "Blackboard is created for cross-agent context"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "convergence",
+          "description": "Convergence loop or convergence reporting is present"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "Auto-selected architecture",
+          "description": "Architecture is auto-selected without user input"
+        },
+        {
+          "type": "transcript_not_contains",
+          "pattern": "AskUserQuestion",
+          "description": "No interactive user questions are asked in autonomous mode"
+        }
+      ],
+      "expectations": [
+        {
+          "description": "Autonomous mode skips ALL interactive gates — no elicitation questions, no architecture selection prompt, no implementation approval",
+          "check": "transcript_behavior",
+          "criteria": "The transcript shows no user-facing questions or approval prompts. All decisions are made automatically with documented rationale."
+        },
+        {
+          "description": "Architecture auto-selection follows the documented priority: codebase conventions > pragmatic balance > smallest blast radius",
+          "check": "transcript_behavior",
+          "criteria": "The skill logs its auto-selection rationale referencing at least one of: codebase conventions alignment, pragmatic balance, or blast radius"
+        },
+        {
+          "description": "Convergence loop implements keep/discard gating with scoring",
+          "check": "transcript_behavior",
+          "criteria": "The transcript shows iteration scoring with KEPT or REVERTED decisions based on score comparisons"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "--autonomous --iterations=5 implement a rate limiter middleware for the API layer",
+      "expected_output": "Autonomous mode with max 5 iterations, convergence loop limited to 5, iterations flag correctly parsed and applied",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "autonomous",
+          "description": "Autonomous mode is activated"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "5",
+          "description": "Max iterations is set to 5"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "iterations",
+          "description": "Iterations parameter is acknowledged"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "convergence-reporter",
+          "description": "Convergence reporter agent is spawned at finalization"
+        }
+      ],
+      "expectations": [
+        {
+          "description": "The --iterations=5 flag is correctly parsed and limits the convergence loop",
+          "check": "transcript_behavior",
+          "criteria": "The skill acknowledges max 5 iterations and does not exceed 5 iterations in the convergence loop"
+        },
+        {
+          "description": "The remaining argument 'implement a rate limiter middleware for the API layer' is used as the feature description, not the flags",
+          "check": "transcript_behavior",
+          "criteria": "The feature description used for exploration and architecture is about rate limiter middleware, not about flags or iterations"
+        },
+        {
+          "description": "Convergence reporter produces a summary report",
+          "check": "transcript_behavior",
+          "criteria": "A convergence report is generated showing iterations completed, best score, and convergence reason"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "add a simple health check endpoint that returns 200 OK",
+      "expected_output": "Skill recognizes this is a simple feature, scales down instance counts, uses fewer explorers and architects, but still follows the full workflow",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "TeamCreate",
+          "description": "Team is still created even for simple features"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "blackboard_create",
+          "description": "Blackboard is still created"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "feature_spec",
+          "description": "Feature spec is still written to blackboard"
+        }
+      ],
+      "expectations": [
+        {
+          "description": "Instance counts are scaled down for this simple feature",
+          "check": "transcript_behavior",
+          "criteria": "The skill recognizes this as a simple feature and reduces explorer/architect/reviewer counts below the configured defaults (e.g., 1 explorer instead of 3)"
+        },
+        {
+          "description": "Elicitation is brief or skipped due to high initial confidence",
+          "check": "transcript_behavior",
+          "criteria": "The skill either skips elicitation entirely (confidence >= 95%) or asks at most 1-3 targeted questions (high confidence 80-94%)"
+        },
+        {
+          "description": "Full workflow phases still execute despite simplicity",
+          "check": "transcript_behavior",
+          "criteria": "All phases execute: exploration, architecture, test planning, implementation, quality review, and summary — even though the feature is simple"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I need to add OAuth2 authorization code flow support — it needs to handle the redirect callback, token exchange, token refresh, PKCE, and store tokens securely. Must work with Google, GitHub, and Azure AD providers. Need proper error handling for all OAuth error responses and token expiration. Should integrate with our existing session middleware.",
+      "expected_output": "Skill detects high initial confidence from detailed description, asks minimal elicitation questions, spawns full instance counts for this complex feature, produces thorough architecture with multiple approaches",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "code-explorer-3",
+          "description": "Full explorer count spawned for complex feature (at least 3)"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "architect-",
+          "description": "Multiple architect instances spawned"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test_plan",
+          "description": "Test plan is produced in Phase 4.5"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test-rigor-reviewer",
+          "description": "Test rigor reviewer is spawned in Phase 6"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "coverage-analyst",
+          "description": "Coverage analyst is spawned in Phase 6"
+        }
+      ],
+      "expectations": [
+        {
+          "description": "Elicitation is graduated — the detailed description yields high confidence so only 1-3 targeted questions are asked",
+          "check": "transcript_behavior",
+          "criteria": "The skill recognizes high initial confidence from the thorough description and asks at most 3 targeted questions about remaining gaps, not 8-15 questions"
+        },
+        {
+          "description": "Explorer focus areas are relevant to OAuth2 implementation",
+          "check": "transcript_behavior",
+          "criteria": "Explorer focus assignments reference OAuth-relevant concerns: existing auth patterns, session middleware integration, provider configuration, or security patterns"
+        },
+        {
+          "description": "Architecture designs address the multi-provider requirement",
+          "check": "transcript_behavior",
+          "criteria": "At least one architecture approach addresses how to handle multiple OAuth providers (Google, GitHub, Azure AD) — e.g., provider abstraction, strategy pattern, or configuration-driven approach"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "add logging",
+      "expected_output": "Skill detects very low confidence from vague description, enters extensive elicitation to understand what kind of logging, where, format, etc.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "blackboard_create",
+          "description": "Blackboard created even before elicitation completes"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "TaskCreate",
+          "description": "Phase tasks are created"
+        }
+      ],
+      "expectations": [
+        {
+          "description": "Low confidence triggers extensive elicitation with many questions",
+          "check": "transcript_behavior",
+          "criteria": "The skill assesses low confidence (<50% or <80%) from the vague 'add logging' prompt and asks 4+ questions covering problem statement, scope, acceptance criteria, and integration points"
+        },
+        {
+          "description": "Elicitation questions are specific to logging concerns",
+          "check": "transcript_behavior",
+          "criteria": "Questions address logging-specific dimensions: what to log (errors, requests, audit trail), log format (structured JSON, plaintext), log destination (file, stdout, remote service), log levels, retention, and which components need logging"
+        },
+        {
+          "description": "Skill does not proceed to exploration until confidence is sufficient",
+          "check": "transcript_behavior",
+          "criteria": "The skill waits for user responses to elicitation questions before spawning code-explorer agents. Explorer agents are NOT spawned immediately after the vague prompt."
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "add a caching layer for database queries using Redis with TTL support, cache invalidation on writes, and a fallback to in-memory cache when Redis is unavailable",
+      "expected_output": "Full workflow with Phase 0 config loading, Phase 4.5 test planning producing formal test cases with boundary analysis, and Phase 6 quality gate evaluation",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "refactor.config.json",
+          "description": "Config file is checked or loaded in Phase 0"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test-planner",
+          "description": "Test planner spawned for Phase 4.5"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test_plan",
+          "description": "Test plan written to blackboard"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test-writer",
+          "description": "Test writer spawned to generate test code from plan"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "rigor",
+          "description": "Test rigor scoring is reported"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "coverage",
+          "description": "Coverage analysis is reported"
+        }
+      ],
+      "expectations": [
+        {
+          "description": "Phase 0 loads or creates configuration with featureDev defaults",
+          "check": "transcript_behavior",
+          "criteria": "The skill attempts to read .claude/refactor.config.json and either uses existing config or creates defaults with explorerCount, architectCount, reviewerCount, commitStrategy, and testArchitect settings"
+        },
+        {
+          "description": "Phase 4.5 test plan uses formal techniques",
+          "check": "transcript_behavior",
+          "criteria": "The test planner task references at least one formal test design technique: equivalence class partitioning, boundary value analysis, state transition coverage, or property-based testing"
+        },
+        {
+          "description": "Phase 6 quality gate checks rigor and coverage against configured minimums",
+          "check": "transcript_behavior",
+          "criteria": "Quality gate evaluation compares rigor score against minimumRigorScore (default 0.7) and coverage against minimumCoverage (default 80%) and reports PASSED or FAILED"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "add a batch file upload endpoint that accepts multipart form data, validates file types, scans for malware, stores in S3 with deduplication, and returns presigned download URLs",
+      "expected_output": "Phase 7 commit and summary follow the correct patterns: single-final commit strategy, security check before staging, proper summary with all required sections",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "SendMessage",
+          "description": "SendMessage is used to communicate with teammates after task assignment"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "TaskUpdate",
+          "description": "TaskUpdate is used to assign task owners"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "TaskCreate",
+          "description": "TaskCreate is used for all task management"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "Phase 1",
+          "description": "Phase 1 Discovery + Elicitation is referenced"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "Phase 2",
+          "description": "Phase 2 Codebase Exploration is referenced"
+        }
+      ],
+      "expectations": [
+        {
+          "description": "Every agent spawn includes team_name parameter",
+          "check": "transcript_behavior",
+          "criteria": "All Agent tool calls include team_name: 'feature-dev-team' — no standalone subagent spawns without team registration"
+        },
+        {
+          "description": "Every TaskUpdate with owner assignment is followed by a SendMessage to that teammate",
+          "check": "transcript_behavior",
+          "criteria": "After each task is assigned to a teammate via TaskUpdate, a SendMessage is sent to that teammate notifying them of the assignment. No agent is left without a message after assignment."
+        },
+        {
+          "description": "Phase 7 commit uses single-final strategy with security check",
+          "check": "transcript_behavior",
+          "criteria": "Before staging files, the skill checks for secret patterns (.env, credentials, keys). Uses 'git add -u' for modified files and specific 'git add' for new files, NOT 'git add -A'. Commits with 'feat:' prefix."
+        },
+        {
+          "description": "Phase 7 shutdown sends shutdown messages and calls TeamDelete",
+          "check": "transcript_behavior",
+          "criteria": "The skill sends shutdown_request via SendMessage to all spawned teammates and calls TeamDelete to clean up the team"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "--autonomous implement a plugin system with dynamic loading, lifecycle hooks, dependency resolution between plugins, and a plugin marketplace API",
+      "expected_output": "Autonomous mode with complex feature: assumptions documented, auto-architecture selection, convergence loop with workspace management, cleanup of workspace directory after finalization",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "autonomous",
+          "description": "Autonomous mode detected"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "git_snapshot",
+          "description": "Git snapshot scripts are used for version management"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "score.sh",
+          "description": "Scoring script is invoked for composite scoring"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "results_log",
+          "description": "Results log script tracks iteration history"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "convergence_data",
+          "description": "Convergence data is written to blackboard"
+        }
+      ],
+      "expectations": [
+        {
+          "description": "Phase 1 autonomous: assumptions are documented instead of asking user",
+          "check": "transcript_behavior",
+          "criteria": "The skill documents assumptions made (e.g., 'Assumed scope: X. Assumed constraint: Y.') instead of using AskUserQuestion"
+        },
+        {
+          "description": "Autonomous convergence loop uses workspace directory correctly",
+          "check": "transcript_behavior",
+          "criteria": "A workspace directory is created (e.g., {slug}-autonomous), iteration subdirectories are created for each iteration, and the workspace is cleaned up (rm -rf) after finalization"
+        },
+        {
+          "description": "Baseline score is computed before iterations begin",
+          "check": "transcript_behavior",
+          "criteria": "Iteration 0 establishes a baseline score before the convergence loop begins iterating from iteration 1"
+        },
+        {
+          "description": "Quality gate uses relaxed autonomous thresholds when appropriate",
+          "check": "transcript_behavior",
+          "criteria": "In Phase 6, if the quality gate fails, autonomous mode uses relaxed thresholds (rigor >= 0.5, coverage >= 60%) before auto-overriding"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "build a real-time notification system with WebSocket support, notification preferences per user, read/unread tracking, and push notification integration for mobile",
+      "expected_output": "Full interactive workflow with Phase 3 clarifying questions that are distinct from Phase 1 — Phase 3 asks HOW/WHERE questions informed by codebase exploration, not WHAT/WHY",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "codebase_context",
+          "description": "Codebase context is consolidated and written to blackboard"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "clarifications",
+          "description": "Clarifications are written to blackboard after Phase 3"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "blackboard_write",
+          "description": "Blackboard writes are used for cross-agent data sharing"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "blackboard_read",
+          "description": "Blackboard reads are used by agents to access shared context"
+        }
+      ],
+      "expectations": [
+        {
+          "description": "Phase 3 questions are informed by codebase exploration and distinct from Phase 1",
+          "check": "transcript_behavior",
+          "criteria": "Phase 3 asks questions about HOW to integrate with discovered patterns, which abstractions to reuse, or design preferences given the existing architecture — NOT re-asking WHAT the feature is or WHY it's needed"
+        },
+        {
+          "description": "Explorer instances have differentiated focus areas",
+          "check": "transcript_behavior",
+          "criteria": "Each code-explorer instance receives a distinct focus assignment — e.g., one traces similar features, one maps architecture/modules, one analyzes integration points. They are NOT all given the same generic prompt."
+        },
+        {
+          "description": "8 phase tasks are created in Phase 0",
+          "check": "transcript_behavior",
+          "criteria": "The skill creates exactly 8 high-level phase tasks via TaskCreate: Discovery, Exploration, Clarifying Questions, Architecture, Test Architecture, Implementation, Quality Review, and Summary"
+        }
+      ]
+    }
+  ]
+}

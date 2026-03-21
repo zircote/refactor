@@ -1,0 +1,23 @@
+[
+  {"query": "add a webhook notification system for repo events", "should_trigger": true},
+  {"query": "implement OAuth2 support with PKCE", "should_trigger": true},
+  {"query": "build a caching layer using Redis", "should_trigger": true},
+  {"query": "I need a feature for exporting metrics to dashboards", "should_trigger": true},
+  {"query": "create a plugin system with dynamic loading", "should_trigger": true},
+  {"query": "add rate limiting middleware to the API", "should_trigger": true},
+  {"query": "implement real-time notifications with WebSocket", "should_trigger": true},
+  {"query": "build a batch file upload endpoint with S3 storage", "should_trigger": true},
+  {"query": "--autonomous add a CLI export command for project data", "should_trigger": true},
+  {"query": "I want to add health check endpoints that return system status", "should_trigger": true},
+
+  {"query": "refactor the existing auth module to use dependency injection", "should_trigger": false},
+  {"query": "fix the bug where login fails after token expiry", "should_trigger": false},
+  {"query": "review my pull request for the caching changes", "should_trigger": false},
+  {"query": "rename all variables in utils.py to use snake_case", "should_trigger": false},
+  {"query": "simplify the database connection pool implementation", "should_trigger": false},
+  {"query": "analyze the performance of our API endpoints", "should_trigger": false},
+  {"query": "update the README with installation instructions", "should_trigger": false},
+  {"query": "clean up dead code in the notification module", "should_trigger": false},
+  {"query": "migrate the existing REST API from v1 to v2 schema", "should_trigger": false},
+  {"query": "optimize the existing search query to use indexes", "should_trigger": false}
+]

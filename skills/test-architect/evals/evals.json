@@ -1,0 +1,445 @@
+{
+  "skill_name": "test-architect",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I need tests for my Rust HTTP client library at ~/projects/http-client. It has a Cargo.toml, src/lib.rs with request building, retry logic, and timeout handling. Generate the full test suite.",
+      "expected_output": "Full pipeline: detects Rust project, creates test plan with equivalence classes and boundary values, generates test files, runs rigor review and coverage analysis, presents summary report.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "cargo test",
+          "description": "Identifies cargo test as the Rust test runner"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "proptest",
+          "description": "Identifies proptest as the Rust property testing library"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "cargo-tarpaulin",
+          "description": "Identifies cargo-tarpaulin as the Rust coverage tool"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "TeamCreate",
+          "description": "Uses swarm orchestration to create a team"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test-planner",
+          "description": "Spawns the test-planner agent"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test-writer",
+          "description": "Spawns the test-writer agent"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test-rigor-reviewer",
+          "description": "Spawns the test-rigor-reviewer agent"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "coverage-analyst",
+          "description": "Spawns the coverage-analyst agent"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "blackboard_create",
+          "description": "Creates a shared blackboard for cross-agent context"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "TaskCreate",
+          "description": "Uses TaskCreate for swarm task management"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "detect_project",
+          "description": "Runs project detection script or logic"
+        }
+      ],
+      "expectations": [
+        "A structured JSON test plan is produced containing test_cases and property_tests arrays covering equivalence classes (valid/invalid URLs, headers), boundary values (timeout=0, max retries), and error paths",
+        "Test code is generated in TDD red-phase style — tests are designed to compile but FAIL against the real implementation, not trivially pass",
+        "The rigor review scores each test 0.0-1.0 and checks for tautological assertions, missing boundary cases, and mutation-susceptible patterns",
+        "A final summary report is presented with planned count, generated file count, rigor score, coverage percentage, and next steps including 'cargo test'"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Run /test-architect --mode=plan for my Python FastAPI app at ./backend — it has pyproject.toml, src/api/routes.py, src/api/models.py, src/services/auth.py. I just want the test plan, don't write code yet.",
+      "expected_output": "Plan-only mode: detects Python, produces JSON test plan, presents it to user without generating test code.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "pytest",
+          "description": "Identifies pytest as the Python test runner"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "hypothesis",
+          "description": "Identifies hypothesis as the Python property testing library"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test-planner",
+          "description": "Spawns the test-planner agent in plan mode"
+        },
+        {
+          "type": "transcript_not_contains",
+          "pattern": "test-writer",
+          "description": "Does NOT spawn the test-writer agent in plan mode"
+        },
+        {
+          "type": "transcript_not_contains",
+          "pattern": "coverage-analyst",
+          "description": "Does NOT spawn the coverage-analyst agent in plan mode"
+        },
+        {
+          "type": "transcript_not_contains",
+          "pattern": "test-rigor-reviewer",
+          "description": "Does NOT spawn the test-rigor-reviewer agent in plan mode"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test_plan",
+          "description": "Produces a test_plan artifact"
+        }
+      ],
+      "expectations": [
+        "The JSON test plan covers all three source files (routes.py, models.py, auth.py) with equivalence class partitioning for API inputs and boundary value analysis for auth edge cases",
+        "The plan includes property-based tests using hypothesis for model validation invariants",
+        "The skill presents the test plan to the user and suggests running /test-gen to generate code, without proceeding to code generation itself"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I have a TypeScript project with package.json and tsconfig.json at ~/code/data-pipeline. The main module is src/transformer.ts which takes CSV data, validates schemas, transforms records, and outputs JSON. Please generate tests for it.",
+      "expected_output": "Full pipeline for TypeScript: detects TS, uses vitest/c8/fast-check, generates comprehensive tests for data transformation logic.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "vitest",
+          "description": "Identifies vitest as the TypeScript test runner"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "fast-check",
+          "description": "Identifies fast-check as the TypeScript property testing library"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "c8",
+          "description": "Identifies c8 as the TypeScript coverage tool"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test-architect-team",
+          "description": "Creates a team named test-architect-team"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "blackboard_write",
+          "description": "Writes test plan to shared blackboard"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": ".test.ts",
+          "description": "References TypeScript test file convention"
+        }
+      ],
+      "expectations": [
+        "The test plan includes equivalence classes for CSV input: valid records, malformed rows, empty input, Unicode content, and schema mismatches",
+        "Boundary value analysis covers edge cases like empty CSV, single-row CSV, maximum field length, and special characters in values",
+        "Property-based tests using fast-check verify transformation invariants such as record count preservation and schema compliance of output JSON",
+        "Generated test files follow TypeScript conventions (*.test.ts) and use vitest assertions"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Run /test-architect --mode=eval on my existing Go test suite at ~/services/payment-gateway. It has go.mod and tests in handler_test.go and service_test.go. I want to know how rigorous my tests are.",
+      "expected_output": "Eval mode: runs rigor review and coverage analysis on existing tests without generating new code.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "go test",
+          "description": "Identifies go test as the Go test runner"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "go tool cover",
+          "description": "Identifies go tool cover as the Go coverage tool"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test-rigor-reviewer",
+          "description": "Spawns the test-rigor-reviewer agent for eval mode"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "coverage-analyst",
+          "description": "Spawns the coverage-analyst agent for eval mode"
+        },
+        {
+          "type": "transcript_not_contains",
+          "pattern": "subagent_type: \"refactor:test-planner\"",
+          "description": "Does NOT spawn test-planner in eval mode"
+        }
+      ],
+      "expectations": [
+        "The skill spawns only test-rigor-reviewer and coverage-analyst — no test-planner or test-writer",
+        "The rigor review evaluates existing tests for tautological assertions, missing boundary cases, weak property generators, missing error path tests, and mutation-susceptible patterns",
+        "Each test in handler_test.go and service_test.go receives an individual rigor score between 0.0 and 1.0 with specific issues and suggestions",
+        "The coverage analysis identifies uncovered functions, branches, and lines, and suggests specific test cases to close gaps targeting 90% coverage",
+        "A combined quality summary is presented with overall rigor score, coverage percentage, issue count, and gap count"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Run /test-architect --mode=coverage for ~/projects/ml-pipeline — it's a Python project with pyproject.toml. I just want to know where my coverage gaps are.",
+      "expected_output": "Coverage-only mode: runs coverage analysis, identifies gaps, suggests targeted test cases.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "coverage",
+          "description": "References coverage.py tool for Python coverage analysis"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "coverage-analyst",
+          "description": "Spawns the coverage-analyst agent"
+        },
+        {
+          "type": "transcript_not_contains",
+          "pattern": "test-writer",
+          "description": "Does NOT spawn test-writer in coverage mode"
+        },
+        {
+          "type": "transcript_not_contains",
+          "pattern": "test-rigor-reviewer",
+          "description": "Does NOT spawn test-rigor-reviewer in coverage mode"
+        },
+        {
+          "type": "transcript_not_contains",
+          "pattern": "test-planner",
+          "description": "Does NOT spawn test-planner in coverage mode"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "90%",
+          "description": "References 90% coverage target"
+        }
+      ],
+      "expectations": [
+        "Only the coverage-analyst agent is spawned — no test-planner, test-writer, or test-rigor-reviewer",
+        "The coverage analysis output includes total_coverage_pct, uncovered_regions, and recommended_tests",
+        "Suggested test cases target specific uncovered functions and branches, not generic advice",
+        "The final report follows the Coverage mode format with Total Coverage percentage, Uncovered Regions count, and gap-specific suggestions"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Generate tests for my Rust project at ~/crypto-lib. It has Cargo.toml and src/lib.rs implementing AES encryption, key derivation, and HMAC verification. Security-critical code needs thorough boundary and property testing.",
+      "expected_output": "Full pipeline with emphasis on security-critical boundary analysis and property-based testing for cryptographic operations.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "proptest",
+          "description": "Uses proptest for property-based testing of crypto invariants"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "boundary",
+          "description": "Applies boundary value analysis to crypto operations"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "blackboard_write",
+          "description": "Uses blackboard for cross-agent context sharing"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "SendMessage",
+          "description": "Uses SendMessage for inter-agent communication"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "mutation",
+          "description": "References mutation-aware testing for crypto code"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "cargo-mutants",
+          "description": "References cargo-mutants as the Rust mutation tool"
+        }
+      ],
+      "expectations": [
+        "The test plan includes boundary values specific to cryptographic operations: zero-length keys, maximum key sizes, empty plaintext, single-byte input, and maximum-length input",
+        "Property-based tests verify cryptographic invariants: encrypt-then-decrypt roundtrip yields original plaintext, HMAC verification succeeds for unmodified data and fails for tampered data",
+        "The plan includes error path tests for invalid keys, corrupted ciphertext, and truncated HMAC values",
+        "Mutation-aware assertions are designed to catch subtle bugs: off-by-one in key derivation rounds, wrong IV size, and incorrect padding"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "I need tests for a Go microservice at ~/services/user-api. It has go.mod and three packages: handlers/, store/, and middleware/. Generate the full test suite with parallel planning since these are independent modules.",
+      "expected_output": "Full pipeline with multi-module parallel planning: spawns multiple test-planner instances for independent packages.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "go test",
+          "description": "Identifies go test as the Go test runner"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "rapid",
+          "description": "Identifies rapid as the Go property testing library"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "TaskCreate",
+          "description": "Uses TaskCreate for swarm task management"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "TeamCreate",
+          "description": "Uses TeamCreate for swarm orchestration"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "_test.go",
+          "description": "References Go test file convention"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "go-mutesting",
+          "description": "References go-mutesting as the Go mutation tool"
+        }
+      ],
+      "expectations": [
+        "The skill detects three distinct modules (handlers, store, middleware) and considers parallel test-planner instances for independent analysis",
+        "The test plan covers all three packages with appropriate testing strategies: HTTP handler tests for handlers/, data access tests for store/, and middleware chain tests for middleware/",
+        "Generated test files follow Go conventions (*_test.go) in each package directory",
+        "The rigor review and coverage analysis run in parallel as specified in Phase 3"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Generate tests for src/parser.py in my Python project at ~/tools/config-parser. The parser handles YAML, JSON, and TOML config files with environment variable interpolation and schema validation. It has pyproject.toml.",
+      "expected_output": "Full pipeline targeting a specific file with comprehensive equivalence class partitioning across three config formats and interpolation scenarios.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "pytest",
+          "description": "Identifies pytest as the Python test runner"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "hypothesis",
+          "description": "Identifies hypothesis for property-based testing"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "equivalence",
+          "description": "Uses equivalence class partitioning technique"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "recall_memories",
+          "description": "Searches Atlatl for prior test patterns before planning"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test_*.py",
+          "description": "References Python test file convention"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "mutmut",
+          "description": "References mutmut as the Python mutation tool"
+        }
+      ],
+      "expectations": [
+        "Equivalence classes are defined for each config format (YAML, JSON, TOML) with valid and invalid input partitions for each",
+        "The test plan covers environment variable interpolation edge cases: undefined variables, nested interpolation, recursive references, and escaped dollar signs",
+        "Boundary value analysis includes empty config files, deeply nested structures, very long string values, and configs with only comments",
+        "The skill searches Atlatl memory for prior Python testing patterns and applies any matching results"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "Generate a full test suite for my TypeScript React component library at ~/ui/components. It has package.json + tsconfig.json, with src/Button.tsx, src/Modal.tsx, and src/Form.tsx. Need tests covering props, state transitions, and accessibility.",
+      "expected_output": "Full pipeline for TypeScript with component-specific testing strategies including state transitions and a11y checks.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "vitest",
+          "description": "Identifies vitest as the test runner"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "fast-check",
+          "description": "Identifies fast-check for property testing"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "TeamDelete",
+          "description": "Performs team cleanup in the Report and Cleanup phase"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "capture_memory",
+          "description": "Captures test strategy to Atlatl memory after completion"
+        }
+      ],
+      "expectations": [
+        "The test plan includes state transition coverage for interactive components like Modal (open/closed states) and Form (pristine/dirty/submitted/error states)",
+        "Property-based tests verify component invariants: Button always renders children, Modal traps focus when open, Form validates all required fields before submission",
+        "The plan includes accessibility-related test cases checking ARIA attributes, keyboard navigation, and screen reader compatibility",
+        "The skill captures meaningful patterns (test strategy decisions, reusable patterns, or anti-patterns) to Atlatl memory and enriches each captured memory"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "I just interrupted a previous test-architect run and want to run it again for ~/projects/api-server (Rust, has Cargo.toml). Make sure stale agents from the previous run are cleaned up.",
+      "expected_output": "The skill detects and cleans up stale agents from a prior run before creating a new team, following the team lifecycle safety protocol.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "transcript_contains",
+          "pattern": "TeamDelete",
+          "description": "Cleans up stale team before creating a new one"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "TeamCreate",
+          "description": "Creates a fresh team after cleanup"
+        },
+        {
+          "type": "transcript_contains",
+          "pattern": "test-architect",
+          "description": "References test-architect team pattern for stale detection"
+        }
+      ],
+      "expectations": [
+        "The skill checks for an existing team with the test-architect pattern and runs TeamDelete on it before creating a new team, following the stale agent detection protocol",
+        "After cleanup, the skill proceeds with normal Phase 0 initialization including project detection, team creation, and agent spawning",
+        "The final Report and Cleanup phase executes Step R.3 (Shutdown Team) with the 30-second timeout for shutdown confirmations before TeamDelete",
+        "The skill verifies no orphaned agents remain after TeamDelete by checking the team config file"
+      ]
+    }
+  ]
+}

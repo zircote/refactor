@@ -1,0 +1,21 @@
+[
+  {"query": "refactor the authentication module, it's gotten really messy", "should_trigger": true},
+  {"query": "clean up src/utils/helpers.ts — too much duplication", "should_trigger": true},
+  {"query": "review security of the payment processing code", "should_trigger": true},
+  {"query": "simplify this code, it's way too complex for what it does", "should_trigger": true},
+  {"query": "improve code quality in the API layer, reduce tech debt", "should_trigger": true},
+  {"query": "restructure the database access module for better separation of concerns", "should_trigger": true},
+  {"query": "--autonomous refactor the entire codebase", "should_trigger": true},
+  {"query": "--focus=security,architecture review the core engine", "should_trigger": true},
+  {"query": "can you clean up and simplify src/services/ — there's a lot of dead code", "should_trigger": true},
+  {"query": "add a new REST endpoint for user registration", "should_trigger": false},
+  {"query": "write unit tests for the payment module", "should_trigger": false},
+  {"query": "deploy the application to production", "should_trigger": false},
+  {"query": "create a new React component for the dashboard", "should_trigger": false},
+  {"query": "debug why the login page returns a 500 error", "should_trigger": false},
+  {"query": "update the README with installation instructions", "should_trigger": false},
+  {"query": "migrate the database schema to add a new users table", "should_trigger": false},
+  {"query": "set up CI/CD pipeline with GitHub Actions", "should_trigger": false},
+  {"query": "review this pull request and leave comments", "should_trigger": false},
+  {"query": "implement the new feature described in JIRA-1234", "should_trigger": false}
+]
