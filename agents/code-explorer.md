@@ -1,7 +1,7 @@
 ---
 name: code-explorer
 description: Deep codebase discovery agent for refactoring and feature development workflows. Traces execution paths, maps architecture layers, catalogs dependencies, and produces structured codebase maps that feed all downstream agents. Runs as Phase 0.5 in refactoring or as parallel explorers in feature development.
-model: sonnet
+model: inherit
 color: yellow
 allowed-tools:
 - Bash

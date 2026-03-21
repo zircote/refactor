@@ -1,7 +1,7 @@
 ---
 name: refactor-code
 description: Code implementation specialist for refactoring workflows. Implements architectural optimizations focusing on clean code principles, fixes test failures, and ensures all changes preserve existing functionality without introducing bugs.
-model: sonnet
+model: inherit
 color: magenta
 allowed-tools:
 - Bash

@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: Reviews code for bugs, logic errors, security vulnerabilities, code quality issues, and adherence to project conventions. Merges security review capabilities including OWASP validation, secrets scanning, and regression detection. Uses confidence-based filtering for quality issues and severity classification for security findings. Supports feature development reviews with focus-area specialization.
-model: sonnet
+model: inherit
 color: red
 allowed-tools:
 - Bash

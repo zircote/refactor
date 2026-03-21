@@ -1,7 +1,7 @@
 ---
 name: test-writer
 description: Code generation agent that transforms JSON test plans into idiomatic test code. Writes tests designed to FAIL (TDD red phase) with mutation-aware assertions using language-appropriate frameworks and property-based testing libraries.
-model: sonnet
+model: inherit
 color: orange
 allowed-tools:
 - Bash

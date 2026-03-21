@@ -1,7 +1,7 @@
 ---
 name: feature-code
 description: Implementation specialist for new feature development. Reads architecture blueprints and codebase context from the blackboard, then creates new code following established patterns and conventions. Designed for feature-dev workflows.
-model: sonnet
+model: inherit
 color: white
 allowed-tools:
 - Bash

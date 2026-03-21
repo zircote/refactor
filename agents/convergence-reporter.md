@@ -1,7 +1,7 @@
 ---
 name: convergence-reporter
 description: Analyzes autonomous convergence loop results, computes score trajectories, generates diffs, and produces convergence reports with recommendations. Spawned at loop finalization to summarize the autonomous run.
-model: sonnet
+model: inherit
 color: cyan
 allowed-tools:
 - Bash

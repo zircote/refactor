@@ -1,7 +1,7 @@
 ---
 name: coverage-analyst
 description: Runs native coverage tools per language, identifies uncovered code paths, correlates gaps with test plans, and suggests targeted test cases to improve coverage metrics.
-model: sonnet
+model: inherit
 color: teal
 allowed-tools:
 - Bash
