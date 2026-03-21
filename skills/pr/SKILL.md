@@ -227,7 +227,12 @@ If already pushed, check for unpushed commits and push if needed.
 
 ### Step C.4: Check for Existing PR
 
-If an existing PR was found in Phase 0, inform the user and ask whether they want to `--update` it instead. Do not create a duplicate.
+If an existing PR was found in Phase 0:
+
+1. **Display the existing PR details**: Show the PR URL, PR number, state, and draft status from the `EXISTING_PR` data captured in Step 0.4.
+2. **Inform the user** that a PR already exists for this branch.
+3. **Suggest using `--update`** to push new commits or modify the existing PR instead of creating a duplicate.
+4. **Do not create a duplicate PR** — stop the Create workflow here.
 
 ### Step C.5: Gather PR Info
 

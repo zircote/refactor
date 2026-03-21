@@ -82,7 +82,8 @@ Parse `$ARGUMENTS` for the following **before** any other processing:
 **Intent detection**: If the user's natural language prompt indicates they only want to see scores or assessments WITHOUT taking action (e.g., "just score them", "I just want the breakdown", "don't change anything yet", "show me what they said"), treat the request as if `--score-only` was passed, even if the flag was not explicitly provided. Look for these signals:
   - "just score" / "just show" / "just want to see"
   - "don't change anything" / "don't fix anything"
-  - "let me decide" (without "help me decide" which implies interactive processing)
+  - "let me decide later" / "I'll decide later" (deferred decision — score-only)
+  Note: "let me decide" (without "later") and "help me decide" both imply the user wants interactive prompting NOW, so they should trigger interactive mode, NOT score-only.
   - "read-only" / "assessment only" / "breakdown only"
 
 If both `--auto` and `--interactive` are present, `--interactive` wins.

@@ -181,8 +181,6 @@ Skip comments that are:
 - Bot-generated comments (CI status, linting reports)
 - Pure approval comments with no actionable content
 
-If `--dry-run` is active, display the categorized list and stop here.
-
 ---
 
 ## Phase 3: Confidence-Based Triage
@@ -211,64 +209,37 @@ When `--auto` is set, only fixes at or above the threshold are applied. All othe
 
 When not in `--auto` mode, use the user's interactive decision for each sub-threshold comment.
 
----
+### Step 3.1: Display Triage Summary
 
-## Phase 4: Rebase
+After computing all confidence scores, **always display a triage summary** before proceeding to any remediation. This summary shows:
 
-**Skip this phase entirely if `--skip-rebase` is set.**
+- Every comment with its priority category (P0-P3, Info)
+- The confidence score and factor breakdown for each comment
+- The proposed fix or response for each comment
+- The disposition: auto-accepted, needs approval, or will be skipped
 
-Rebase BEFORE remediation ensures that fixes are applied to code that is already current with the base branch. This prevents unnecessary merge conflicts and ensures reviewers see fixes applied to the latest code.
+This gives the user (and the agent) a complete picture before any code changes begin. When the user explicitly asks to "see the breakdown first" or "show me the scores before fixing," this display is the natural response.
 
-### Step 4.1: Fetch Latest Base
-
-```bash
-git fetch origin ${BASE_BRANCH}
-```
-
-### Step 4.2: Rebase
-
-```bash
-git rebase origin/${BASE_BRANCH}
-```
-
-### Step 4.3: Handle Conflicts
-
-If rebase encounters conflicts:
-1. **HALT the pipeline** — do NOT proceed to Phase 5 (remediation).
-2. Show conflicting files (`git diff --name-only --diff-filter=U`) and their conflict markers.
-3. Offer resolution options:
-   - **Resolve manually** — User edits files, then `git add` resolved files and `git rebase --continue`.
-   - **Abort** — `git rebase --abort` and stop.
-   - **Skip commit** — `git rebase --skip` (warn about skipped changes).
-4. State: "The remediation pipeline is halted. No fixes will be applied until the rebase completes cleanly."
-5. Repeat for each conflicting commit until the rebase completes or is aborted.
-
-### Step 4.4: Verify Rebase
-
-```bash
-git log --oneline -5
-```
-
-Confirm the commit history looks correct after rebase.
+**If `--dry-run` is active**: Display the triage summary, label it "DRY RUN — no changes were made", and **stop here**. Do not proceed to Phase 4 or any subsequent phase.
 
 ---
 
-## Phase 5: Remediation
+## Phase 4: Remediation
 
-For each accepted fix, apply the changes. Because the branch was rebased in Phase 4, all fixes are applied to code that is current with the base branch.
+For each accepted fix, apply the changes.
 
-### Step 5.1: Read Before Edit
+### Step 4.1: Read Before Edit
 
-Always read the target file before making changes. Use targeted reads with offset/limit when the file is large. Confirm the code context matches the reviewer's comment (line numbers may have shifted since the review or rebase).
+Always read the target file before making changes. Use targeted reads with offset/limit when the file is large. Confirm the code context matches the reviewer's comment (line numbers may have shifted since the review).
 
-### Step 5.2: Apply Minimal Fixes
+### Step 4.2: Apply Minimal Fixes
 
 - Make the smallest change that addresses the reviewer's feedback.
 - Do not refactor surrounding code unless the comment explicitly requests it.
 - Do not introduce new patterns or dependencies unless required by the fix.
 - Preserve existing code style and conventions.
 
-### Step 5.3: Specialist Agent Routing
+### Step 4.3: Specialist Agent Routing
 
 For complex fixes that require deep analysis (e.g., architectural changes, cross-file refactors, test additions), delegate to a specialist agent using the Task tool:
 
@@ -282,12 +253,52 @@ Each specialist agent receives:
 - The diff hunk for context
 - Clear instructions on what to fix and what NOT to change
 
-### Step 5.4: Verify Each Fix
+### Step 4.4: Verify Each Fix
 
 After applying each fix:
 1. Confirm the file is syntactically valid (language-appropriate check if available).
 2. Run any fast feedback tools (linter, type checker) if configured.
 3. If the fix breaks something, revert and flag for manual review.
+
+---
+
+## Phase 5: Rebase
+
+**Skip this phase entirely if `--skip-rebase` is set.**
+
+Rebase AFTER remediation but BEFORE committing ensures that the branch is up to date with the base branch and that the fix commits land cleanly on top of the latest upstream code.
+
+### Step 5.1: Fetch Latest Base
+
+```bash
+git fetch origin ${BASE_BRANCH}
+```
+
+### Step 5.2: Rebase
+
+```bash
+git rebase origin/${BASE_BRANCH}
+```
+
+### Step 5.3: Handle Conflicts
+
+If rebase encounters conflicts:
+1. **HALT the pipeline** — do NOT proceed to Phase 6 (commit).
+2. Show conflicting files (`git diff --name-only --diff-filter=U`) and their conflict markers.
+3. Offer resolution options:
+   - **Resolve manually** — User edits files, then `git add` resolved files and `git rebase --continue`.
+   - **Abort** — `git rebase --abort` and stop.
+   - **Skip commit** — `git rebase --skip` (warn about skipped changes).
+4. State: "The remediation pipeline is halted. No commits will be created until the rebase completes cleanly."
+5. Repeat for each conflicting commit until the rebase completes or is aborted.
+
+### Step 5.4: Verify Rebase
+
+```bash
+git log --oneline -5
+```
+
+Confirm the commit history looks correct after rebase.
 
 ---
 
@@ -414,7 +425,7 @@ query {
 }'
 ```
 
-Match threads to the comments that were fixed in Phase 5 using the comment `databaseId`. Store the thread IDs for resolution after push.
+Match threads to the comments that were fixed in Phase 4 using the comment `databaseId`. Store the thread IDs for resolution after push.
 
 ---
 
@@ -422,7 +433,7 @@ Match threads to the comments that were fixed in Phase 5 using the comment `data
 
 ### Step 9.1: Push
 
-If `--force` is set OR if a rebase was performed in Phase 4:
+If `--force` is set OR if a rebase was performed in Phase 5:
 
 ```bash
 git push --force-with-lease origin ${HEAD_BRANCH}

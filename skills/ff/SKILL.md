@@ -52,11 +52,14 @@ SEE ALSO
 
 ### Step 1: Check Working Directory
 
-Run `git status --porcelain`. If there is any output (uncommitted changes exist), stop and report:
+Run `git status --porcelain`.
+
+- **If output is empty** (no uncommitted changes): the working directory is clean. Proceed to Step 2.
+- **If output is non-empty** (uncommitted changes exist): stop and report:
 
 > Working directory is not clean. Commit or stash your changes before fast-forwarding.
 
-Do not proceed.
+Do not proceed past this point when the working directory is dirty. This guard protects against merge conflicts with uncommitted work.
 
 ### Step 2: Determine Target Branch
 
