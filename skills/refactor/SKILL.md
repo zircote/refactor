@@ -33,7 +33,14 @@ The workflow uses parallel execution where possible. In standard mode, it iterat
 
 Parse `$ARGUMENTS` for the following **before** any other processing:
 
-- `--autonomous` — Enable autonomous convergence mode. When present, extract and remove from `$ARGUMENTS` and set `autonomous_mode = true`. Phase 2 is replaced by the autonomous convergence loop (see `references/autonomous-algorithm.md`). When autonomous: `max_iterations = cli_iterations ?? config.autonomous.maxIterations ?? 20`. Iteration range expands to 1-20 (not 1-10). If `--autonomous` is not present, set `autonomous_mode = false`.
+- `--autonomous` — Enable fully autonomous mode. When present, extract and remove from `$ARGUMENTS` and set `autonomous_mode = true`. This changes TWO things:
+  1. **Phase 2** is replaced by the autonomous convergence loop (see `references/autonomous-algorithm.md`). `max_iterations = cli_iterations ?? config.autonomous.maxIterations ?? 20`. Iteration range expands to 1-20 (not 1-10).
+  2. **ALL interactive gates are skipped** — the agent uses highest-confidence best practices instead of asking the user. Specifically:
+     - **Phase 0 configuration questions** (Q1–Q6): Use defaults from config file. If no config exists, use built-in defaults. Do not prompt for commit strategy, PR creation, or report publishing — use `config.postRefactor` values directly.
+     - **Phase 1 scope confirmation**: Accept the provided scope as-is. Do not ask for clarification.
+     - **Phase 3 assessment gates**: Auto-fix all findings with confidence >= 80. Do not ask user for disposition on individual findings.
+     - **Phase 4 report and commit**: Commit and report using configured strategy without confirmation.
+  If `--autonomous` is not present, set `autonomous_mode = false` and all interactive gates operate normally.
 
 - `--iterations=N` — Override the configured iteration count for this run. `N` must be a positive integer (1-10 standard, 1-20 autonomous). If present, extract and remove it from `$ARGUMENTS` and store as `cli_iterations`. The remaining text is the refactoring scope. Also recognize natural language equivalents like "3 iterations" or "I'd like 5 iterations" in the prose — extract the number and treat as `cli_iterations`.
 
@@ -64,9 +71,10 @@ After extracting flags, the remaining arguments are interpreted as:
 
 1. Attempt to read `.claude/refactor.config.json` from the project root
 2. **If file exists**: Parse the JSON silently. Merge with defaults (any missing fields use defaults). Store as `config`. Proceed to Phase 0.
-3. **If file does NOT exist**: Run interactive setup (Step 0.0.2)
+3. **If file does NOT exist AND `autonomous_mode`**: Create config with all defaults silently. Do not prompt. Store as `config`. Proceed to Phase 0.
+4. **If file does NOT exist AND NOT `autonomous_mode`**: Run interactive setup (Step 0.0.2)
 
-### Step 0.0.2: Interactive Setup (First Run Only)
+### Step 0.0.2: Interactive Setup (First Run Only — skipped in autonomous mode)
 
 Run the following **AskUserQuestion** prompts sequentially:
 
@@ -519,7 +527,7 @@ After Phase 1 parallel tasks complete, run sequential test-architect steps:
 
 ## Phase 2: Autonomous Convergence Loop (when `autonomous_mode = true`)
 
-**Replaces the standard Phase 2 when `--autonomous` is active. All other phases (0, 0.5, 1, 3, 4) execute identically.**
+**Replaces the standard Phase 2 when `--autonomous` is active. All other phases (0, 0.5, 1, 3, 4) execute with autonomous gate bypasses — no user interaction. See argument parsing above for per-phase autonomous behavior.**
 
 **Goal**: Iteratively improve code quality through the same agent sub-steps, but with composite scoring, keep/discard gating, and automatic convergence detection. See `references/autonomous-algorithm.md` for the formal specification.
 

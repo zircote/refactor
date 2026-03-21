@@ -31,11 +31,19 @@ The workflow uses interactive approval gates at key decision points and parallel
 
 Parse `$ARGUMENTS` for the following **before** any other processing:
 
-- `--autonomous` — Enable autonomous convergence mode. When present, extract and remove from `$ARGUMENTS` and set `autonomous_mode = true`. Phase 5 is replaced by the autonomous convergence loop (see `references/autonomous-algorithm.md`). If not present, set `autonomous_mode = false`.
+- `--autonomous` — Enable fully autonomous mode. When present, extract and remove from `$ARGUMENTS` and set `autonomous_mode = true`. This changes TWO things:
+  1. **Phase 5** is replaced by the autonomous convergence loop (see `references/autonomous-algorithm.md`).
+  2. **ALL interactive gates are skipped** — the agent uses highest-confidence best practices and recommendations instead of asking the user. Specifically:
+     - **Phase 1 (Elicitation)**: Instead of AskUserQuestion, assess confidence from the provided description and proceed with best-judgment assumptions for any gaps. Document assumptions made.
+     - **Phase 3 (Clarifying Questions)**: Skip user interaction. Make design decisions based on codebase patterns discovered in Phase 2. Document decisions made.
+     - **Phase 4 (Architecture Selection)**: Instead of presenting options to the user, evaluate all architect proposals and select the best one automatically using this priority: (1) highest alignment with existing codebase conventions, (2) pragmatic balance of quality and simplicity, (3) smallest blast radius. Document the choice and rationale.
+     - **Phase 5 (Implementation Approval)**: Skip — proceed directly.
+     - **Phase 6 (Review Disposition)**: Auto-fix all findings with confidence >= 80. Override quality gate only if rigor >= 0.5 and coverage >= 60% (relaxed thresholds for autonomous). Document any overrides.
+  If `--autonomous` is not present, set `autonomous_mode = false` and all interactive gates operate normally.
 
 - `--iterations=N` — Override the max iteration count for autonomous mode. `N` must be a positive integer (1-20). If present, extract and remove from `$ARGUMENTS` and store as `cli_iterations`. Only meaningful when combined with `--autonomous`.
 
-After extracting flags, the remaining `$ARGUMENTS` is the feature description. This will be refined through the elicitation protocol in Phase 1.
+After extracting flags, the remaining `$ARGUMENTS` is the feature description. In autonomous mode, this is used as-is (no elicitation). In interactive mode, it will be refined through the elicitation protocol in Phase 1.
 
 **Autonomous mode settings**: `max_iterations = cli_iterations ?? config.autonomous.maxIterations ?? 20`. Load convergence config: `convergence = config.autonomous.convergence`. Load score weights: `score_weights = config.autonomous.scoreWeights`.
 
@@ -159,7 +167,9 @@ TASK DISCOVERY PROTOCOL:
    - [ ] Know integration touchpoints
    - [ ] Aware of critical constraints
 
-4. If confidence < 95%, use **AskUserQuestion** to elicit missing details. **Ask only about the gaps** — do not re-ask dimensions the user already covered. Target these dimensions as needed:
+4. **If `autonomous_mode`**: Skip user elicitation entirely. For any gaps below 95% confidence, make best-judgment assumptions based on the feature description and document them in the feature spec (e.g., "Assumed scope: X. Assumed constraint: Y."). Proceed directly to Phase 2.
+
+   **If NOT `autonomous_mode`**: If confidence < 95%, use **AskUserQuestion** to elicit missing details. **Ask only about the gaps** — do not re-ask dimensions the user already covered. Target these dimensions as needed:
    - **Problem statement**: What problem does this solve? Who is affected?
    - **Scope boundaries**: What is IN scope vs explicitly OUT of scope?
    - **Acceptance criteria**: How will we know it's done? What does "working" look like?
@@ -261,9 +271,12 @@ SendMessage to "code-explorer-{i}": "Task #{id} assigned: codebase exploration. 
    - Are there edge cases visible now that weren't obvious before?
    - Are there backward compatibility concerns?
    - Which existing abstractions should be reused vs extended?
-3. **If ambiguities exist**: Present questions to the user in a clear, organized list using **AskUserQuestion**. Wait for answers before proceeding.
-4. **If no ambiguities exist**: Inform the user that exploration revealed no additional questions, summarize the key patterns discovered, and proceed to Phase 4. Write a clarifications entry noting "No additional clarifications needed — codebase patterns are clear."
-5. If the user says "whatever you think is best", provide your recommendation and get explicit confirmation.
+3. **If `autonomous_mode`**: Skip user interaction. Resolve all ambiguities using codebase conventions discovered in Phase 2. Document each decision: "Decided: {choice} because {rationale from codebase patterns}." Write decisions to clarifications.
+
+   **If NOT `autonomous_mode`**:
+   - **If ambiguities exist**: Present questions to the user in a clear, organized list using **AskUserQuestion**. Wait for answers before proceeding.
+   - **If no ambiguities exist**: Inform the user that exploration revealed no additional questions, summarize the key patterns discovered, and proceed to Phase 4. Write a clarifications entry noting "No additional clarifications needed — codebase patterns are clear."
+   - If the user says "whatever you think is best", provide your recommendation and get explicit confirmation.
 6. Write clarifications to blackboard:
    ```
    blackboard_write(task_id="{blackboard_id}", key="clarifications", value="{user answers or 'No additional clarifications needed'}")
@@ -313,12 +326,14 @@ SendMessage to "architect-{i}": "Task #{id} assigned: architecture design. Start
 1. Wait for all architect tasks to complete.
 2. Read all `architect_{i}_design` from the blackboard.
 3. Review all approaches and form your recommendation.
-4. **Present to user** using **AskUserQuestion**:
+4. **If `autonomous_mode`**: Automatically select the best architecture using this priority: (1) highest alignment with existing codebase conventions, (2) pragmatic balance of quality and simplicity, (3) smallest blast radius. Log: "Auto-selected architecture {i}: {brief rationale}." Skip to step 6.
+
+   **If NOT `autonomous_mode`**: **Present to user** using **AskUserQuestion**:
    - Brief summary of each approach
    - Trade-offs comparison
    - **Your recommendation with reasoning**
    - Concrete implementation differences
-5. **Ask user which approach they prefer**.
+5. **Ask user which approach they prefer** (interactive mode only).
 6. Write chosen architecture to blackboard:
    ```
    blackboard_write(task_id="{blackboard_id}", key="chosen_architecture", value="{selected blueprint}")
@@ -373,7 +388,7 @@ SendMessage to "test-planner": "Task #{id} assigned: create test plan for chosen
 
 ## Phase 5: Autonomous Convergence Implementation (when `autonomous_mode = true`)
 
-**Replaces the standard Phase 5 when `--autonomous` is active. All other phases (0-4, 6, 7) execute identically, including all interactive gates (elicitation, clarification, architecture selection).**
+**Replaces the standard Phase 5 when `--autonomous` is active. All other phases (0-4, 6, 7) execute with autonomous gate bypasses — no user interaction. See argument parsing above for per-phase autonomous behavior.**
 
 **Goal**: Iteratively implement the feature with composite scoring, keep/discard gating, and automatic convergence detection. The test plan from Phase 4.5 is the stable fitness function — tests are NOT rewritten per iteration.
 
@@ -385,7 +400,7 @@ SendMessage to "test-planner": "Task #{id} assigned: create test plan for chosen
    - code-reviewer: reads codebase_context from blackboard
    - convergence-reporter: reads convergence_data from blackboard (spawned deferred at finalization)
 
-2. Get user approval: Use **AskUserQuestion**: "Ready to implement using the {chosen approach} architecture in autonomous mode (max {max_iterations} iterations)? The system will iterate until convergence — you'll review the final result."
+2. **Skip approval** — autonomous mode proceeds without confirmation. Log: "Starting autonomous implementation with {chosen approach} architecture (max {max_iterations} iterations)."
 
 3. Create workspace: `mkdir -p {scope-slug}-autonomous`
 4. Set `workspace = {scope-slug}-autonomous`
@@ -522,7 +537,9 @@ Agent tool with:
 
 ### Step 5.1: Get Approval
 
-Use **AskUserQuestion**: "Ready to implement using the {chosen approach} architecture. Proceed?"
+**If `autonomous_mode`**: Skip — already in autonomous flow (this section is the non-autonomous path).
+
+**If NOT `autonomous_mode`**: Use **AskUserQuestion**: "Ready to implement using the {chosen approach} architecture. Proceed?"
 
 ### Step 5.2: Implement
 
@@ -640,7 +657,13 @@ SendMessage to "code-reviewer-{i}": "Task #{id} assigned: feature review. Start 
    - `coverage_ok = coverage_pct >= ta_config.minimumCoverage`
    - `gate_passed = rigor_ok AND coverage_ok`
 
-5. **Present to user** using **AskUserQuestion**:
+5. **If `autonomous_mode`**: Skip user presentation. Auto-resolve:
+   - Auto-fix all code review findings with confidence >= 80 (create tasks for feature-code, wait for completion).
+   - If gate failed but `rigor_score >= 0.5` and `coverage_pct >= 60%`: auto-override with relaxed autonomous thresholds. Log: "Quality gate auto-overridden (autonomous): rigor {rigor_score}, coverage {coverage_pct}%."
+   - If gate failed below relaxed thresholds: attempt one fix cycle (create improvement tasks, re-validate). If still failing, proceed with override and document.
+   - Store `quality_gate_override = !gate_passed` and proceed to Phase 7.
+
+   **If NOT `autonomous_mode`**: **Present to user** using **AskUserQuestion**:
    - Consolidated code review findings grouped by severity
    - Test Quality Gate: {PASSED / FAILED}
    - "Rigor score: {rigor_score}/1.0 (minimum: {ta_config.minimumRigorScore})"
@@ -648,14 +671,14 @@ SendMessage to "code-reviewer-{i}": "Task #{id} assigned: feature review. Start 
    - If gate failed: Options: "Fix now", "Override (proceed with documented exception)", "Abandon"
    - If gate passed: Options: "Fix critical code issues now", "Fix all issues", "Proceed as-is"
 
-6. **If gate failed AND user chose Fix**:
+6. **If gate failed AND user chose Fix** (interactive mode only):
    - Create improvement tasks for feature-code (implementation gaps) and test-writer (coverage gaps)
    - Wait for completion
    - Re-run Step 6.3 (quality validation only — code reviewers already done)
    - Re-evaluate gate
    - Re-present to user (max 2 re-validation loops before asking user to override or abandon)
 
-7. **If gate passed OR user chose Override**:
+7. **If gate passed OR user chose Override** (or autonomous auto-resolved):
    - Store `quality_gate_override = !gate_passed` for summary reporting
    - Proceed to Phase 7
 
