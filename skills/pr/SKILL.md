@@ -177,7 +177,39 @@ git status --porcelain
 
 If there are uncommitted changes, warn the user: "WARNING: You have uncommitted changes. These will NOT be included in the PR. Commit them first if needed."
 
-### Step C.2: Push Branch
+### Step C.2: Ensure Branch is Current
+
+Before pushing, ensure the branch is rebased on the latest target branch to avoid merge conflicts and out-of-date PRs.
+
+1. Fetch the target branch:
+   ```bash
+   TARGET_BRANCH="${TO_BRANCH:-$DEFAULT_BRANCH}"
+   git fetch ${REMOTE} ${TARGET_BRANCH}
+   ```
+
+2. Check if behind the target branch:
+   ```bash
+   BEHIND=$(git log --oneline HEAD..${REMOTE}/${TARGET_BRANCH} | head -5)
+   ```
+
+3. If `BEHIND` is non-empty, rebase onto the target branch:
+   ```bash
+   git rebase ${REMOTE}/${TARGET_BRANCH}
+   ```
+
+4. **Conflict Resolution**: If rebase encounters conflicts:
+   1. **HALT the pipeline** — do NOT proceed to push or PR creation.
+   2. Show conflicting files (`git diff --name-only --diff-filter=U`) and their conflict markers.
+   3. Offer resolution options:
+      - **Resolve manually** — User edits files, then `git add` resolved files and `git rebase --continue`.
+      - **Abort** — `git rebase --abort` and stop.
+      - **Skip commit** — `git rebase --skip` (warn about skipped changes).
+   4. State: "The PR creation pipeline is halted. No PR will be created until the rebase completes cleanly."
+   5. Repeat for each conflicting commit until the rebase completes or is aborted.
+
+### Step C.3: Push Branch
+
+Push the rebased branch to the remote with a single normal push.
 
 Check if branch is pushed to remote:
 
@@ -193,11 +225,11 @@ git push -u "${REMOTE}" "${CURRENT_BRANCH}"
 
 If already pushed, check for unpushed commits and push if needed.
 
-### Step C.3: Check for Existing PR
+### Step C.4: Check for Existing PR
 
 If an existing PR was found in Phase 0, inform the user and ask whether they want to `--update` it instead. Do not create a duplicate.
 
-### Step C.4: Gather PR Info
+### Step C.5: Gather PR Info
 
 Get commits between base and head:
 
@@ -212,7 +244,7 @@ Get a diff summary for context:
 git diff "${TARGET_BRANCH}...HEAD" --stat
 ```
 
-### Step C.5: Generate PR Title and Body
+### Step C.6: Generate PR Title and Body
 
 If `fill_mode` is set, let `gh` auto-fill from commits. Otherwise:
 
@@ -232,7 +264,7 @@ If `fill_mode` is set, let `gh` auto-fill from commits. Otherwise:
 
 Present the generated title and body to the user for approval before creating.
 
-### Step C.6: Create PR
+### Step C.7: Create PR
 
 Build the `gh pr create` command:
 
@@ -250,7 +282,7 @@ If `web_mode` is set, use `--web` flag instead of `--title` and `--body` to open
 
 If `fill_mode` is set, use `--fill` flag instead of `--title` and `--body`.
 
-### Step C.7: Report Success
+### Step C.8: Report Success
 
 Display:
 - PR URL

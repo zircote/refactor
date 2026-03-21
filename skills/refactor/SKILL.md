@@ -769,7 +769,8 @@ If code-reviewer reported **FAIL** (Critical/High severity findings or high-conf
 1. Increment `refactoring_iteration += 1`
 2. Inform user: "Iteration {refactoring_iteration} of {max_iterations} complete."
 3. **If `config.postRefactor.commitStrategy` is `"per-iteration"`**:
-   - Stage all changed files using Bash: `git add -u`
+   - **Security check**: Before staging, identify and exclude any files matching secret patterns (`.env`, `.env.*`, `credentials.json`, `secrets.*`, `*.pem`, `*.key`, files containing API keys/tokens/passwords). Warn the user if confidential files are detected.
+   - Stage all changed files using Bash: `git add -u` (never `git add -A` — it may stage untracked secrets or artifacts)
    - Check for staged changes: `git diff --cached --quiet` — if exit code 0, no changes to commit; skip and log "No changes to commit for this iteration"
    - Commit using Bash with a HEREDOC message:
      ```bash
@@ -841,16 +842,17 @@ Monitor TaskList until all created Phase 3 tasks show completed.
 
 **Only when `config.postRefactor.commitStrategy` is `"single-final"`**:
 
-1. Stage all changed files using Bash: `git add -u`
-2. Check for staged changes: `git diff --cached --quiet` — if exit code 0, no changes to commit; skip and log "No changes to commit"
-3. Commit using Bash with a HEREDOC message:
+1. **Security check**: Before staging, identify and exclude any files matching secret patterns (`.env`, `.env.*`, `credentials.json`, `secrets.*`, `*.pem`, `*.key`, files containing API keys/tokens/passwords). Warn the user if confidential files are detected.
+2. Stage all changed files using Bash: `git add -u` (never `git add -A` — it may stage untracked secrets or artifacts)
+3. Check for staged changes: `git diff --cached --quiet` — if exit code 0, no changes to commit; skip and log "No changes to commit"
+4. Commit using Bash with a HEREDOC message:
    ```bash
    git commit -m "$(cat <<'EOF'
    refactor{if is_focused: '(' + focus_areas joined by ',' + ')'}: {scope} — {active scores as 'name score/10' joined by ', '}
    EOF
    )"
    ```
-4. If commit fails (e.g., no git, pre-commit hook failure, no changes), log a warning to the user and continue
+5. If commit fails (e.g., no git, pre-commit hook failure, no changes), log a warning to the user and continue
 
 ### Step 4.1.6: Publish Report (Conditional)
 
@@ -885,14 +887,20 @@ Monitor TaskList until all created Phase 3 tasks show completed.
 
 **Only when `config.postRefactor.createPR` is `true`**:
 
-1. **Determine branch**: Check current branch via Bash: `git rev-parse --abbrev-ref HEAD`
+1. **Determine branch and fetch latest**:
+   ```bash
+   CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+   TARGET_BRANCH=$(gh repo view --json defaultBranchRef -q '.defaultBranchRef.name' 2>/dev/null || echo "main")
+   git fetch origin ${TARGET_BRANCH}
+   ```
    - If on `main`, `master`, or `develop`:
      - Generate a scope slug from `{scope}` (lowercase, replace spaces/special chars with hyphens, truncate to 50 chars)
      - Generate `{date}` in YYYY-MM-DD format
-     - Create and switch to branch via Bash: `git checkout -b "refactor/{scope-slug}-{date}"`
+     - Create and switch to branch: `git checkout -b "refactor/{scope-slug}-{date}"`
 
 2. **Ensure all changes are committed**: If `commitStrategy` was `"none"` (no commits happened yet):
-   - Stage all changed files: `git add -u`
+   - **Security check**: Before staging, identify and exclude any files matching secret patterns (`.env`, `.env.*`, `credentials.json`, `secrets.*`, `*.pem`, `*.key`, files containing API keys/tokens/passwords). Warn the user if confidential files are detected.
+   - Stage all changed files: `git add -u` (never `git add -A` — it may stage untracked secrets or artifacts)
    - Check for staged changes: `git diff --cached --quiet` — if exit code 0, no changes to commit
    - Commit via Bash with HEREDOC:
      ```bash
@@ -902,10 +910,28 @@ Monitor TaskList until all created Phase 3 tasks show completed.
      )"
      ```
 
-3. **Push branch to remote**: Run via Bash: `git push -u origin HEAD`
+3. **Ensure branch is current** with the target branch before pushing:
+   ```bash
+   BEHIND=$(git log --oneline HEAD..origin/${TARGET_BRANCH} | head -5)
+   ```
+   If `BEHIND` is non-empty, rebase:
+   ```bash
+   git rebase origin/${TARGET_BRANCH}
+   ```
+   **Conflict Resolution**: If rebase encounters conflicts:
+   1. **HALT the pipeline** — do NOT proceed to push or PR creation.
+   2. Show conflicting files (`git diff --name-only --diff-filter=U`) and their conflict markers.
+   3. Offer resolution options:
+      - **Resolve manually** — User edits files, then `git add` resolved files and `git rebase --continue`.
+      - **Abort** — `git rebase --abort` and stop.
+      - **Skip commit** — `git rebase --skip` (warn about skipped changes).
+   4. State: "The PR creation pipeline is halted. No PR will be created until the rebase completes cleanly."
+   5. Repeat for each conflicting commit until the rebase completes or is aborted.
+
+4. **Push branch to remote**: Run via Bash: `git push -u origin HEAD`
    - If push fails, log a warning and continue (PR creation will also fail)
 
-4. **Create the PR** using Bash with `gh pr create`:
+5. **Create the PR** using Bash with `gh pr create`:
    - Build the command:
      ```bash
      gh pr create --title "refactor{if is_focused: '(' + focus_areas joined by ',' + ')'}: {scope}" --body "$(cat <<'EOF'
@@ -934,7 +960,7 @@ Monitor TaskList until all created Phase 3 tasks show completed.
      ```
    - Store the created PR URL as `pr_url`
 
-5. If any step fails (e.g., no remote, auth issues, `gh` not available), log a warning to the user and continue
+6. If any step fails (e.g., no remote, auth issues, `gh` not available), log a warning to the user and continue
 
 ### Step 4.2: Report to User
 

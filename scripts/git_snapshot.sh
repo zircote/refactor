@@ -77,9 +77,10 @@ snapshot_create() {
 		return 1
 	fi
 
-	# Create a commit with the current working tree state
-	# We add all tracked changes, create a temporary commit, branch from it,
-	# then reset the commit (keeping changes in working tree).
+	# git add -A is safe here: this is a LOCAL-ONLY temporary commit that is
+	# immediately reset (git reset --soft HEAD~1). It never gets pushed to any
+	# remote. We need -A (not -u) to capture new files created during refactoring,
+	# ensuring snapshot restores are complete. .gitignore handles build artifacts.
 	git add -A
 	git commit -m "autoresearch: snapshot v${version}" --allow-empty >/dev/null 2>&1
 	git branch "${branch}" HEAD
@@ -103,6 +104,10 @@ snapshot_restore() {
 	fi
 
 	git checkout "${branch}" -- .
+	# Remove files in the working tree that don't exist in the snapshot.
+	# This ensures a clean restore when the snapshot had fewer files than
+	# the current working tree (e.g., files created after the snapshot).
+	git clean -fd
 	echo "Working tree restored from: ${branch}"
 }
 

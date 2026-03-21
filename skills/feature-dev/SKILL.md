@@ -663,9 +663,10 @@ SendMessage to "code-reviewer-{i}": "Task #{id} assigned: feature review. Start 
 ### Step 7.1: Commit (Conditional)
 
 **If `config.featureDev.commitStrategy` is `"single-final"`**:
-1. Stage all changes: `git add -u` for modified files, then `git add` each new file from the implementation report's "Files Created" list. Do NOT use `git add -A` (may include unintended files).
-2. Check for staged changes: `git diff --cached --quiet` — if exit code 0, skip
-3. Commit:
+1. **Security check**: Before staging, identify and exclude any files matching secret patterns (`.env`, `.env.*`, `credentials.json`, `secrets.*`, `*.pem`, `*.key`, files containing API keys/tokens/passwords). Warn the user if confidential files are detected.
+2. Stage changes: `git add -u` for modified files, then `git add` each new file from the implementation report's "Files Created" list (excluding confidential files). Do NOT use `git add -A`.
+3. Check for staged changes: `git diff --cached --quiet` — if exit code 0, skip
+4. Commit:
    ```bash
    git commit -m "$(cat <<'EOF'
    feat: {brief feature description}
@@ -676,9 +677,31 @@ SendMessage to "code-reviewer-{i}": "Task #{id} assigned: feature review. Start 
 ### Step 7.2: Create PR (Conditional)
 
 **If `config.featureDev.createPR` is `true`**:
-1. Create feature branch if on main/master: `git checkout -b "feature/{scope-slug}"`
-2. Push: `git push -u origin HEAD`
-3. Create PR:
+1. Fetch the latest target branch:
+   ```bash
+   TARGET_BRANCH=$(gh repo view --json defaultBranchRef -q '.defaultBranchRef.name' 2>/dev/null || echo "main")
+   git fetch origin ${TARGET_BRANCH}
+   ```
+2. Create feature branch if on main/master: `git checkout -b "feature/{scope-slug}"`
+3. Ensure branch is current with the target branch:
+   ```bash
+   BEHIND=$(git log --oneline HEAD..origin/${TARGET_BRANCH} | head -5)
+   ```
+   If `BEHIND` is non-empty, rebase:
+   ```bash
+   git rebase origin/${TARGET_BRANCH}
+   ```
+   **Conflict Resolution**: If rebase encounters conflicts:
+   1. **HALT the pipeline** — do NOT proceed to push or PR creation.
+   2. Show conflicting files (`git diff --name-only --diff-filter=U`) and their conflict markers.
+   3. Offer resolution options:
+      - **Resolve manually** — User edits files, then `git add` resolved files and `git rebase --continue`.
+      - **Abort** — `git rebase --abort` and stop.
+      - **Skip commit** — `git rebase --skip` (warn about skipped changes).
+   4. State: "The PR creation pipeline is halted. No PR will be created until the rebase completes cleanly."
+   5. Repeat for each conflicting commit until the rebase completes or is aborted.
+4. Push: `git push -u origin HEAD`
+5. Create PR:
    ```bash
    gh pr create --title "feat: {feature description}" --body "$(cat <<'EOF'
    ## Summary

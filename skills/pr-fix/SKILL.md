@@ -1,12 +1,12 @@
 ---
 name: pr-fix
-description: "Complete PR remediation workflow — fetch all review comments, triage by confidence, fix findings, rebase, commit, reply to reviewers, push, and resolve threads. Use this skill when the user wants to address PR feedback, fix review comments, remediate PR findings, resolve PR threads, or act on reviewer suggestions. Triggers on: 'fix PR comments', 'address PR feedback', 'fix review findings', 'pr-fix', 'remediate PR', 'resolve PR comments', 'fix the PR', 'address reviewer comments', 'fix what reviewers said', 'handle PR feedback'. Anti-triggers (do NOT match): 'create a PR' (use /pr), 'review this PR' (use /review-comments), 'commit and push' without PR context (use /cp), 'just push' (use /cp), 'rebase only' (use /fr), 'read PR comments' without fix intent (use /review-comments)."
+description: "Complete PR remediation workflow — fetch all review comments, triage by confidence, rebase, fix findings, commit, reply to reviewers, push, and resolve threads. Use this skill when the user wants to address PR feedback, fix review comments, remediate PR findings, resolve PR threads, or act on reviewer suggestions. Triggers on: 'fix PR comments', 'address PR feedback', 'fix review findings', 'pr-fix', 'remediate PR', 'resolve PR comments', 'fix the PR', 'address reviewer comments', 'fix what reviewers said', 'handle PR feedback'. Anti-triggers (do NOT match): 'create a PR' (use /pr), 'review this PR' (use /review-comments), 'commit and push' without PR context (use /cp), 'just push' (use /cp), 'rebase only' (use /fr), 'read PR comments' without fix intent (use /review-comments)."
 argument-hint: "[pr-number] [--auto] [--confidence=N] [--skip-rebase] [--dry-run] [--force]"
 ---
 
 # PR Fix Skill — Complete PR Remediation Workflow
 
-You are a PR remediation agent. Your job is to fetch all review feedback on a pull request, triage it by confidence, apply fixes, rebase, commit, reply to reviewers, push, and resolve threads — all using the `gh` and `git` CLIs.
+You are a PR remediation agent. Your job is to fetch all review feedback on a pull request, triage it by confidence, rebase onto the base branch, apply fixes, commit, reply to reviewers, push, and resolve threads — all using the `gh` and `git` CLIs.
 
 ## Arguments
 
@@ -213,22 +213,62 @@ When not in `--auto` mode, use the user's interactive decision for each sub-thre
 
 ---
 
-## Phase 4: Remediation
+## Phase 4: Rebase
 
-For each accepted fix, apply the changes:
+**Skip this phase entirely if `--skip-rebase` is set.**
 
-### Step 4.1: Read Before Edit
+Rebase BEFORE remediation ensures that fixes are applied to code that is already current with the base branch. This prevents unnecessary merge conflicts and ensures reviewers see fixes applied to the latest code.
 
-Always read the target file before making changes. Use targeted reads with offset/limit when the file is large. Confirm the code context matches the reviewer's comment (line numbers may have shifted since the review).
+### Step 4.1: Fetch Latest Base
 
-### Step 4.2: Apply Minimal Fixes
+```bash
+git fetch origin ${BASE_BRANCH}
+```
+
+### Step 4.2: Rebase
+
+```bash
+git rebase origin/${BASE_BRANCH}
+```
+
+### Step 4.3: Handle Conflicts
+
+If rebase encounters conflicts:
+1. **HALT the pipeline** — do NOT proceed to Phase 5 (remediation).
+2. Show conflicting files (`git diff --name-only --diff-filter=U`) and their conflict markers.
+3. Offer resolution options:
+   - **Resolve manually** — User edits files, then `git add` resolved files and `git rebase --continue`.
+   - **Abort** — `git rebase --abort` and stop.
+   - **Skip commit** — `git rebase --skip` (warn about skipped changes).
+4. State: "The remediation pipeline is halted. No fixes will be applied until the rebase completes cleanly."
+5. Repeat for each conflicting commit until the rebase completes or is aborted.
+
+### Step 4.4: Verify Rebase
+
+```bash
+git log --oneline -5
+```
+
+Confirm the commit history looks correct after rebase.
+
+---
+
+## Phase 5: Remediation
+
+For each accepted fix, apply the changes. Because the branch was rebased in Phase 4, all fixes are applied to code that is current with the base branch.
+
+### Step 5.1: Read Before Edit
+
+Always read the target file before making changes. Use targeted reads with offset/limit when the file is large. Confirm the code context matches the reviewer's comment (line numbers may have shifted since the review or rebase).
+
+### Step 5.2: Apply Minimal Fixes
 
 - Make the smallest change that addresses the reviewer's feedback.
 - Do not refactor surrounding code unless the comment explicitly requests it.
 - Do not introduce new patterns or dependencies unless required by the fix.
 - Preserve existing code style and conventions.
 
-### Step 4.3: Specialist Agent Routing
+### Step 5.3: Specialist Agent Routing
 
 For complex fixes that require deep analysis (e.g., architectural changes, cross-file refactors, test additions), delegate to a specialist agent using the Task tool:
 
@@ -242,46 +282,12 @@ Each specialist agent receives:
 - The diff hunk for context
 - Clear instructions on what to fix and what NOT to change
 
-### Step 4.4: Verify Each Fix
+### Step 5.4: Verify Each Fix
 
 After applying each fix:
 1. Confirm the file is syntactically valid (language-appropriate check if available).
 2. Run any fast feedback tools (linter, type checker) if configured.
 3. If the fix breaks something, revert and flag for manual review.
-
----
-
-## Phase 5: Rebase
-
-**Skip this phase entirely if `--skip-rebase` is set.**
-
-### Step 5.1: Fetch Latest Base
-
-```bash
-git fetch origin ${BASE_BRANCH}
-```
-
-### Step 5.2: Rebase
-
-```bash
-git rebase origin/${BASE_BRANCH}
-```
-
-### Step 5.3: Handle Conflicts
-
-If rebase encounters conflicts:
-1. List conflicted files via `git diff --name-only --diff-filter=U`.
-2. For each conflict, attempt automatic resolution if the conflict is in a file that was modified by this remediation session (prefer our changes).
-3. If automatic resolution is not possible, present the conflict to the user and ask for guidance.
-4. After resolution: `git add <resolved-files>` then `git rebase --continue`.
-
-### Step 5.4: Verify Rebase
-
-```bash
-git log --oneline -5
-```
-
-Confirm the commit history looks correct after rebase.
 
 ---
 
@@ -408,7 +414,7 @@ query {
 }'
 ```
 
-Match threads to the comments that were fixed in Phase 4 using the comment `databaseId`. Store the thread IDs for resolution after push.
+Match threads to the comments that were fixed in Phase 5 using the comment `databaseId`. Store the thread IDs for resolution after push.
 
 ---
 
@@ -416,7 +422,7 @@ Match threads to the comments that were fixed in Phase 4 using the comment `data
 
 ### Step 9.1: Push
 
-If `--force` is set OR if a rebase was performed in Phase 5:
+If `--force` is set OR if a rebase was performed in Phase 4:
 
 ```bash
 git push --force-with-lease origin ${HEAD_BRANCH}

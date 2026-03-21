@@ -108,15 +108,14 @@ git rebase ${REMOTE}/${BRANCH}
 If already up to date (0 commits behind), you may skip the rebase and report: "Skipping rebase — already up to date with ${REMOTE}/${BRANCH}."
 
 **Conflict Resolution**: If rebase encounters conflicts:
-1. **HALT the sync pipeline immediately** — do NOT proceed to push.
-2. Show the conflicting files: `git diff --name-only --diff-filter=U`
-3. Show the conflict markers in each file.
-4. Provide conflict resolution guidance:
-   - **Resolve manually** — The user will edit files; wait for them to indicate readiness, then `git add` resolved files and `git rebase --continue`.
-   - **Abort** — Run `git rebase --abort` and stop the sync.
-   - **Skip this commit** — Run `git rebase --skip` (warn about skipped changes).
-5. Explicitly state: "The sync pipeline is halted. No push will happen until the rebase completes cleanly."
-6. Repeat for each conflicting commit until the rebase completes or is aborted.
+1. **HALT the pipeline** — do NOT proceed to push.
+2. Show conflicting files (`git diff --name-only --diff-filter=U`) and their conflict markers.
+3. Offer resolution options:
+   - **Resolve manually** — User edits files, then `git add` resolved files and `git rebase --continue`.
+   - **Abort** — `git rebase --abort` and stop.
+   - **Skip commit** — `git rebase --skip` (warn about skipped changes).
+4. State: "The sync pipeline is halted. No push will happen until the rebase completes cleanly."
+5. Repeat for each conflicting commit until the rebase completes or is aborted.
 
 If the rebase was aborted, stop. If a stash was saved in pre-flight, pop it before stopping.
 
@@ -142,14 +141,15 @@ If the user declines, stop. If a stash was saved in pre-flight, pop it.
 
 ### Step 5: Push
 
-```bash
-git push ${REMOTE} HEAD
-```
+Choose the push strategy based on what happened in Step 3:
 
-Do NOT use `--force` or `--force-with-lease` unless the user has EXPLICITLY and DIRECTLY requested force-pushing. Speculative mentions like "I think the push might need a force" or "it might need --force" are NOT explicit requests — they are observations. Only treat a clear directive like "force push it" or "use --force" as an explicit request.
+- **Rebase was performed** (branch had upstream): `git push --force-with-lease ${REMOTE} HEAD` — safe because we just rebased onto the latest remote.
+- **No rebase performed** (or no prior upstream): `git push ${REMOTE} HEAD`
 
-If the push is rejected (e.g., non-fast-forward), inform the user and suggest:
-- **Primary recommendation**: Re-run `/sync` to incorporate new remote changes that may have caused the rejection.
+Do NOT use bare `--force` unless the user has EXPLICITLY and DIRECTLY requested it. Speculative mentions ("I think it might need --force") are NOT explicit requests. Note: `--force-with-lease` after a rebase is a safe, automatic consequence of the rebase workflow — it is NOT the same as bare `--force`.
+
+If the push is rejected (e.g., `--force-with-lease` fails because someone pushed between our fetch and push), inform the user and suggest:
+- **Primary recommendation**: Re-run `/sync` to incorporate the new remote changes.
 - **Secondary note**: Mention that `--force` exists as an option but do NOT offer to run it. Instead, tell the user they can re-invoke `/sync` with an explicit force flag if needed. Warn about the risks of rewriting remote history.
 
 ### Step 6: Report

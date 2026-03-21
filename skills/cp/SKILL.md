@@ -120,11 +120,45 @@ If `$ARGUMENTS` provided a commit message, use it directly. Otherwise:
 1. Run `git log --oneline -5` to confirm the commit(s) succeeded.
 2. Display the resulting commit hash(es) and message(s).
 
+## Step 4.5: Sync with Remote
+
+Before pushing, ensure the local branch is up to date with the remote to avoid non-fast-forward rejections. If no upstream tracking branch exists (first push), skip this step entirely — Step 5 will set up tracking.
+
+1. Fetch and check for upstream divergence:
+   ```bash
+   git fetch origin
+   UPSTREAM=$(git rev-parse --abbrev-ref @{u} 2>/dev/null || echo "")
+   ```
+
+2. If `UPSTREAM` is non-empty, check if the local branch is behind:
+   ```bash
+   BEHIND=$(git log --oneline HEAD..@{u} | head -5)
+   ```
+
+3. If `BEHIND` is non-empty, rebase onto the upstream:
+   ```bash
+   git rebase @{u}
+   ```
+
+4. **Conflict Resolution**: If rebase encounters conflicts:
+   1. **HALT the pipeline** — do NOT proceed to push.
+   2. Show conflicting files (`git diff --name-only --diff-filter=U`) and their conflict markers.
+   3. Offer resolution options:
+      - **Resolve manually** — User edits files, then `git add` resolved files and `git rebase --continue`.
+      - **Abort** — `git rebase --abort` and stop.
+      - **Skip commit** — `git rebase --skip` (warn about skipped changes).
+   4. State: "The push pipeline is halted. No push will happen until the rebase completes cleanly."
+   5. Repeat for each conflicting commit until the rebase completes or is aborted.
+
+---
+
 ## Step 5: Push to Remote
 
 1. Determine the current branch: `git branch --show-current`
-2. Push using `git push origin <branch>`.
-   - If the branch has no upstream, use `git push -u origin <branch>`.
+2. Choose the push strategy based on what happened in Step 4.5:
+   - **Rebase was performed** (branch had upstream): `git push --force-with-lease origin <branch>` — safe because we just rebased onto the latest upstream.
+   - **No upstream** (first push): `git push -u origin <branch>`
+   - **No rebase needed**: `git push origin <branch>`
 3. Confirm the push succeeded.
 4. If the push fails (e.g., rejected due to remote changes), inform the user with the error and suggest resolution (pull/rebase).
 
