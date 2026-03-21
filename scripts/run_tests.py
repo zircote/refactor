@@ -10,6 +10,7 @@ import re
 import subprocess
 from typing import Any
 
+from .exceptions import SubprocessError, UnsupportedLanguageError
 
 # Test commands per language
 _TEST_COMMANDS: dict[str, list[str]] = {
@@ -94,13 +95,7 @@ def run_tests(path: str, lang: str) -> dict[str, Any]:
     """
     cmd = _TEST_COMMANDS.get(lang)
     if cmd is None:
-        return {
-            "passed": 0,
-            "failed": 0,
-            "errors": 0,
-            "output": f"unsupported language: {lang}",
-            "exit_code": -1,
-        }
+        raise UnsupportedLanguageError(lang)
 
     try:
         result = subprocess.run(
@@ -111,27 +106,17 @@ def run_tests(path: str, lang: str) -> dict[str, Any]:
             timeout=300,
         )
     except FileNotFoundError as exc:
-        return {
-            "passed": 0,
-            "failed": 0,
-            "errors": 1,
-            "output": f"command not found: {exc}",
-            "exit_code": -1,
-        }
-    except subprocess.TimeoutExpired:
-        return {
-            "passed": 0,
-            "failed": 0,
-            "errors": 1,
-            "output": "test execution timed out after 300s",
-            "exit_code": -1,
-        }
+        raise SubprocessError(
+            f"command not found: {exc}", command=" ".join(cmd), exit_code=-1
+        ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise SubprocessError(
+            "test execution timed out after 300s", command=" ".join(cmd), exit_code=-1
+        ) from exc
 
     combined_output = result.stdout + result.stderr
     parser = _PARSERS.get(lang)
-    counts = (
-        parser(combined_output) if parser else {"passed": 0, "failed": 0, "errors": 0}
-    )
+    counts = parser(combined_output) if parser else {"passed": 0, "failed": 0, "errors": 0}
 
     return {
         **counts,

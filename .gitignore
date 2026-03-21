@@ -2,3 +2,27 @@
 .claude/settings.local.json
 .claude/*.local.md
 refactor-result-*.md
+
+# Autonomous workspaces
+*-autonomous/
+*-workspace/
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Test/coverage artifacts
+.coverage
+.hypothesis/
+htmlcov/
+.pytest_cache/
+
+# Cogitations assessment cache
+.cogitations/last-assessment.json
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+credentials.json

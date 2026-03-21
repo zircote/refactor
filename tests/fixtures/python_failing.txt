@@ -1,0 +1,10 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.0, pytest-8.0.0, pluggy-1.4.0
+rootdir: /tmp/myproject
+collected 8 items
+
+tests/test_main.py::test_add PASSED
+tests/test_main.py::test_subtract FAILED
+tests/test_main.py::test_multiply PASSED
+
+============================== 5 passed, 2 failed, 1 error in 0.67s ==============================

@@ -475,9 +475,10 @@ Same conditions as refactor autonomous mode (see refactor SKILL.md Phase 2 Step 
    ```
    Create task: "Analyze convergence data and produce a convergence report for [{feature}]. Read convergence_data from blackboard."
    Assign to "convergence-reporter", send message, wait for report.
-4. Clean up: `bash scripts/git_snapshot.sh cleanup`
-5. Inform user: "Autonomous implementation complete. {i} iterations, best score: {best.score}. Proceeding to quality review."
-6. **Proceed to Phase 6** (Quality Review) as normal.
+4. Clean up snapshot branches: `bash scripts/git_snapshot.sh cleanup`
+5. **Remove workspace directory**: Run via Bash: `rm -rf {workspace}`. The workspace contains only ephemeral iteration artifacts (test-results.json, review-scores.json, results.tsv) — the convergence report is already on the blackboard and the best code is on the working tree. Workspace directories MUST NOT be committed.
+6. Inform user: "Autonomous implementation complete. {i} iterations, best score: {best.score}. Proceeding to quality review."
+7. **Proceed to Phase 6** (Quality Review) as normal.
 
 ---
 
@@ -752,9 +753,12 @@ Suggested next steps:
 
 ### Step 7.4: Shutdown Team
 
-1. Send **shutdown_request** to all spawned teammates via SendMessage.
-2. Wait for shutdown confirmations.
-3. Use **TeamDelete** to clean up the team.
+**This step MUST execute regardless of success or failure in prior steps.** If any phase fails or the user interrupts, skip directly here.
+
+1. Send **shutdown_request** to all spawned teammates via SendMessage
+2. Wait up to **30 seconds** for shutdown confirmations. If any teammate does not respond within 30 seconds, proceed anyway — do not block on unresponsive agents
+3. Use **TeamDelete** to clean up the team. This forcefully terminates any remaining agents
+4. If TeamDelete fails, log the error and inform the user: "Team cleanup failed — run `TeamDelete` manually for team `{team_name}`"
 
 ## Orchestration Notes
 
@@ -808,6 +812,12 @@ Suggested next steps:
 - If still idle after second nudge: report to user and consider direct implementation
 - If tests fail repeatedly (3+ attempts): ask user for guidance
 - If blackboard write fails: fall back to inline context in task descriptions
+
+### Team Lifecycle Safety
+- **Stale agent detection**: At the start of Phase 0, check for an existing team with the same name pattern (`feature-dev-*`). If found, run **TeamDelete** on it before creating a new team. This cleans up leaked agents from prior interrupted runs.
+- **Guaranteed cleanup**: Step 7.4 (Shutdown Team) is a **finally block** — it MUST execute even if prior phases fail, the user cancels, or an unrecoverable error occurs. If you cannot determine whether prior phases succeeded, still execute Step 7.4.
+- **Shutdown timeout**: Never wait indefinitely for shutdown confirmations. After 30 seconds, proceed with TeamDelete regardless. Cooperative shutdown is preferred but not required.
+- **No orphaned agents**: After TeamDelete, verify no teammates remain by checking the team config file. If it still exists, warn the user.
 
 ---
 

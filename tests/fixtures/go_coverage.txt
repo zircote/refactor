@@ -1,0 +1,7 @@
+=== RUN   TestAdd
+--- PASS: TestAdd (0.00s)
+=== RUN   TestSubtract
+--- PASS: TestSubtract (0.00s)
+PASS
+coverage: 78.5% of statements
+ok  	myproject	0.004s

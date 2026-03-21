@@ -1,0 +1,10 @@
+   Compiling myproject v0.1.0 (/tmp/myproject)
+    Finished test [unoptimized + debuginfo] target(s) in 2.34s
+     Running unittests src/lib.rs (target/debug/deps/myproject-abc123)
+
+running 3 tests
+test tests::test_add ... ok
+test tests::test_subtract ... FAILED
+test tests::test_parse ... ok
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s

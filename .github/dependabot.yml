@@ -10,3 +10,14 @@ updates:
       - "area/ci"
     commit-message:
       prefix: "ci"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "type/chore"
+      - "area/dependencies"
+    commit-message:
+      prefix: "deps"

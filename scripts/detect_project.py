@@ -9,7 +9,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-
 # Priority order: Rust > Python > TypeScript > Go
 _LANGUAGE_MARKERS: list[tuple[str, list[str]]] = [
     ("rust", ["Cargo.toml"]),

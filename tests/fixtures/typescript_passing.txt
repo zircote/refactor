@@ -1,0 +1,9 @@
+ ✓ tests/main.test.ts (3)
+   ✓ add (0.5ms)
+   ✓ subtract (0.3ms)
+   ✓ multiply (0.2ms)
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  10:00:00
+   Duration  1.23s

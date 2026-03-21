@@ -355,9 +355,12 @@ Uncovered Regions: {count}
 
 ### Step R.3: Shutdown Team
 
+**This step MUST execute regardless of success or failure in prior steps.** If any phase fails or the user interrupts, skip directly here.
+
 1. Send **shutdown_request** to all spawned teammates via SendMessage
-2. Wait for shutdown confirmations
-3. Use **TeamDelete** to clean up the team
+2. Wait up to **30 seconds** for shutdown confirmations. If any teammate does not respond within 30 seconds, proceed anyway — do not block on unresponsive agents
+3. Use **TeamDelete** to clean up the team. This forcefully terminates any remaining agents
+4. If TeamDelete fails, log the error and inform the user: "Team cleanup failed — run `TeamDelete` manually for team `{team_name}`"
 
 ## Orchestration Notes
 
@@ -387,6 +390,12 @@ For large projects with multiple modules, use parallel test-planner instances:
 - If a teammate goes idle: re-send assignment via SendMessage with explicit "start now"
 - If still idle after second nudge: report to user and implement directly
 - If coverage tools not installed: report which tools are needed and continue with available data
+
+### Team Lifecycle Safety
+- **Stale agent detection**: At the start of the workflow, check for an existing team with the same name pattern (`test-architect-*`). If found, run **TeamDelete** on it before creating a new team. This cleans up leaked agents from prior interrupted runs.
+- **Guaranteed cleanup**: Step R.3 (Shutdown Team) is a **finally block** — it MUST execute even if prior phases fail, the user cancels, or an unrecoverable error occurs. If you cannot determine whether prior phases succeeded, still execute Step R.3.
+- **Shutdown timeout**: Never wait indefinitely for shutdown confirmations. After 30 seconds, proceed with TeamDelete regardless. Cooperative shutdown is preferred but not required.
+- **No orphaned agents**: After TeamDelete, verify no teammates remain by checking the team config file. If it still exists, warn the user.
 
 ### Language Support Table
 

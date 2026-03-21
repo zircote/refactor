@@ -7,12 +7,13 @@ a normalized coverage report.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
 
+from .exceptions import SubprocessError, UnsupportedLanguageError
 from .utils import parse_json_output
-
 
 # Coverage commands per language
 _COVERAGE_COMMANDS: dict[str, list[list[str]]] = {
@@ -39,11 +40,7 @@ def run_coverage(path: str, lang: str) -> dict[str, Any]:
     """
     commands = _COVERAGE_COMMANDS.get(lang)
     if commands is None:
-        return {
-            "error": f"unsupported language: {lang}",
-            "output": "",
-            "exit_code": -1,
-        }
+        raise UnsupportedLanguageError(lang)
 
     combined_output = ""
     last_exit_code = 0
@@ -58,28 +55,31 @@ def run_coverage(path: str, lang: str) -> dict[str, Any]:
                 timeout=600,
             )
         except FileNotFoundError as exc:
-            return {
-                "error": f"command not found: {exc}",
-                "output": combined_output,
-                "exit_code": -1,
-            }
-        except subprocess.TimeoutExpired:
-            return {
-                "error": "coverage execution timed out after 600s",
-                "output": combined_output,
-                "exit_code": -1,
-            }
+            raise SubprocessError(
+                f"command not found: {exc}",
+                command=" ".join(cmd),
+                exit_code=-1,
+                output=combined_output,
+            ) from exc
+        except subprocess.TimeoutExpired as exc:
+            raise SubprocessError(
+                "coverage execution timed out after 600s",
+                command=" ".join(cmd),
+                exit_code=-1,
+                output=combined_output,
+            ) from exc
 
         combined_output += result.stdout + result.stderr
         last_exit_code = result.returncode
 
         # For multi-step commands (Python), abort early if a step fails
         if result.returncode != 0 and len(commands) > 1:
-            return {
-                "error": f"command failed: {' '.join(cmd)}",
-                "output": combined_output,
-                "exit_code": result.returncode,
-            }
+            raise SubprocessError(
+                f"command failed: {' '.join(cmd)}",
+                command=" ".join(cmd),
+                exit_code=result.returncode,
+                output=combined_output,
+            )
 
     # Try to read coverage JSON files for languages that produce them
     coverage_data = _read_coverage_file(path, lang)
@@ -140,9 +140,7 @@ def _normalize_rust_coverage(data: dict[str, Any]) -> dict[str, Any]:
         covered_lines += file_covered
         if file_covered < file_total:
             uncovered = [
-                t.get("line", 0)
-                for t in file_entry.get("traces", [])
-                if t.get("hits", 0) == 0
+                t.get("line", 0) for t in file_entry.get("traces", []) if t.get("hits", 0) == 0
             ]
             uncovered_files.append(
                 {
@@ -231,7 +229,7 @@ def parse_coverage(output: str, lang: str) -> dict[str, Any]:
     """
     # Try to extract JSON from the output
     data = parse_json_output(output)
-    if data and not isinstance(data, str):
+    if isinstance(data, dict):
         return _normalize_coverage(data, lang)
 
     # Fallback: try to parse Go text coverage profile
@@ -249,7 +247,6 @@ def parse_coverage(output: str, lang: str) -> dict[str, Any]:
 
 def _parse_go_text_coverage(output: str) -> dict[str, Any]:
     """Parse Go coverage percentage from 'go test -cover' output."""
-    import re
 
     # Look for "coverage: XX.X% of statements"
     match = re.search(r"coverage:\s+([\d.]+)%\s+of\s+statements", output)

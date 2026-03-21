@@ -643,11 +643,13 @@ Check conditions in order. First match stops the loop:
 
 4. Clean up snapshot branches: Run via Bash: `bash scripts/git_snapshot.sh cleanup`
 
-5. Store convergence report for inclusion in Phase 4 report
+5. **Remove workspace directory**: Run via Bash: `rm -rf {workspace}`. The workspace contains only ephemeral iteration artifacts (test-results.json, review-scores.json, results.tsv) — the convergence report is already on the blackboard and the best code is on the working tree. Workspace directories MUST NOT be committed.
 
-6. Inform user: "Autonomous convergence loop complete. {i} iterations, {kept_count} kept, {reverted_count} reverted. Best score: {best.score}. Reason: {convergence_reason}. Proceeding to final assessment."
+6. Store convergence report for inclusion in Phase 4 report
 
-7. Set `refactoring_iteration = i` (for Phase 3/4 compatibility)
+7. Inform user: "Autonomous convergence loop complete. {i} iterations, {kept_count} kept, {reverted_count} reverted. Best score: {best.score}. Reason: {convergence_reason}. Proceeding to final assessment."
+
+8. Set `refactoring_iteration = i` (for Phase 3/4 compatibility)
 
 8. **Proceed to Phase 3** (Final Assessment) as normal.
 
@@ -835,7 +837,7 @@ Monitor TaskList until all created Phase 3 tasks show completed.
 
 1. Generate timestamp
 2. Create `refactor-result-{timestamp}.md` with the final assessment report. If `is_focused`, add a "Focus Mode: {focus_areas joined by ', '}" header at the top of the report. Include only scores from active agents.
-3. **If `autonomous_mode`**: Include a "## Convergence Summary" section in the report with: score trajectory table (from results.tsv), convergence reason, iterations run vs max, kept/reverted counts, and a link to the full convergence report at `{workspace}/convergence-report.md`.
+3. **If `autonomous_mode`**: Include a "## Convergence Summary" section in the report with: score trajectory table (from blackboard `convergence_data`), convergence reason, iterations run vs max, kept/reverted counts, and the full convergence report (from blackboard `convergence_report`). Note: the workspace directory was already removed in Step 2.2 — all data must come from the blackboard.
 4. Use Write tool to save the report
 
 ### Step 4.1.5: Commit Final Changes (Conditional)
@@ -983,9 +985,12 @@ Quality Scores:
 
 ### Step 4.3: Shutdown Team
 
+**This step MUST execute regardless of success or failure in prior steps.** If any phase fails or the user interrupts, skip directly here.
+
 1. Send **shutdown_request** to all spawned teammates (those in `active_agents`) via SendMessage
-2. Wait for shutdown confirmations
-3. Use **TeamDelete** to clean up the team
+2. Wait up to **30 seconds** for shutdown confirmations. If any teammate does not respond within 30 seconds, proceed anyway — do not block on unresponsive agents
+3. Use **TeamDelete** to clean up the team. This forcefully terminates any remaining agents
+4. If TeamDelete fails, log the error and inform the user: "Team cleanup failed — run `TeamDelete` manually for team `{team_name}`"
 
 ## Orchestration Notes
 
@@ -1017,6 +1022,12 @@ Quality Scores:
 - If blocking findings persist after 3 fix attempts: ask user for guidance
 - Don't proceed past test failures — green tests are gating
 - Don't proceed past blocking code review findings (Critical/High severity or confidence >= 80 quality issues) — review is gating
+
+### Team Lifecycle Safety
+- **Stale agent detection**: At the start of Phase 0, check for an existing team with the same name pattern (`refactor-*`). If found, run **TeamDelete** on it before creating a new team. This cleans up leaked agents from prior interrupted runs.
+- **Guaranteed cleanup**: Step 4.3 (Shutdown Team) is a **finally block** — it MUST execute even if prior phases fail, the user cancels, or an unrecoverable error occurs. If you cannot determine whether prior phases succeeded, still execute Step 4.3.
+- **Shutdown timeout**: Never wait indefinitely for shutdown confirmations. After 30 seconds, proceed with TeamDelete regardless. Cooperative shutdown is preferred but not required.
+- **No orphaned agents**: After TeamDelete, verify no teammates remain by checking the team config file. If it still exists, warn the user.
 
 ### State Management
 - Track `refactoring_iteration` counter carefully

@@ -1,0 +1,8 @@
+=== RUN   TestAdd
+--- PASS: TestAdd (0.00s)
+=== RUN   TestSubtract
+--- PASS: TestSubtract (0.00s)
+=== RUN   TestMultiply
+--- PASS: TestMultiply (0.00s)
+PASS
+ok  	myproject	0.003s
