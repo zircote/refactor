@@ -12,3 +12,10 @@ iteration	score	best_score	action	changelog
 8	77.8	77.8	kept	Suppress N/A items: ARC-004, DEX-012, DEX-013. ARC 61.1→76.0, DEX 74.8→80.7
 9	77.7	77.8	reverted	License scanning + GOV suppression fix. GOV-001 improved but GOV-004 unsuppression (0.0) offset gains
 10	78.0	78.0	kept	Error handling unification: COD-006 0.50→0.75, dead exceptions removed, structured context added
+11	79.0	79.0	kept	License compliance scanning (GOV-001 0.50→1.0), GOV suppression rate fix (33%→27%)
+12	79.5	79.5	kept	Branch protection: require 1 PR approval, admin bypass, License Compliance status check (GOV-003)
+13	80.0	80.0	kept	Rollback automation: post-release verification + auto-rollback on failure (CCD-008)
+14	80.5	80.5	kept	CI fix: uv sync --only-group dev → --extra dev. Unblocks all PR merges
+15	81.0	81.0	kept	Structured audit logging: scripts/audit.py with JSON entries (GOV-004 0.0→0.50+)
+16	81.0	81.0	kept	Version drift fix: pyproject.toml 2.2.0 → 4.1.0 (matches CHANGELOG)
+17	81.5	81.5	kept	Protocol interfaces: TestRunner, OutputParser, CoverageAnalyzer, ProjectDetector (ARC-002)
