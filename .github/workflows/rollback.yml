@@ -16,8 +16,8 @@ permissions:
   contents: write
 
 jobs:
-  rollback:
-    name: Rollback to ${{ inputs.version }}
+  validate:
+    name: Validate Rollback Target
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,6 +32,38 @@ jobs:
             exit 1
           fi
 
+  verify:
+    name: Verify Rollback Target
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Install dependencies
+        run: uv sync --frozen --only-group dev 2>/dev/null || pip install pytest pytest-cov
+
+      - name: Run tests at rollback target
+        run: |
+          if command -v uv &> /dev/null && [ -f uv.lock ]; then
+            uv run pytest --tb=short -q
+          else
+            python -m pytest --tb=short -q
+          fi
+
+  rollback:
+    name: Rollback to ${{ inputs.version }}
+    needs: [validate, verify]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+          fetch-depth: 0
+
       - name: Get current latest release
         id: current
         run: |
@@ -40,34 +72,39 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create rollback release
+      - name: Execute rollback
         run: |
           rollback_tag="${{ inputs.version }}"
           rollback_version="${rollback_tag#v}"
           current="${{ steps.current.outputs.latest }}"
 
-          cat > rollback_notes.md << EOF
+          cat > rollback_notes.md << 'NOTES'
           ## Rollback Release
 
-          **Rolled back from:** ${current}
-          **Rolled back to:** ${rollback_tag}
-          **Reason:** ${{ inputs.reason }}
-          **Triggered by:** ${{ github.actor }}
-          **Timestamp:** $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          | Field | Value |
+          |-------|-------|
+          | **Rolled back from** | CURRENT_PLACEHOLDER |
+          | **Rolled back to** | TAG_PLACEHOLDER |
+          | **Reason** | REASON_PLACEHOLDER |
+          | **Triggered by** | ACTOR_PLACEHOLDER |
+          | **Verified** | Tests passed at rollback target |
+          NOTES
 
-          This release restores the project to the state at ${rollback_tag}.
-          EOF
+          sed -i "s|CURRENT_PLACEHOLDER|${current}|g" rollback_notes.md
+          sed -i "s|TAG_PLACEHOLDER|${rollback_tag}|g" rollback_notes.md
+          sed -i "s|REASON_PLACEHOLDER|${{ inputs.reason }}|g" rollback_notes.md
+          sed -i "s|ACTOR_PLACEHOLDER|${{ github.actor }}|g" rollback_notes.md
 
-          # Mark current release as superseded by updating its notes
+          # Mark current release as superseded
           if [ "$current" != "none" ]; then
             gh release edit "$current" \
               --notes "$(gh release view "$current" --json body -q .body)
 
           ---
-          **⚠️ Superseded by rollback to ${rollback_tag}** — ${{ inputs.reason }}" || true
+          **Superseded by rollback to ${rollback_tag}** — ${{ inputs.reason }}" || true
           fi
 
-          # Re-publish the rollback version as latest
+          # Promote rollback version as latest
           gh release edit "$rollback_tag" --latest \
             --notes "$(cat rollback_notes.md)" || \
           gh release create "$rollback_tag" \
