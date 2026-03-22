@@ -9,6 +9,7 @@ from hypothesis import strategies as st
 
 from scripts.coverage_report import _parse_go_text_coverage, parse_coverage
 from scripts.detect_project import detect_language
+from scripts.exceptions import CoverageParseError
 from scripts.run_tests import (
     _parse_go_output,
     _parse_python_output,
@@ -137,12 +138,15 @@ class TestFormatResultsProperties:
 class TestGoTextCoverageProperties:
     @given(st.text(max_size=300))
     @settings(max_examples=50)
-    def test_never_crashes(self, text: str):
-        result = _parse_go_text_coverage(text)
-        assert isinstance(result, dict)
-        assert "coverage_pct" in result
-        assert isinstance(result["coverage_pct"], float)
-        assert result["coverage_pct"] >= 0.0
+    def test_returns_dict_or_raises_parse_error(self, text: str):
+        try:
+            result = _parse_go_text_coverage(text)
+            assert isinstance(result, dict)
+            assert "coverage_pct" in result
+            assert isinstance(result["coverage_pct"], float)
+            assert result["coverage_pct"] >= 0.0
+        except CoverageParseError:
+            pass  # Expected for unparseable input
 
 
 # --- Property: parse_coverage never crashes ---
@@ -154,6 +158,9 @@ class TestParseCoverageProperties:
         st.sampled_from(["rust", "python", "typescript", "go", "unknown", ""]),
     )
     @settings(max_examples=50)
-    def test_never_crashes(self, output: str, lang: str):
-        result = parse_coverage(output, lang)
-        assert result is None or isinstance(result, dict)
+    def test_returns_dict_or_raises_parse_error(self, output: str, lang: str):
+        try:
+            result = parse_coverage(output, lang)
+            assert result is None or isinstance(result, dict)
+        except CoverageParseError:
+            pass  # Expected for unparseable input

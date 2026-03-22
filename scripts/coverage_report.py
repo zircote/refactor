@@ -12,7 +12,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from .exceptions import SubprocessError, UnsupportedLanguageError
+from .exceptions import CoverageParseError, SubprocessError, UnsupportedLanguageError
 from .utils import parse_json_output
 
 # Coverage commands per language
@@ -124,7 +124,10 @@ def _normalize_coverage(data: dict[str, Any], lang: str) -> dict[str, Any]:
         return _normalize_python_coverage(data)
     elif lang == "typescript":
         return _normalize_typescript_coverage(data)
-    return {"error": "normalization not implemented", "raw": data}
+    raise CoverageParseError(
+        f"coverage normalization not implemented for language: {lang}",
+        raw_output=str(data),
+    )
 
 
 def _normalize_rust_coverage(data: dict[str, Any]) -> dict[str, Any]:
@@ -236,13 +239,10 @@ def parse_coverage(output: str, lang: str) -> dict[str, Any]:
     if lang == "go":
         return _parse_go_text_coverage(output)
 
-    return {
-        "error": "could not parse coverage output",
-        "total_lines": 0,
-        "covered_lines": 0,
-        "coverage_pct": 0.0,
-        "uncovered_files": [],
-    }
+    raise CoverageParseError(
+        "could not parse coverage output",
+        raw_output=output,
+    )
 
 
 def _parse_go_text_coverage(output: str) -> dict[str, Any]:
@@ -259,10 +259,7 @@ def _parse_go_text_coverage(output: str) -> dict[str, Any]:
             "uncovered_files": [],
         }
 
-    return {
-        "error": "could not parse Go coverage output",
-        "total_lines": 0,
-        "covered_lines": 0,
-        "coverage_pct": 0.0,
-        "uncovered_files": [],
-    }
+    raise CoverageParseError(
+        "could not parse Go coverage output",
+        raw_output=output,
+    )

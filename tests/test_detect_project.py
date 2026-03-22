@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from scripts.detect_project import detect_language, detect_project, detect_test_framework
+from scripts.exceptions import ProjectDetectionError, UnsupportedLanguageError
 
 
 class TestDetectLanguage:
@@ -53,9 +56,9 @@ class TestDetectTestFramework:
         fw = detect_test_framework(str(tmp_path), "python")
         assert fw["test_runner"] == "pytest"
 
-    def test_unknown_language_returns_empty_strings(self, tmp_path: Path):
-        fw = detect_test_framework(str(tmp_path), "unknown")
-        assert fw["test_runner"] == ""
+    def test_unknown_language_raises(self, tmp_path: Path):
+        with pytest.raises(UnsupportedLanguageError, match="unsupported language: unknown"):
+            detect_test_framework(str(tmp_path), "unknown")
 
 
 class TestDetectProject:
@@ -66,9 +69,13 @@ class TestDetectProject:
         assert "framework" in result
         assert result["framework"]["test_runner"] == "cargo test"
 
-    def test_full_detection_unknown(self, tmp_path: Path):
-        result = detect_project(str(tmp_path))
-        assert result["language"] is None
+    def test_full_detection_unknown_raises(self, tmp_path: Path):
+        with pytest.raises(ProjectDetectionError, match="no supported language detected"):
+            detect_project(str(tmp_path))
+
+    def test_nonexistent_path_raises(self):
+        with pytest.raises(ProjectDetectionError, match="not a directory"):
+            detect_project("/nonexistent/path/to/project")
 
     def test_result_has_expected_keys(self, tmp_project):
         project = tmp_project("python")

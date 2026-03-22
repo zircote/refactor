@@ -9,7 +9,10 @@ Ref: https://github.com/zircote/refactor/issues/9
 
 from __future__ import annotations
 
+import pytest
+
 from scripts.coverage_report import parse_coverage
+from scripts.exceptions import CoverageParseError
 from scripts.utils import parse_json_output
 
 
@@ -127,13 +130,13 @@ class TestParseCoverageNonDictJson:
     Bug: json.loads("NaN") returns float nan. _normalize_coverage assumed
     dict input and called data.get() on a float, crashing.
     Found by Hypothesis property-based testing.
+    Now raises CoverageParseError instead of silently returning error dicts.
     """
 
-    def test_nan_string_does_not_crash(self):
-        result = parse_coverage("NaN", "rust")
-        # Should return error dict, not crash
-        assert isinstance(result, dict)
+    def test_nan_string_raises_parse_error(self):
+        with pytest.raises(CoverageParseError):
+            parse_coverage("NaN", "rust")
 
-    def test_integer_json_does_not_crash(self):
-        result = parse_coverage("42", "python")
-        assert isinstance(result, dict)
+    def test_integer_json_raises_parse_error(self):
+        with pytest.raises(CoverageParseError):
+            parse_coverage("42", "python")

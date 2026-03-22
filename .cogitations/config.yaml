@@ -84,6 +84,15 @@ item_overrides:
   CFG-015:
     suppressed: true
     justification: "CLI plugin — single environment, no multi-env config drift to detect"
+  ARC-004:
+    suppressed: true
+    justification: "Plugin interface is markdown files per Claude Code plugin spec — no programmatic API surface requiring OpenAPI/JSON Schema contracts"
+  DEX-012:
+    suppressed: true
+    justification: "Claude Code plugins are installed via plugin CLI — scaffolding handled by plugin system"
+  DEX-013:
+    suppressed: true
+    justification: "Static markdown skill/agent definitions — hot-reload not applicable"
 
 # Scoring threshold overrides (optional — can only raise, not lower)
 # tier_thresholds:

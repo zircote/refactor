@@ -9,6 +9,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .exceptions import ProjectDetectionError, UnsupportedLanguageError
+
 # Priority order: Rust > Python > TypeScript > Go
 _LANGUAGE_MARKERS: list[tuple[str, list[str]]] = [
     ("rust", ["Cargo.toml"]),
@@ -100,12 +102,7 @@ def detect_test_framework(path: str, lang: str) -> dict[str, str]:
     """
     framework = _FRAMEWORK_MAP.get(lang)
     if framework is None:
-        return {
-            "error": f"unsupported language: {lang}",
-            "test_runner": "",
-            "coverage_tool": "",
-            "property_lib": "",
-        }
+        raise UnsupportedLanguageError(lang)
     return dict(framework)
 
 
@@ -147,15 +144,11 @@ def detect_project(path: str) -> dict[str, Any]:
     """
     root = Path(path).resolve()
     if not root.is_dir():
-        return {"error": f"not a directory: {path}", "path": str(root)}
+        raise ProjectDetectionError(f"not a directory: {path}", path=str(root))
 
     lang = detect_language(str(root))
     if lang is None:
-        return {
-            "path": str(root),
-            "language": None,
-            "error": "no supported language detected",
-        }
+        raise ProjectDetectionError("no supported language detected", path=str(root))
 
     framework = detect_test_framework(str(root), lang)
     source_dirs = _find_existing_dirs(root, _SOURCE_DIRS.get(lang, []))

@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from scripts.coverage_report import _parse_go_text_coverage, parse_coverage
-from scripts.exceptions import UnsupportedLanguageError
+from scripts.exceptions import CoverageParseError, UnsupportedLanguageError
 
 
 class TestParseCoverage:
@@ -43,15 +43,13 @@ class TestParseCoverage:
         assert result is not None
         assert result["coverage_pct"] == 78.5
 
-    def test_parse_unsupported_returns_error_dict(self):
-        result = parse_coverage("some output", "fortran")
-        assert result is not None
-        assert "error" in result
+    def test_parse_unsupported_raises_coverage_parse_error(self):
+        with pytest.raises(CoverageParseError, match="could not parse coverage output"):
+            parse_coverage("some output", "fortran")
 
-    def test_parse_empty_output_returns_error_dict(self):
-        result = parse_coverage("", "python")
-        assert result is not None
-        assert result["coverage_pct"] == 0.0
+    def test_parse_empty_output_raises_coverage_parse_error(self):
+        with pytest.raises(CoverageParseError, match="could not parse coverage output"):
+            parse_coverage("", "python")
 
 
 class TestParseGoTextCoverage:
@@ -60,9 +58,9 @@ class TestParseGoTextCoverage:
         result = _parse_go_text_coverage(output)
         assert result["coverage_pct"] == 85.3
 
-    def test_no_match_returns_zero(self):
-        result = _parse_go_text_coverage("no coverage info here")
-        assert result["coverage_pct"] == 0.0
+    def test_no_match_raises_coverage_parse_error(self):
+        with pytest.raises(CoverageParseError, match="could not parse Go coverage output"):
+            _parse_go_text_coverage("no coverage info here")
 
     def test_from_fixture(self, sample_output):
         result = _parse_go_text_coverage(sample_output("go", "coverage"))
@@ -138,11 +136,11 @@ class TestNormalizeCoverage:
         result = _normalize_coverage(data, "python")
         assert result["coverage_pct"] == 80.0
 
-    def test_normalize_coverage_unknown_lang(self):
+    def test_normalize_coverage_unknown_lang_raises(self):
         from scripts.coverage_report import _normalize_coverage
 
-        result = _normalize_coverage({}, "fortran")
-        assert "error" in result
+        with pytest.raises(CoverageParseError, match="normalization not implemented"):
+            _normalize_coverage({}, "fortran")
 
 
 class TestReadCoverageFile:
