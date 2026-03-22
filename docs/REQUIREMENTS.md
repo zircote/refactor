@@ -53,6 +53,28 @@
 | `/sync` | Full sync cycle | Fetch, rebase, push in one command |
 | `/pr-fix` | Fix PR feedback | Triage comments, fix, reply, push |
 
+## Non-Goals
+
+The following are explicitly **out of scope**:
+
+- **IDE integration**: This is a CLI plugin, not an IDE extension. IDE features are handled by Claude Code itself.
+- **Language-specific AST manipulation**: The plugin orchestrates tools (ruff, pytest, mypy) rather than implementing language parsers.
+- **Cloud deployment**: No server component, no hosted service, no API endpoints.
+- **Multi-user collaboration**: Designed for single-user CLI workflows.
+- **Backward compatibility with pre-2.0**: Version 1.x is unsupported; no migration tooling provided.
+
+## Edge Cases and Error Handling
+
+| Scenario | Expected Behavior |
+|----------|-------------------|
+| Project has no tests | Report detection failure, suggest test framework |
+| Unsupported language | Raise `UnsupportedLanguageError` with supported list |
+| Subprocess timeout | Raise `SubprocessError` after 300s (tests) / 600s (coverage) |
+| Malformed coverage output | Return error dict with `coverage_pct: 0.0` |
+| Empty project directory | `detect_project` returns `null` framework with low confidence |
+| Git conflicts during refactoring | Abort iteration, restore from snapshot |
+| Convergence plateau | Stop after 5 consecutive no-improvement iterations |
+
 ## Non-Functional Requirements
 
 ### Quality

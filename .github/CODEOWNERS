@@ -8,3 +8,8 @@
 
 # Default owner for everything in the repo
 * @zircote
+
+# Security-sensitive paths require explicit review
+SECURITY.md @zircote
+scripts/ @zircote
+.github/workflows/ @zircote

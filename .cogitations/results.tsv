@@ -2,3 +2,5 @@ iteration	score	best_score	action	changelog
 0	53.9	53.9	baseline	Initial assessment
 1	56.5	56.5	kept	Developer Experience: CONTRIBUTING.md, Makefile, launch.json
 2	57.5	57.5	kept	Product Specification: issue templates, PR template, requirements docs
+3	57.7	57.7	kept	Governance: ADRs, SECURITY.md, security review docs
+4	57.1	57.7	reverted	TDD+Coding: mutmut config, function refactoring (assessor variance)

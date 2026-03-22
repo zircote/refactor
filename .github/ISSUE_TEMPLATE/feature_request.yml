@@ -7,6 +7,14 @@ body:
       value: |
         Describe the feature you'd like to see in the refactor plugin.
   - type: textarea
+    id: user-story
+    attributes:
+      label: User Story
+      description: "Describe the need in user story format"
+      placeholder: "As a [role], I want [capability] so that [benefit]"
+    validations:
+      required: true
+  - type: textarea
     id: problem
     attributes:
       label: Problem Statement

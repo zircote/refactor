@@ -17,27 +17,49 @@ active_domains:
   - tdd
   - security
   - cicd
-  - observability
-  - event_messaging
-  - data_management
-  - performance_reliability
   - developer_experience
   - governance_compliance
   - version_control
   - config_environment
   - dependency_management
-  - incident_management
-  - accessibility_i18n
+
+# Disabled domains (structurally N/A for CLI plugin):
+# - observability         # no server to observe
+# - event_messaging       # no message brokers
+# - data_management       # no database/persistent storage
+# - performance_reliability # no server/API performance
+# - incident_management   # no service to manage incidents for
+# - accessibility_i18n    # no UI
 
 # Domain weight overrides (optional — uncomment to customize)
 # domain_weights:
 #   security: 2.0
 
-# Item-level overrides (optional)
-# item_overrides:
-#   A11Y-001:
-#     suppressed: true
-#     justification: "Headless API — no UI"
+item_overrides:
+  GOV-004:
+    suppressed: true
+    justification: "Local CLI tool — no admin operations requiring audit trail"
+  GOV-006:
+    suppressed: true
+    justification: "Local CLI tool — no regulatory compliance requirements"
+  GOV-008:
+    suppressed: true
+    justification: "Local CLI tool — no RBAC or access control model"
+  GOV-014:
+    suppressed: true
+    justification: "Local CLI tool — no user data processed or stored"
+  GOV-015:
+    suppressed: true
+    justification: "Local CLI tool — compliance reporting not applicable"
+  PRD-008:
+    suppressed: true
+    justification: "Solo-maintained project — no stakeholder sign-off process"
+  PRD-014:
+    suppressed: true
+    justification: "CLI plugin — no product analytics or telemetry"
+  PRD-015:
+    suppressed: true
+    justification: "CLI plugin — no UI requiring accessibility specs"
 
 # Scoring threshold overrides (optional — can only raise, not lower)
 # tier_thresholds:
