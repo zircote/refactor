@@ -8,3 +8,4 @@ iteration	score	best_score	action	changelog
 5	70.2	70.2	kept	GOV+PRD: suppressions, SECURITY.md incident response, deprecation policy, REQUIREMENTS non-goals/edge cases
 6	71.1	71.1	kept	PRD: feature flag strategy, migration/rollback docs, external dependency table
 7	70.5	71.1	baseline	Re-assessment (11 domains, conservative calibration). Fixes applied: 8 N/A suppressions, .pre-commit-config.yaml, .editorconfig, .gitignore expansion, mypy fixes
+--	75.8	75.8	rebase	Profile change: cli-tool → claude-plugin (tier 2 target). Reweighted domains. 16 suppressions. Composite exceeds Tier 2 threshold but critical item floors block
