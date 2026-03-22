@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv sync --frozen --only-group dev
+      - run: uv sync --frozen --extra dev
       - run: uv run ruff check scripts/
       - run: uv run ruff format --check scripts/
 
@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv sync --frozen --only-group dev
+      - run: uv sync --frozen --extra dev
       - run: uv run mypy scripts/
 
   test:
@@ -36,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv sync --frozen --only-group dev
+      - run: uv sync --frozen --extra dev
       - run: uv run pytest --cov=scripts --cov-report=term-missing --cov-branch
 
   license:
@@ -45,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv sync --frozen --only-group dev
+      - run: uv sync --frozen --extra dev
       - name: List dependency licenses
         run: uv run pip-licenses --format=markdown --output-file=licenses.md
       - name: Check license compliance
@@ -59,6 +59,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv sync --frozen --only-group dev
+      - run: uv sync --frozen --extra dev
       - run: uv run pip-audit
       - run: uv run bandit -r scripts/ -c pyproject.toml

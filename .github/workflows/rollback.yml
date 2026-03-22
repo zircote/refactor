@@ -44,7 +44,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
 
       - name: Install dependencies
-        run: uv sync --frozen --only-group dev 2>/dev/null || pip install pytest pytest-cov
+        run: uv sync --frozen --extra dev 2>/dev/null || pip install pytest pytest-cov
 
       - name: Run tests at rollback target
         run: |
