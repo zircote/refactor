@@ -20,6 +20,23 @@ htmlcov/
 # Cogitations assessment cache
 .cogitations/last-assessment.json
 
+# IDE
+.idea/
+*.swp
+*.swo
+.vscode/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# OS files
+Thumbs.db
+
+# Coverage (additional)
+coverage.xml
+
 # Secrets
 .env
 .env.*

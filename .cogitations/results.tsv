@@ -7,3 +7,4 @@ iteration	score	best_score	action	changelog
 --	66.4	66.4	rebase	Disabled 6 N/A domains, recalculated with 11 domains
 5	70.2	70.2	kept	GOV+PRD: suppressions, SECURITY.md incident response, deprecation policy, REQUIREMENTS non-goals/edge cases
 6	71.1	71.1	kept	PRD: feature flag strategy, migration/rollback docs, external dependency table
+7	70.5	71.1	baseline	Re-assessment (11 domains, conservative calibration). Fixes applied: 8 N/A suppressions, .pre-commit-config.yaml, .editorconfig, .gitignore expansion, mypy fixes

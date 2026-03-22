@@ -54,7 +54,8 @@ def _extract_balanced_json(output: str, open_char: str, close_char: str) -> dict
             depth -= 1
             if depth == 0:
                 try:
-                    return json.loads(output[start : i + 1])
+                    result: dict[str, Any] = json.loads(output[start : i + 1])
+                    return result
                 except json.JSONDecodeError:
                     return None
     return None
@@ -78,7 +79,8 @@ def parse_json_output(output: str) -> dict[str, Any] | None:
 
     # Try parsing the entire output as JSON
     try:
-        return json.loads(output)
+        parsed: dict[str, Any] = json.loads(output)
+        return parsed
     except json.JSONDecodeError:
         pass
 

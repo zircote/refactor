@@ -60,6 +60,30 @@ item_overrides:
   PRD-015:
     suppressed: true
     justification: "CLI plugin — no UI requiring accessibility specs"
+  ARC-012:
+    suppressed: true
+    justification: "CLI tool with no database — Database Schema Management is not applicable"
+  CCD-009:
+    suppressed: true
+    justification: "CLI plugin distributed via gh — no staging/production environment parity to maintain"
+  CCD-012:
+    suppressed: true
+    justification: "CLI plugin distributed as single artifact — feature flags not applicable"
+  CCD-015:
+    suppressed: true
+    justification: "CLI plugin — no cloud infrastructure to manage with IaC"
+  CFG-005:
+    suppressed: true
+    justification: "CLI plugin — feature flags not applicable to single-artifact distribution"
+  CFG-006:
+    suppressed: true
+    justification: "CLI plugin — no cloud infrastructure requiring IaC configuration"
+  CFG-010:
+    suppressed: true
+    justification: "CLI plugin — no containerized deployment"
+  CFG-015:
+    suppressed: true
+    justification: "CLI plugin — single environment, no multi-env config drift to detect"
 
 # Scoring threshold overrides (optional — can only raise, not lower)
 # tier_thresholds:
