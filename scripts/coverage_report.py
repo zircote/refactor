@@ -12,6 +12,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from .audit import log_operation
 from .exceptions import CoverageParseError, SubprocessError, UnsupportedLanguageError
 from .utils import parse_json_output
 
@@ -86,11 +87,21 @@ def run_coverage(path: str, lang: str) -> dict[str, Any]:
     if coverage_data is None:
         coverage_data = parse_coverage(combined_output, lang)
 
-    return {
+    cov_result = {
         "output": combined_output,
         "exit_code": last_exit_code,
         "coverage": coverage_data,
     }
+
+    total_pct = coverage_data.get("total_percent") if coverage_data else None
+    log_operation(
+        action="coverage_analysis",
+        resource=f"{path} ({lang})",
+        result="success" if last_exit_code == 0 else "failure",
+        details={"total_percent": total_pct} if total_pct is not None else None,
+    )
+
+    return cov_result
 
 
 def _read_coverage_file(path: str, lang: str) -> dict[str, Any] | None:

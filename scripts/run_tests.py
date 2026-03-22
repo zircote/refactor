@@ -10,6 +10,7 @@ import re
 import subprocess
 from typing import Any
 
+from .audit import log_operation
 from .exceptions import SubprocessError, UnsupportedLanguageError
 
 # Test commands per language
@@ -118,8 +119,21 @@ def run_tests(path: str, lang: str) -> dict[str, Any]:
     parser = _PARSERS.get(lang)
     counts = parser(combined_output) if parser else {"passed": 0, "failed": 0, "errors": 0}
 
-    return {
+    test_result = {
         **counts,
         "output": combined_output,
         "exit_code": result.returncode,
     }
+
+    log_operation(
+        action="test_run",
+        resource=f"{path} ({lang})",
+        result="success" if result.returncode == 0 else "failure",
+        details={
+            "passed": counts["passed"],
+            "failed": counts["failed"],
+            "errors": counts["errors"],
+        },
+    )
+
+    return test_result
