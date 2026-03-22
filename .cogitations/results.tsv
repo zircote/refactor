@@ -4,3 +4,5 @@ iteration	score	best_score	action	changelog
 2	57.5	57.5	kept	Product Specification: issue templates, PR template, requirements docs
 3	57.7	57.7	kept	Governance: ADRs, SECURITY.md, security review docs
 4	57.1	57.7	reverted	TDD+Coding: mutmut config, function refactoring (assessor variance)
+--	66.4	66.4	rebase	Disabled 6 N/A domains, recalculated with 11 domains
+5	70.2	70.2	kept	GOV+PRD: suppressions, SECURITY.md incident response, deprecation policy, REQUIREMENTS non-goals/edge cases

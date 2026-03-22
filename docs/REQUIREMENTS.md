@@ -75,6 +75,40 @@ The following are explicitly **out of scope**:
 | Git conflicts during refactoring | Abort iteration, restore from snapshot |
 | Convergence plateau | Stop after 5 consecutive no-improvement iterations |
 
+## Feature Flag Strategy
+
+This project uses **branch-based feature delivery** rather than runtime feature flags:
+
+- **New features**: Developed on feature branches, merged via PR after CI passes
+- **Experimental features**: Gated by skill availability — new skills are added as separate files and registered in the plugin manifest only when ready
+- **Rollback**: Achieved via `rollback.yml` workflow (revert to prior tagged release) or git revert
+
+Runtime feature flags are not applicable to this CLI plugin architecture. Behavior variations are controlled by skill configuration files (`.claude/refactor.config.json`).
+
+## Migration and Rollback
+
+### Version Migration
+
+- **Minor versions** (2.x → 2.y): Backward compatible. No migration needed.
+- **Major versions** (2.x → 3.0): Breaking changes documented in CHANGELOG.md with migration guide.
+- **Config changes**: New config keys get defaults; removed keys are silently ignored.
+
+### Rollback Procedure
+
+1. **Automated**: `.github/workflows/rollback.yml` — workflow_dispatch with target tag
+   - Validates tag exists
+   - Runs full test suite against target version
+   - Promotes target tag to new GitHub Release
+2. **Manual**: `git checkout v{version}` in the plugin directory
+
+### External Dependencies
+
+| Dependency | Owner | Purpose | Risk |
+|-----------|-------|---------|------|
+| Claude Code CLI | Anthropic | Host platform | Plugin API stability |
+| GitHub Actions | GitHub | CI/CD platform | Workflow syntax changes |
+| PyPI (dev deps) | PSF | Dev tooling source | Supply chain (mitigated by pip-audit) |
+
 ## Non-Functional Requirements
 
 ### Quality
