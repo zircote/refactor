@@ -16,6 +16,7 @@ dev = [
     "bandit>=1.8",
     "pytest-subprocess>=1.5",
     "hypothesis>=6.100",
+    "pip-licenses>=5.0",
 ]
 
 [tool.pytest.ini_options]

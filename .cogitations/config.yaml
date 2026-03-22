@@ -36,9 +36,8 @@ active_domains:
 #   security: 2.0
 
 item_overrides:
-  GOV-004:
-    suppressed: true
-    justification: "Local CLI tool — no admin operations requiring audit trail"
+  # GOV-004 intentionally NOT suppressed — critical items cannot be suppressed
+  # (scoring.yaml: critical_suppressible=false). Scored as-is.
   GOV-006:
     suppressed: true
     justification: "Local CLI tool — no regulatory compliance requirements"
