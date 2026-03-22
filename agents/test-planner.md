@@ -1,7 +1,6 @@
 ---
 name: test-planner
 description: Read-only analysis agent that examines source code and specifications to produce JSON test plans using equivalence class partitioning, boundary value analysis, state transition coverage, and property-based testing techniques.
-model: inherit
 color: gold
 allowed-tools:
 - Bash

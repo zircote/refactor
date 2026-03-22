@@ -1,7 +1,6 @@
 ---
 name: simplifier
 description: Code simplification specialist for refactoring workflows. Simplifies and refines recently changed code for clarity, consistency, and maintainability while preserving all functionality.
-model: inherit
 color: cyan
 allowed-tools:
 - Bash

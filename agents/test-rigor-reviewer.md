@@ -1,7 +1,6 @@
 ---
 name: test-rigor-reviewer
 description: Read-only quality assurance agent that evaluates test suites for scientific rigor, scoring each test against formal testing criteria and flagging anti-patterns like tautological assertions, weak generators, and mutation-susceptible patterns.
-model: inherit
 color: amber
 allowed-tools:
 - Bash

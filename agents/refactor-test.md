@@ -1,7 +1,6 @@
 ---
 name: refactor-test
 description: Test coverage analyzer and test case generator for refactoring workflows. Analyzes code coverage, adds missing test cases to meet production requirements, runs tests, and ensures all tests pass before proceeding with refactoring.
-model: inherit
 color: blue
 allowed-tools:
 - Bash

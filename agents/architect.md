@@ -1,7 +1,6 @@
 ---
 name: architect
 description: Code architecture analyst, optimization planner, and feature architecture designer. Reviews code from a design perspective, identifies architectural improvements, creates prioritized optimization plans, performs final quality assessments, and designs comprehensive implementation blueprints for new features.
-model: inherit
 color: green
 allowed-tools:
 - Bash
