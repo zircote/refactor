@@ -1,0 +1,194 @@
+{
+  "domain": "config_environment",
+  "items": {
+    "CFG-001": {
+      "score": 0.90,
+      "raw": "No hardcoded URLs/IPs/credentials in source; config files are project-level defaults only",
+      "assessment_mode": "both",
+      "check_type": "static_analysis",
+      "evidence": [
+        "scripts/detect_project.py — no os.environ calls; no hardcoded URLs or credentials",
+        "scripts/run_tests.py — test commands are constants for tool names, not environment-specific config",
+        "scripts/utils.py — no env var usage; no hardcoded config values",
+        ".claude/refactor.config.json — project-level defaults with no env-specific values"
+      ],
+      "findings": [
+        "Deterministic PASS: no hardcoded environment-specific values found in source",
+        "LLM score 4/5: All config externalized via JSON config files; clear separation of config from code. Not a 5 because no config schema documentation and no .env.example"
+      ]
+    },
+    "CFG-002": {
+      "score": 0.90,
+      "raw": "No secrets present anywhere in codebase; CI uses GitHub-native token injection",
+      "assessment_mode": "both",
+      "check_type": "config_audit",
+      "evidence": [
+        "No .env files found in repository",
+        ".github/workflows/auto-release.yml — uses secrets.GITHUB_TOKEN via env: GH_TOKEN, not hardcoded",
+        "scripts/ — no API keys, passwords, or credentials in any source file",
+        "pyproject.toml — no credentials"
+      ],
+      "findings": [
+        "Deterministic PASS: no committed .env files, no plaintext secrets in config",
+        "LLM score 4/5: CLI tool has no external service credentials to manage; CI properly uses GitHub Actions secrets injection"
+      ]
+    },
+    "CFG-003": {
+      "score": 0.50,
+      "raw": "N/A — CLI plugin with no dev/staging/prod deployment environments",
+      "assessment_mode": "llm_assisted",
+      "check_type": "llm_rubric",
+      "evidence": [
+        "Project is a Claude Code plugin (Python library), not a server application",
+        "No deployment environments configured",
+        "Single execution context: local CLI"
+      ],
+      "findings": [
+        "LLM score 3/5: Environment parity criterion is largely N/A for a CLI tool with no server environments. Trivially satisfied since there's only one runtime context"
+      ]
+    },
+    "CFG-004": {
+      "score": 0.10,
+      "raw": "No startup config validation; project is a library with no entry-point validation",
+      "assessment_mode": "both",
+      "check_type": "static_analysis",
+      "evidence": [
+        "scripts/__init__.py — no config validation",
+        "scripts/run_tests.py — no startup validation",
+        "No main() entry point with config checks found",
+        ".claude/refactor.config.json — consumed by Claude Code CLI, not validated by this project's code"
+      ],
+      "findings": [
+        "Deterministic FAIL: no config validation logic at any entry point",
+        "LLM score 2/5: No startup validation exists; project is a library so some inapplicability, but config values like min coverage and score weights are never validated"
+      ]
+    },
+    "CFG-006": {
+      "score": 0.20,
+      "raw": "No IaC files found; project is a CLI plugin with no managed infrastructure",
+      "assessment_mode": "both",
+      "check_type": "config_audit",
+      "evidence": [
+        "No Terraform, Pulumi, CDK, or CloudFormation files found",
+        "Project is a Python CLI plugin distributed via Claude Code plugin system",
+        ".github/workflows/ — CI/CD pipelines as code exist (ci.yml, release.yml)"
+      ],
+      "findings": [
+        "Deterministic FAIL: no IaC files present",
+        "LLM score 2/5: No infrastructure to manage (CLI tool). CI pipelines are defined as code which is partial credit, but no cloud infrastructure IaC"
+      ]
+    },
+    "CFG-007": {
+      "score": 0.20,
+      "raw": "No .env.example; project uses no environment variables",
+      "assessment_mode": "both",
+      "check_type": "config_audit",
+      "evidence": [
+        "Glob .env* — no .env.example or .env.template found",
+        "Grep os.environ in scripts/ — no matches",
+        "Project operates entirely on filesystem paths passed as arguments"
+      ],
+      "findings": [
+        "Deterministic FAIL: no .env.example present",
+        "LLM score 2/5: No env vars are used, but this is not documented explicitly. A README note stating 'no environment variables required' would satisfy the spirit of this check"
+      ]
+    },
+    "CFG-008": {
+      "score": 0.50,
+      "raw": "Mixed JSON/YAML formats with clear purpose separation but no schema validation",
+      "assessment_mode": "llm_assisted",
+      "check_type": "llm_rubric",
+      "evidence": [
+        ".claude/refactor.config.json — JSON for plugin config",
+        "hooks/hooks.json — JSON for hooks",
+        ".github/workflows/*.yml — YAML for CI (mandated by GitHub Actions)",
+        ".github/dependabot.yml — YAML",
+        "pyproject.toml — TOML for Python project metadata",
+        "No JSON Schema or validation for config files"
+      ],
+      "findings": [
+        "LLM score 3/5: JSON for app config, YAML for CI workflows (GitHub requires YAML), TOML for pyproject. Reasonable separation by purpose but no schema validation for any config files"
+      ]
+    },
+    "CFG-009": {
+      "score": 1.00,
+      "raw": "Zero environment-name checks in source code",
+      "assessment_mode": "both",
+      "check_type": "static_analysis",
+      "evidence": [
+        "Grep NODE_ENV|RAILS_ENV|APP_ENV in scripts/ — no matches",
+        "Grep 'environment ==' in scripts/ — no matches",
+        "All behavior differences driven by input parameters, not environment names"
+      ],
+      "findings": [
+        "Deterministic PASS: no environment-specific code paths found",
+        "LLM score 5/5: Exemplary — zero environment name checks anywhere; CLI tool behavior is fully parameter-driven"
+      ]
+    },
+    "CFG-010": {
+      "score": 0.25,
+      "raw": "No container configuration; project is not containerized",
+      "assessment_mode": "both",
+      "check_type": "config_audit",
+      "evidence": [
+        "Glob Dockerfile — no matches",
+        "Glob docker-compose* — no matches",
+        "Project distributed as Claude Code plugin, not as container image"
+      ],
+      "findings": [
+        "Deterministic FAIL: no Dockerfile present",
+        "LLM score 2/5: No container configuration at all (N/A for CLI plugin). No violations but also no container best practices"
+      ]
+    },
+    "CFG-012": {
+      "score": 1.00,
+      "raw": "No sensitive config present anywhere; clean separation trivially satisfied",
+      "assessment_mode": "deterministic",
+      "check_type": "config_audit",
+      "evidence": [
+        "No API keys, database credentials, or secrets found in any config file",
+        "pyproject.toml — only build/dev tooling config",
+        ".claude/refactor.config.json — only numeric thresholds and strategy settings"
+      ],
+      "findings": [
+        "Deterministic PASS: no sensitive config exists to be co-mingled; clean by absence"
+      ]
+    },
+    "CFG-013": {
+      "score": 0.90,
+      "raw": "All default config values are safe and restrictive",
+      "assessment_mode": "both",
+      "check_type": "static_analysis",
+      "evidence": [
+        ".claude/refactor.config.json — defaults: iterations=5, minimumRigorScore=0.7, minimumCoverage=80, maxIterations=20",
+        "No default passwords, no CORS settings, no debug=true flags",
+        "No permissive security defaults found in any config file"
+      ],
+      "findings": [
+        "Deterministic PASS: no insecure default values found",
+        "LLM score 4/5: All defaults are conservative and safe. Not a 5 because no startup validation that warns on relaxed settings"
+      ]
+    },
+    "CFG-014": {
+      "score": 0.50,
+      "raw": "Single config file; no multi-environment management needed",
+      "assessment_mode": "llm_assisted",
+      "check_type": "llm_rubric",
+      "evidence": [
+        ".claude/refactor.config.json — single config file with all settings",
+        "No per-environment config files found",
+        "Project has no deployment environments requiring separate config"
+      ],
+      "findings": [
+        "LLM score 3/5: Single config file with no per-environment duplication. No multi-environment management needed for a CLI plugin — criterion is partially N/A"
+      ]
+    }
+  },
+  "items_skipped_tier": 3,
+  "skipped_items": ["CFG-005", "CFG-011", "CFG-015"],
+  "items_suppressed": 0,
+  "items_assessed": 12,
+  "domain_score": 0.64,
+  "domain_score_pct": 64,
+  "scoring_notes": "Several criteria (CFG-003, CFG-006, CFG-010, CFG-014) are partially N/A for a CLI plugin with no server infrastructure or deployment environments. CFG-004 and CFG-007 are genuine gaps. CFG-009 and CFG-012 are exemplary."
+}

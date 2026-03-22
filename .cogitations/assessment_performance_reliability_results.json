@@ -1,0 +1,259 @@
+{
+  "domain": "performance_reliability",
+  "items": {
+    "PRF-001": {
+      "score": 0.25,
+      "raw": "N/A — CLI tool with no HTTP endpoints; no latency targets applicable",
+      "assessment_mode": "both",
+      "check_type": "metric_query",
+      "evidence": [
+        "Project is a Python CLI plugin invoked by Claude Code, not a web service",
+        "No HTTP server, no APM, no latency measurement instrumentation",
+        "subprocess calls have timeouts (300s, 600s) but no p50/p95/p99 tracking"
+      ],
+      "findings": [
+        "Deterministic FAIL: no APM or latency metrics configured",
+        "LLM score 2/5: CLI tool with no endpoints; response time budgets are N/A. Subprocess timeouts exist as a proxy for latency bounds but no percentile monitoring"
+      ]
+    },
+    "PRF-002": {
+      "score": 0.10,
+      "raw": "N/A — no server to load test; CLI plugin",
+      "assessment_mode": "both",
+      "check_type": "artifact_inspection",
+      "evidence": [
+        "No k6, locust, artillery, or other load test scripts found",
+        "Project is a CLI tool invoked locally, not a service receiving concurrent traffic",
+        ".github/workflows/ — no load test stage in ci.yml or release.yml"
+      ],
+      "findings": [
+        "Deterministic FAIL: no load test configuration files present",
+        "LLM score 1/5: No load testing — N/A for a CLI plugin with no server component"
+      ]
+    },
+    "PRF-003": {
+      "score": 0.25,
+      "raw": "subprocess timeouts configured; no CPU/memory/connection limits",
+      "assessment_mode": "deterministic",
+      "check_type": "config_audit",
+      "evidence": [
+        "scripts/run_tests.py:106 — subprocess.run(timeout=300)",
+        "scripts/coverage_report.py:55 — subprocess.run(timeout=600)",
+        "No Dockerfile, no container resource limits, no ulimit configuration",
+        "No connection pool settings — project makes no network connections",
+        "No memory limit configuration anywhere"
+      ],
+      "findings": [
+        "Deterministic FAIL: no CPU/memory limits configured; subprocess timeouts provide time-bound but not resource-bound protection",
+        "Partial credit: subprocess timeout=300/600 prevents runaway test processes"
+      ]
+    },
+    "PRF-004": {
+      "score": 0.25,
+      "raw": "N/A — no external HTTP/gRPC calls in codebase",
+      "assessment_mode": "both",
+      "check_type": "static_analysis",
+      "evidence": [
+        "Grep for requests, httpx, urllib, aiohttp in scripts/ — no matches",
+        "Only external calls are subprocess invocations to test runners (cargo, pytest, vitest, go test)",
+        "FileNotFoundError and TimeoutExpired caught for all subprocess calls"
+      ],
+      "findings": [
+        "Deterministic PASS (trivially): no external service calls to protect with circuit breakers",
+        "LLM score 2/5: N/A — CLI tool calls only local tools via subprocess. Subprocess failures are caught but there is no circuit breaker pattern needed"
+      ]
+    },
+    "PRF-005": {
+      "score": 0.50,
+      "raw": "FileNotFoundError and TimeoutExpired caught; SubprocessError raised with context",
+      "assessment_mode": "llm_assisted",
+      "check_type": "llm_rubric",
+      "evidence": [
+        "scripts/run_tests.py:108-115 — FileNotFoundError and TimeoutExpired caught, re-raised as SubprocessError",
+        "scripts/coverage_report.py:57-82 — same pattern for all coverage commands",
+        "No fallback behavior when test runner unavailable (just error propagation)",
+        "No feature flags or degraded-mode operation"
+      ],
+      "findings": [
+        "LLM score 3/5: Errors in non-critical paths (e.g., coverage tool missing) do raise SubprocessError but there is no graceful degradation — the CLI fails rather than continuing with partial results. Appropriate for a test runner but no degraded-mode design"
+      ]
+    },
+    "PRF-006": {
+      "score": 0.10,
+      "raw": "N/A — no caching applicable for test runner CLI",
+      "assessment_mode": "both",
+      "check_type": "config_audit",
+      "evidence": [
+        "No Redis, memcached, or in-process cache configuration found",
+        "No TTL definitions or cache invalidation logic",
+        "CLI tool re-runs tests fresh on each invocation — caching is intentionally absent"
+      ],
+      "findings": [
+        "Deterministic FAIL: no cache configuration present",
+        "LLM score 1/5: No caching — N/A for a test runner that must always run fresh. Test results are non-cacheable by nature"
+      ]
+    },
+    "PRF-007": {
+      "score": 0.10,
+      "raw": "N/A — no public API endpoints; CLI plugin",
+      "assessment_mode": "both",
+      "check_type": "config_audit",
+      "evidence": [
+        "Project exposes no HTTP endpoints — pure CLI/library interface",
+        "No rate limiting middleware, no throttling logic",
+        "Invoked once per Claude Code session, not a shared API"
+      ],
+      "findings": [
+        "Deterministic FAIL: no rate limiting configured",
+        "LLM score 1/5: N/A — CLI plugin has no public API to rate-limit"
+      ]
+    },
+    "PRF-008": {
+      "score": 0.10,
+      "raw": "N/A — CLI plugin with no deployment infrastructure or scaling requirements",
+      "assessment_mode": "llm_assisted",
+      "check_type": "llm_rubric",
+      "evidence": [
+        "Project is a Python library distributed as a Claude Code plugin",
+        "No deployment environments, no server instances to scale",
+        "No resource utilization monitoring applicable"
+      ],
+      "findings": [
+        "LLM score 1/5: N/A — no capacity planning applicable for a CLI tool"
+      ]
+    },
+    "PRF-009": {
+      "score": 0.10,
+      "raw": "N/A — no service level; CLI tool has no availability/latency SLOs",
+      "assessment_mode": "both",
+      "check_type": "config_audit",
+      "evidence": [
+        "No SLO configuration files found",
+        "No monitoring dashboards or error budget tracking",
+        "CLI tool invoked on-demand — no availability commitment applicable"
+      ],
+      "findings": [
+        "Deterministic FAIL: no SLO definitions present",
+        "LLM score 1/5: N/A — SLOs are not applicable to a local CLI plugin"
+      ]
+    },
+    "PRF-010": {
+      "score": 0.50,
+      "raw": "CLI process exits cleanly; subprocess handles cleaned up by Python runtime",
+      "assessment_mode": "both",
+      "check_type": "static_analysis",
+      "evidence": [
+        "Grep for signal, SIGTERM, SIGINT in scripts/ — no explicit signal handlers",
+        "subprocess.run() is blocking — completed or timed out before process exits",
+        "Python runtime handles child process cleanup on exit",
+        "No background threads or long-lived daemon processes"
+      ],
+      "findings": [
+        "Deterministic FAIL: no explicit SIGTERM/SIGINT handler",
+        "LLM score 3/5: CLI tool exits when done — graceful shutdown is trivially satisfied since there are no in-flight requests to drain. No background workers require checkpointing. Missing explicit signal handling but risk is low"
+      ]
+    },
+    "PRF-011": {
+      "score": 0.10,
+      "raw": "N/A — no HTTP server; no health check endpoints applicable",
+      "assessment_mode": "deterministic",
+      "check_type": "config_audit",
+      "evidence": [
+        "No FastAPI, Flask, Django, or any HTTP framework in pyproject.toml dependencies",
+        "No /health or /ready endpoint definitions in any source file",
+        "CLI plugin invoked as subprocess by Claude Code — no orchestration health probes needed"
+      ],
+      "findings": [
+        "Deterministic FAIL: no health check endpoints exist",
+        "N/A — CLI plugin has no server to probe"
+      ]
+    },
+    "PRF-012": {
+      "score": 0.85,
+      "raw": "All subprocess calls have explicit timeout configuration",
+      "assessment_mode": "both",
+      "check_type": "static_analysis",
+      "evidence": [
+        "scripts/run_tests.py:106 — subprocess.run(cmd, ..., timeout=300)",
+        "scripts/coverage_report.py:55 — subprocess.run(cmd, ..., timeout=600)",
+        "scripts/run_tests.py:113-114 — TimeoutExpired caught, raised as SubprocessError",
+        "scripts/coverage_report.py:64-70 — TimeoutExpired caught, raised as SubprocessError",
+        "No requests, httpx, or database calls — all I/O is subprocess"
+      ],
+      "findings": [
+        "Deterministic PASS: all subprocess calls have explicit timeout=N values",
+        "LLM score 4/5: Timeout configuration is thorough for all I/O operations. Not a 5 because timeout values are hardcoded constants (not configurable) and there is no per-operation timeout budget propagation across the call chain"
+      ]
+    },
+    "PRF-013": {
+      "score": 0.10,
+      "raw": "No retry logic; test runner failures are propagated immediately",
+      "assessment_mode": "both",
+      "check_type": "static_analysis",
+      "evidence": [
+        "Grep for retry, backoff, tenacity, attempts in scripts/ — no matches",
+        "SubprocessError raised immediately on failure with no retry",
+        "FileNotFoundError re-raised without retry"
+      ],
+      "findings": [
+        "Deterministic FAIL: no retry logic found",
+        "LLM score 1/5: No retry strategy. For a CLI test runner, retrying on transient subprocess failures (e.g., flaky test infrastructure) could be appropriate but is absent"
+      ]
+    },
+    "PRF-014": {
+      "score": 0.75,
+      "raw": "No detectable memory leaks; clean single-pass CLI architecture",
+      "assessment_mode": "both",
+      "check_type": "metric_query",
+      "evidence": [
+        "No global mutable caches or accumulating data structures in scripts/",
+        "subprocess.run() returns immediately and releases resources",
+        "No event listeners, no long-running loops, no circular references",
+        "All data flows: input → process → output → exit",
+        "scripts/coverage_report.py:113 — json.loads() result is local variable, not cached globally"
+      ],
+      "findings": [
+        "Deterministic N/A: no long-running process to monitor for memory growth",
+        "LLM score 4/5: Clean single-pass architecture with no opportunity for memory leaks. Not a 5 because no memory profiling in CI and no explicit bounded data structures (though none are needed given the design)"
+      ]
+    },
+    "PRF-015": {
+      "score": 0.25,
+      "raw": "All operations synchronous; subprocess.run() blocks entire execution",
+      "assessment_mode": "llm_assisted",
+      "check_type": "llm_rubric",
+      "evidence": [
+        "scripts/run_tests.py:101 — subprocess.run() is synchronous, blocks up to 300s",
+        "scripts/coverage_report.py:49 — subprocess.run() blocks up to 600s",
+        "No asyncio, threading, or multiprocessing in scripts/",
+        "No job tracking, no status callbacks"
+      ],
+      "findings": [
+        "LLM score 2/5: All heavy operations (test execution, coverage analysis) are synchronous and block the caller. For a CLI tool this is expected behavior, but long test suites (up to 600s) block Claude Code entirely. No async or job-based design"
+      ]
+    },
+    "PRF-016": {
+      "score": 0.10,
+      "raw": "No structured logging, no metrics, no tracing",
+      "assessment_mode": "both",
+      "check_type": "config_audit",
+      "evidence": [
+        "Grep for logging, structlog, loguru, prometheus, opentelemetry in scripts/ — no matches",
+        "No logging calls anywhere in scripts/*.py",
+        "subprocess output captured as raw string, not structured",
+        "pyproject.toml — no observability library dependencies"
+      ],
+      "findings": [
+        "Deterministic FAIL: no logging framework, no metrics, no tracing configured",
+        "LLM score 1/5: No observability instrumentation whatsoever. Operations are opaque — no way to debug production issues from telemetry"
+      ]
+    }
+  },
+  "items_skipped_tier": 0,
+  "skipped_items": [],
+  "items_suppressed": 0,
+  "items_assessed": 16,
+  "domain_score": 0.28,
+  "domain_score_pct": 28,
+  "scoring_notes": "Domain score is low because performance_reliability criteria are predominantly designed for long-running web services, not CLI plugins. PRF-012 (timeout configuration) is the only strongly applicable criterion and scores well (0.85). PRF-001, PRF-002, PRF-006, PRF-007, PRF-008, PRF-009, PRF-011 are N/A for a CLI tool. Genuine gaps: PRF-016 (no logging/observability), PRF-013 (no retry logic), PRF-003 (no resource limits beyond timeouts). PRF-014 (memory safety) and PRF-005 (error handling) score moderately well given the simple architecture."
+}

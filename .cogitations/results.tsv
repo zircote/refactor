@@ -1,1 +1,2 @@
-0\t76.4\t76.4\tpending\tBaseline assessment: Tier 1 (76.4/100), 3 critical blockers
+iteration	score	best_score	action	changelog
+0	53.9	53.9	baseline	Initial assessment

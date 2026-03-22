@@ -1,0 +1,233 @@
+{
+  "domain": "dependency_management",
+  "items": {
+    "DEP-001": {
+      "score": 1.0,
+      "raw": "uv.lock exists and is tracked in git; used with --frozen in all CI jobs",
+      "assessment_mode": "deterministic",
+      "check_type": "artifact_inspection",
+      "evidence": [
+        "uv.lock — present in repository root, confirmed tracked via git ls-files",
+        ".github/workflows/ci.yml — all jobs use 'uv sync --frozen --only-group dev'",
+        "uv.lock — contains pinned versions with SHA256 hashes for all packages"
+      ],
+      "findings": [
+        "Deterministic PASS: lockfile (uv.lock) exists, is committed, and enforced via --frozen in CI"
+      ]
+    },
+    "DEP-002": {
+      "score": 1.0,
+      "raw": "pip-audit runs in CI security job; bandit also configured for SAST",
+      "assessment_mode": "deterministic",
+      "check_type": "artifact_inspection",
+      "evidence": [
+        ".github/workflows/ci.yml security job — 'uv run pip-audit' scans for known CVEs",
+        ".github/workflows/ci.yml security job — 'uv run bandit -r scripts/ -c pyproject.toml'",
+        "pyproject.toml — pip-audit>=2.7 and bandit>=1.8 listed as dev dependencies"
+      ],
+      "findings": [
+        "Deterministic PASS: pip-audit scans dependency tree for vulnerabilities on every CI run"
+      ]
+    },
+    "DEP-003": {
+      "score": 1.0,
+      "raw": "Dependabot configured for pip ecosystem with weekly schedule",
+      "assessment_mode": "deterministic",
+      "check_type": "config_audit",
+      "evidence": [
+        ".github/dependabot.yml — pip ecosystem configured, weekly schedule on Monday",
+        ".github/dependabot.yml — github-actions ecosystem also configured for CI action updates",
+        ".github/dependabot.yml — labels: ['type/chore', 'area/dependencies']"
+      ],
+      "findings": [
+        "Deterministic PASS: Dependabot configured for both pip packages and GitHub Actions with weekly cadence"
+      ]
+    },
+    "DEP-004": {
+      "score": 0.10,
+      "raw": "No license scanning tool configured; no SBOM generation; no approved license list",
+      "assessment_mode": "both",
+      "check_type": "artifact_inspection",
+      "evidence": [
+        "pyproject.toml — pip-audit present (CVE scanning) but no pip-licenses or liccheck configured",
+        ".github/workflows/ci.yml — no license scanning step in any job",
+        "No SBOM generation tool (cyclonedx-py, spdx) found in configuration",
+        "Project is MIT-licensed (typical for Claude Code plugins) but no approved license list documented"
+      ],
+      "findings": [
+        "Deterministic FAIL: no license scanning tool configured in CI pipeline",
+        "LLM score 2/5: project uses standard OSI-approved dev tool dependencies (pytest, ruff, mypy) but no systematic license compliance process; no approved license list; no SBOM"
+      ]
+    },
+    "DEP-005": {
+      "score": 0.75,
+      "raw": "Zero runtime dependencies; 9 focused dev-only packages each serving distinct purpose",
+      "assessment_mode": "llm_assisted",
+      "check_type": "llm_rubric",
+      "evidence": [
+        "pyproject.toml — dependencies = [] (no runtime dependencies at all)",
+        "pyproject.toml dev deps: pytest (testing), pytest-cov (coverage), pytest-randomly (test ordering), ruff (lint+format), mypy (typing), pip-audit (security), bandit (SAST), pytest-subprocess (subprocess mocking), hypothesis (property testing)",
+        "No redundant packages: single linter (ruff handles both lint and format), single type checker"
+      ],
+      "findings": [
+        "LLM score 4/5: Exceptionally minimal dependency surface — zero runtime deps. Dev deps are well-chosen with no redundancy. Not 5/5 because no depcheck in CI and no documented dependency decision rationale"
+      ]
+    },
+    "DEP-006": {
+      "score": 0.70,
+      "raw": "Manifest uses lower-bound ranges (>=X.Y); lockfile pins exact versions deterministically",
+      "assessment_mode": "deterministic",
+      "check_type": "config_audit",
+      "evidence": [
+        "pyproject.toml — 'pytest>=8.0', 'pytest-cov>=5.0', 'ruff>=0.9', 'mypy>=1.14' — all lower bounds only",
+        "uv.lock — exact versions pinned: bandit 1.9.4, certifi 2026.2.25, charset-normalizer 3.4.6",
+        ".github/workflows/ci.yml — 'uv sync --frozen' enforces lockfile in CI (deterministic)"
+      ],
+      "findings": [
+        "Partial: manifest uses open lower-bound ranges (not tight), BUT uv.lock pins exact versions providing build determinism in practice. The lockfile mitigates the loose manifest ranges effectively."
+      ]
+    },
+    "DEP-007": {
+      "score": 0.20,
+      "raw": "Transitive deps captured in uv.lock with hashes but no SBOM generation or explicit tree analysis",
+      "assessment_mode": "both",
+      "check_type": "artifact_inspection",
+      "evidence": [
+        "uv.lock — all transitive dependencies pinned with SHA256 hashes (e.g., cachecontrol, colorama, stevedore)",
+        "No SBOM generation tool (cyclonedx-py, spdx-tools) in CI pipeline",
+        "No dependency tree visualization or explicit transitive analysis step"
+      ],
+      "findings": [
+        "Deterministic FAIL: no SBOM generated",
+        "LLM score 3/5: transitive deps are implicitly tracked via lockfile but no explicit monitoring, size tracking, or SBOM attestation"
+      ]
+    },
+    "DEP-008": {
+      "score": 0.80,
+      "raw": "Dependabot runs weekly; lockfile shows current package versions (certifi 2026.2.25, bandit 1.9.4)",
+      "assessment_mode": "deterministic",
+      "check_type": "artifact_inspection",
+      "evidence": [
+        ".github/dependabot.yml — weekly update schedule for pip packages",
+        "uv.lock — certifi 2026.2.25 (released 2026-02-25, very fresh)",
+        "uv.lock — bandit 1.9.4 (upload-time 2026-02-25, current)",
+        "uv.lock — charset-normalizer 3.4.6 (upload-time 2026-03-15, very fresh)"
+      ],
+      "findings": [
+        "Automated weekly updates via Dependabot ensure freshness; sampled packages are current (within weeks of assessment date 2026-03-21); no obviously stale packages detected"
+      ]
+    },
+    "DEP-009": {
+      "score": 0.80,
+      "raw": "Lockfile has SHA256 hashes for all packages; single trusted registry (PyPI); no SLSA/Sigstore",
+      "assessment_mode": "both",
+      "check_type": "config_audit",
+      "evidence": [
+        "uv.lock — every package has sha256 hash for both sdist and wheel (e.g., bandit-1.9.4: hash='sha256:b589e...')",
+        "uv.lock — all sources are 'registry = https://pypi.org/simple' (single trusted registry)",
+        "No .pip.conf or custom registry configuration — uses official PyPI only",
+        "No SLSA provenance verification or Sigstore signature checks configured"
+      ],
+      "findings": [
+        "Deterministic PASS: all packages have integrity hashes in lockfile; single official registry",
+        "LLM score 3/5: integrity verification via hashes, trusted single registry, but no provenance verification (SLSA/Sigstore), no dependency review process, no private registry proxy"
+      ]
+    },
+    "DEP-010": {
+      "score": 0.50,
+      "raw": "No vendor directory; uses uv lockfile approach — appropriate Python convention but not documented",
+      "assessment_mode": "llm_assisted",
+      "check_type": "llm_rubric",
+      "evidence": [
+        "No vendor/ directory in project",
+        "uv.lock — lockfile-based reproducibility instead of vendoring",
+        "pyproject.toml — standard pip-based dependency management",
+        "No documentation of vendoring strategy decision"
+      ],
+      "findings": [
+        "LLM score 3/5: implicit decision to use lockfile instead of vendoring — appropriate for Python CLI tool ecosystem. No documented rationale, no offline build verification, no CI enforcement of vendor consistency."
+      ]
+    },
+    "DEP-011": {
+      "score": 1.0,
+      "raw": "Dependabot PRs trigger full CI suite; no auto-merge without passing tests",
+      "assessment_mode": "deterministic",
+      "check_type": "pipeline_verification",
+      "evidence": [
+        ".github/workflows/ci.yml — 'on: pull_request: branches: [main]' triggers on all PRs including Dependabot",
+        ".github/workflows/ci.yml — runs lint, typecheck, test (with coverage), and security scan on every PR",
+        "No auto-merge configuration found — updates require human review after tests pass",
+        ".github/dependabot.yml — PRs labeled and scheduled, feeding into CI pipeline"
+      ],
+      "findings": [
+        "Deterministic PASS: CI pipeline runs full test suite on all PRs including Dependabot update PRs; no auto-merge without passing checks"
+      ]
+    },
+    "DEP-012": {
+      "score": 0.25,
+      "raw": "No ADRs or documentation for dependency choices; no decision rationale recorded",
+      "assessment_mode": "llm_assisted",
+      "check_type": "llm_rubric",
+      "evidence": [
+        "No ADR directory found in project",
+        "pyproject.toml — dependencies listed without comments or rationale",
+        "No README section documenting key dependencies and reasons",
+        "9 dev dependencies chosen sensibly but without documented justification"
+      ],
+      "findings": [
+        "LLM score 2/5: standard tools recognizable to Python developers (pytest, ruff, mypy) but no documented rationale; no ADRs for technology choices; no usage guidelines or known pitfalls documented"
+      ]
+    },
+    "DEP-013": {
+      "score": 1.0,
+      "raw": "No private registry used; all packages from standard PyPI; no misconfiguration possible",
+      "assessment_mode": "deterministic",
+      "check_type": "config_audit",
+      "evidence": [
+        "No .pip.conf or pip configuration file found",
+        "uv.lock — all packages source from 'https://pypi.org/simple' (official PyPI)",
+        "No private packages or scoped packages in dependency list",
+        "No registry authentication configuration needed or present"
+      ],
+      "findings": [
+        "Deterministic PASS (N/A): no private registry used; no misconfiguration risk; all packages from official PyPI"
+      ]
+    },
+    "DEP-014": {
+      "score": 0.90,
+      "raw": "uv sync --frozen enforces lockfile in CI; all packages have integrity hashes",
+      "assessment_mode": "both",
+      "check_type": "artifact_inspection",
+      "evidence": [
+        ".github/workflows/ci.yml — all 4 jobs use 'uv sync --frozen --only-group dev'",
+        "uv.lock — SHA256 hashes for all sdist and wheel packages",
+        "Same source + same lockfile = identical package versions installed",
+        "No Bazel or hermetic build; no network isolation during build"
+      ],
+      "findings": [
+        "Deterministic PASS: frozen lockfile enforced in CI ensuring reproducible installs",
+        "LLM score 4/5: fully deterministic installs from frozen lockfile; not hermetic (no containerized/isolated build environment, no output hash verification)"
+      ]
+    },
+    "DEP-015": {
+      "score": 0.30,
+      "raw": "No explicit deprecated package tracking; indirect coverage via weekly Dependabot updates",
+      "assessment_mode": "deterministic",
+      "check_type": "artifact_inspection",
+      "evidence": [
+        "pip-audit checks CVEs but not package deprecation status",
+        "No pip-check or deprecation-specific tooling configured",
+        ".github/dependabot.yml — weekly updates would surface new versions but not explicitly flag deprecated packages",
+        "pyproject.toml — no deprecated packages detected in direct dependencies (all active projects)"
+      ],
+      "findings": [
+        "No explicit deprecated package detection in CI; Dependabot provides some indirect coverage by surfacing updates; no tracking plan for any deprecated transitives"
+      ]
+    }
+  },
+  "domain_score": 0.75,
+  "items_assessed": 15,
+  "items_suppressed": 0,
+  "items_skipped_tier": 0,
+  "scoring_notes": "Weighted domain score: sum(score*weight)/sum(weights) = 66.30/88 = 0.753. Strengths: lockfile hygiene (DEP-001), vulnerability scanning (DEP-002), automated updates (DEP-003), update testing (DEP-011), build reproducibility (DEP-014), zero runtime deps (DEP-005). Gaps: no license scanning (DEP-004), no SBOM/transitive analysis (DEP-007), no dependency documentation (DEP-012), no deprecated tracking (DEP-015)."
+}
