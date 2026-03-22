@@ -62,3 +62,99 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
+
+  verify-release:
+    name: Post-Release Verification
+    needs: [validate, release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify release exists and is latest
+        run: |
+          version="${{ needs.validate.outputs.version }}"
+          echo "Verifying release v${version}..."
+
+          # Check release exists
+          release_tag=$(gh release view "v${version}" --repo "${{ github.repository }}" --json tagName -q .tagName)
+          if [ "$release_tag" != "v${version}" ]; then
+            echo "::error::Release v${version} not found"
+            exit 1
+          fi
+
+          # Check release is marked as latest
+          latest_tag=$(gh release view --repo "${{ github.repository }}" --json tagName -q .tagName)
+          if [ "$latest_tag" != "v${version}" ]; then
+            echo "::warning::Release v${version} is not marked as latest (latest: ${latest_tag})"
+          fi
+
+          echo "Release v${version} verified successfully"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.validate.outputs.version }}
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Verify tests pass at release tag
+        run: |
+          uv sync --extra dev
+          uv run pytest --tb=short -q
+
+  rollback-on-failure:
+    name: Auto-Rollback on Verification Failure
+    needs: [validate, verify-release]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find previous release
+        id: previous
+        run: |
+          current="v${{ needs.validate.outputs.version }}"
+          previous=$(gh release list --repo "${{ github.repository }}" --limit 5 --json tagName -q ".[].tagName" | grep -v "^${current}$" | head -1)
+          echo "previous=${previous}" >> "$GITHUB_OUTPUT"
+          echo "Rolling back from ${current} to ${previous}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete failed release
+        run: |
+          version="v${{ needs.validate.outputs.version }}"
+          echo "::warning::Deleting failed release ${version}"
+          gh release delete "${version}" --yes --repo "${{ github.repository }}" || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote previous release as latest
+        if: steps.previous.outputs.previous != ''
+        run: |
+          previous="${{ steps.previous.outputs.previous }}"
+          echo "Promoting ${previous} as latest release"
+          gh release edit "${previous}" --latest --repo "${{ github.repository }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create rollback issue
+        run: |
+          version="v${{ needs.validate.outputs.version }}"
+          previous="${{ steps.previous.outputs.previous }}"
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "Release ${version} auto-rolled back" \
+            --body "## Auto-Rollback Report
+
+          | Field | Value |
+          |-------|-------|
+          | **Failed release** | ${version} |
+          | **Rolled back to** | ${previous:-none} |
+          | **Trigger** | Post-release verification failure |
+          | **Run** | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |
+
+          Please investigate the verification failure before re-releasing." \
+            --label "bug"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
