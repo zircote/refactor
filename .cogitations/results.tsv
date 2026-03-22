@@ -1,2 +1,3 @@
 iteration	score	best_score	action	changelog
 0	53.9	53.9	baseline	Initial assessment
+1	56.5	56.5	kept	Developer Experience: CONTRIBUTING.md, Makefile, launch.json

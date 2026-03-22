@@ -1,0 +1,80 @@
+# Requirements Specification
+
+## Product Overview
+
+**Refactor** is a Claude Code plugin that provides automated code refactoring, feature development, and test generation through swarm-orchestrated specialist agents.
+
+## Target Users
+
+- Software engineers using Claude Code who need to refactor existing codebases
+- Developers building new features with AI-assisted architecture and implementation
+- Teams wanting automated test suite generation with scientific rigor
+
+## Core Capabilities
+
+### 1. Automated Refactoring (`/refactor`)
+
+**Goal**: Improve existing code quality through iterative analysis and modification.
+
+**Acceptance Criteria**:
+- Discovers codebase structure via deep exploration
+- Reviews code with confidence-scored findings (bugs, security, quality)
+- Implements improvements while preserving all existing tests
+- Runs in autonomous mode with convergence detection
+
+### 2. Feature Development (`/feature-dev`)
+
+**Goal**: Build new features with multi-perspective architecture design.
+
+**Acceptance Criteria**:
+- Explores codebase to understand patterns and conventions
+- Designs architecture from multiple perspectives (security, performance, maintainability)
+- Implements code following established project patterns
+- Reviews implementation for quality before completion
+
+### 3. Test Generation (`/test-architect`)
+
+**Goal**: Generate scientifically grounded test suites.
+
+**Acceptance Criteria**:
+- Uses equivalence class partitioning and boundary value analysis
+- Generates mutation-aware assertions (TDD red phase)
+- Reviews test rigor against formal testing criteria
+- Analyzes and improves code coverage
+
+### 4. Git Workflow Commands
+
+| Command | Goal | Acceptance Criteria |
+|---------|------|-------------------|
+| `/pr` | Create pull requests | Draft PR with description, linked issues |
+| `/cp` | Commit and push | Stage, commit, push with conventional message |
+| `/fr` | Fetch and rebase | Clean rebase onto remote tracking branch |
+| `/ff` | Fast-forward merge | Update branch without merge commits |
+| `/sync` | Full sync cycle | Fetch, rebase, push in one command |
+| `/pr-fix` | Fix PR feedback | Triage comments, fix, reply, push |
+
+## Non-Functional Requirements
+
+### Quality
+
+- Minimum 80% test coverage (enforced in CI)
+- Strict type checking via mypy
+- Zero linting errors (ruff)
+- No known security vulnerabilities (bandit + pip-audit)
+
+### Performance
+
+- Test suite completes in under 60 seconds
+- All subprocess calls have explicit timeouts
+
+### Compatibility
+
+- Python 3.10+
+- Works with Claude Code CLI
+
+## Success Metrics
+
+- Test suite passes with >80% coverage
+- All CI checks green (lint, typecheck, test, security)
+- Autonomous workflows converge within iteration limits
+- Zero runtime dependencies (minimal attack surface)
