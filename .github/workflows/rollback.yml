@@ -1,0 +1,78 @@
+name: Rollback Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag to rollback to (e.g., v2.1.0)"
+        required: true
+        type: string
+      reason:
+        description: "Reason for rollback"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  rollback:
+    name: Rollback to ${{ inputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+          fetch-depth: 0
+
+      - name: Validate tag exists
+        run: |
+          if ! git tag -l "${{ inputs.version }}" | grep -q .; then
+            echo "::error::Tag ${{ inputs.version }} does not exist"
+            exit 1
+          fi
+
+      - name: Get current latest release
+        id: current
+        run: |
+          latest=$(gh release view --json tagName -q .tagName 2>/dev/null || echo "none")
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create rollback release
+        run: |
+          rollback_tag="${{ inputs.version }}"
+          rollback_version="${rollback_tag#v}"
+          current="${{ steps.current.outputs.latest }}"
+
+          cat > rollback_notes.md << EOF
+          ## Rollback Release
+
+          **Rolled back from:** ${current}
+          **Rolled back to:** ${rollback_tag}
+          **Reason:** ${{ inputs.reason }}
+          **Triggered by:** ${{ github.actor }}
+          **Timestamp:** $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          This release restores the project to the state at ${rollback_tag}.
+          EOF
+
+          # Mark current release as superseded by updating its notes
+          if [ "$current" != "none" ]; then
+            gh release edit "$current" \
+              --notes "$(gh release view "$current" --json body -q .body)
+
+          ---
+          **⚠️ Superseded by rollback to ${rollback_tag}** — ${{ inputs.reason }}" || true
+          fi
+
+          # Re-publish the rollback version as latest
+          gh release edit "$rollback_tag" --latest \
+            --notes "$(cat rollback_notes.md)" || \
+          gh release create "$rollback_tag" \
+            --title "v${rollback_version} (rollback)" \
+            --notes-file rollback_notes.md \
+            --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

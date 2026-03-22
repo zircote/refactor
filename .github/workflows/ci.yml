@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
@@ -15,43 +16,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install ruff
-      - run: ruff check scripts/
-      - run: ruff format --check scripts/
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen --only-group dev
+      - run: uv run ruff check scripts/
+      - run: uv run ruff format --check scripts/
 
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install mypy
-      - run: mypy scripts/
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen --only-group dev
+      - run: uv run mypy scripts/
 
   test:
     name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install pytest pytest-cov pytest-randomly
-      - run: pytest --cov=scripts --cov-report=term-missing --cov-branch
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen --only-group dev
+      - run: uv run pytest --cov=scripts --cov-report=term-missing --cov-branch
 
   security:
     name: Security Scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install pip-audit bandit
-      - run: pip-audit
-      - run: bandit -r scripts/ -c pyproject.toml
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen --only-group dev
+      - run: uv run pip-audit
+      - run: uv run bandit -r scripts/ -c pyproject.toml
