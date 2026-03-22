@@ -1,0 +1,703 @@
+---
+# Cogitations Engineering Principles Ontology
+#
+# A comprehensive ontology for the Software Engineering Principles Corpus.
+# Defines the _eng namespace hierarchy covering 17 technical domains plus
+# assessment and scoring operational namespaces. Extends mif-base with
+# 6 entity types, 1 custom trait, 6 relationships, and discovery patterns.
+#
+# Compatible with: mif-base v1.0.0 (cognitive triad hierarchy)
+#
+# Version: 1.0.0
+# Last Updated: 2026-03-21
+
+ontology:
+  id: eng-principles
+  version: "1.0.0"
+  description: >-
+    Engineering principles ontology for the Cogitations software engineering
+    corpus. Covers 17 technical domains (product, architecture, coding, TDD,
+    security, CI/CD, observability, messaging, data, reliability, devex,
+    governance, VCS, config, dependencies, incidents, accessibility) plus
+    assessment and scoring operational namespaces. Provides entity types for
+    principles, checks, profiles, assessments, tiers, and overrides with
+    a scored trait for the weighted composite assessment framework.
+  extends:
+    - mif-base
+
+# =============================================================================
+# NAMESPACES
+# =============================================================================
+# New _eng root namespace with 19 children. Does not modify the mif-base
+# cognitive triad (_semantic, _episodic, _procedural).
+
+namespaces:
+  _eng:
+    description: >-
+      Root namespace for software engineering principles, assessments,
+      and scoring configurations
+    children:
+      product:
+        description: >-
+          Product & Specification: requirements elicitation, user stories,
+          acceptance criteria, specification formats, traceability matrices,
+          definition of done, definition of ready
+        type_hint: semantic
+      architecture:
+        description: >-
+          Architecture & Design: SOLID, separation of concerns, DDD,
+          hexagonal/ports-and-adapters, CQRS, microservices vs monolith,
+          API design principles, idempotency, eventual consistency
+        type_hint: semantic
+      coding:
+        description: >-
+          Coding Practices: clean code, naming conventions, error handling,
+          defensive programming, immutability, design patterns (creational,
+          structural, behavioral), complexity metrics, cognitive load
+        type_hint: semantic
+      tdd:
+        description: >-
+          Test-Driven Development: red-green-refactor, test pyramid,
+          coverage metrics, mutation testing, property-based testing,
+          contract testing, fixture management, flaky test elimination
+        type_hint: semantic
+      security:
+        description: >-
+          Security: OWASP Top 10, auth patterns (RBAC/ABAC/PBAC),
+          secrets management, supply chain security, threat modeling
+          (STRIDE/PASTA), zero trust, cryptographic hygiene
+        type_hint: semantic
+      cicd:
+        description: >-
+          CI/CD & Delivery: pipeline design, build reproducibility,
+          artifact management, feature flags, canary/blue-green/rolling
+          deployment, rollback strategies, IaC, GitOps
+        type_hint: semantic
+      observability:
+        description: >-
+          Observability & Telemetry: structured logging, distributed
+          tracing, metrics (RED/USE/Golden Signals), SLIs/SLOs/error
+          budgets, alerting philosophy, correlation IDs
+        type_hint: semantic
+      messaging:
+        description: >-
+          Event-Driven & Messaging: event sourcing, pub/sub, dead
+          letter handling, sagas (choreography/orchestration), schema
+          evolution, message ordering, delivery semantics
+        type_hint: semantic
+      data:
+        description: >-
+          Data Management: schema evolution, migration strategies,
+          ACID/BASE trade-offs, partitioning, replication, GDPR/privacy
+          patterns, data lifecycle management
+        type_hint: semantic
+      reliability:
+        description: >-
+          Performance & Reliability: caching strategies, circuit breakers,
+          retries with backoff, graceful degradation, capacity planning,
+          chaos engineering, load shedding, bulkhead pattern
+        type_hint: semantic
+      devex:
+        description: >-
+          Developer Experience: documentation standards, onboarding,
+          code review, pair/mob programming, inner source, local dev
+          environment parity, golden path
+        type_hint: semantic
+      governance:
+        description: >-
+          Governance & Compliance: licensing, audit logging, data
+          retention, privacy by design, change management, separation
+          of duties, policy as code
+        type_hint: semantic
+      vcs:
+        description: >-
+          Version Control & Collaboration: branching strategies,
+          commit conventions, PR hygiene, monorepo/polyrepo trade-offs,
+          changelog generation, signed commits
+        type_hint: semantic
+      config:
+        description: >-
+          Configuration & Environment Management: twelve-factor app,
+          config-as-code, environment parity, secret rotation, feature
+          toggle lifecycle, config validation at startup
+        type_hint: semantic
+      dependencies:
+        description: >-
+          Dependency Management: version pinning, lockfile hygiene,
+          vulnerability scanning, license compliance, SBOM, SLSA
+          attestation, vendoring decisions
+        type_hint: semantic
+      incidents:
+        description: >-
+          Incident Management & Operational Readiness: incident response,
+          blameless postmortems, on-call practices, runbook standards,
+          game day exercises, blast radius containment
+        type_hint: semantic
+      a11y:
+        description: >-
+          Accessibility & Internationalization: WCAG/POUR, semantic
+          markup, keyboard navigation, ARIA, UTF-8, ICU MessageFormat,
+          CLDR, RTL support, pseudo-localization
+        type_hint: semantic
+      assessment:
+        description: >-
+          Assessment results, audit history, trend snapshots, compliance
+          records, score time-series, regression alerts
+        type_hint: episodic
+      scoring:
+        description: >-
+          Scoring configurations, project profiles, weight overrides,
+          threshold definitions, suppression audit trail
+        type_hint: procedural
+
+# =============================================================================
+# ENTITY TYPES
+# =============================================================================
+# 6 entity types for the assessment framework. Each has a JSON Schema
+# defining its structured fields.
+
+entity_types:
+  # ---------------------------------------------------------------------------
+  # Principle: A named software engineering principle or pattern
+  # ---------------------------------------------------------------------------
+  - name: principle
+    description: >-
+      A named, technology-agnostic software engineering principle or pattern
+      with assessment criteria, maturity tier assignment, and translation hooks
+      for language-specific implementation lookup.
+    base: semantic
+    traits:
+      - scored
+    schema:
+      required:
+        - principle_id
+        - name
+        - domain
+        - severity
+        - tier
+      properties:
+        principle_id:
+          type: string
+          description: "Unique identifier (e.g., SEC-001, TDD-003)"
+          pattern: "^[A-Z]{2,4}-\\d{3}$"
+        name:
+          type: string
+          description: "Principle name (e.g., Circuit Breaker Pattern)"
+        domain:
+          type: string
+          description: "Domain this principle belongs to"
+          enum:
+            - product
+            - architecture
+            - coding
+            - tdd
+            - security
+            - cicd
+            - observability
+            - messaging
+            - data
+            - reliability
+            - devex
+            - governance
+            - vcs
+            - config
+            - dependencies
+            - incidents
+            - a11y
+        description:
+          type: string
+          description: "One-line description of the principle"
+        intent:
+          type: string
+          description: "When to apply this principle"
+        good_looks_like:
+          type: string
+          description: "What correct application looks like"
+        bad_looks_like:
+          type: string
+          description: "What violation looks like"
+        severity:
+          type: string
+          description: "How critical this principle is"
+          enum:
+            - critical
+            - important
+            - recommended
+        tier:
+          type: integer
+          description: "Minimum maturity tier (1=MVP, 2=Production, 3=Enterprise)"
+          enum: [1, 2, 3]
+        assessment_mode:
+          type: string
+          description: "How this principle is evaluated"
+          enum:
+            - deterministic
+            - llm_assisted
+            - both
+        default_weight:
+          type: integer
+          description: "Default scoring weight"
+          minimum: 1
+          maximum: 10
+        applicability:
+          type: string
+          description: "Project type applicability"
+          enum:
+            - greenfield
+            - brownfield
+            - both
+        translation_hooks:
+          type: array
+          description: "Keywords for language-specific implementation lookup"
+          items:
+            type: string
+        dependencies:
+          type: array
+          description: "IDs of prerequisite principles"
+          items:
+            type: string
+            pattern: "^[A-Z]{2,4}-\\d{3}$"
+
+  # ---------------------------------------------------------------------------
+  # Check: A deterministic or LLM-assisted assessment check
+  # ---------------------------------------------------------------------------
+  - name: check
+    description: >-
+      An automatable verification check that implements one or more principles.
+      Defines pass/fail criteria, check type, automation strategy, and
+      integration point in the development lifecycle.
+    base: procedural
+    traits:
+      - scored
+    schema:
+      required:
+        - check_id
+        - name
+        - check_type
+        - pass_condition
+      properties:
+        check_id:
+          type: string
+          description: "Unique check identifier"
+        name:
+          type: string
+          description: "Check name"
+        check_type:
+          type: string
+          description: "Category of verification"
+          enum:
+            - static_analysis
+            - test_execution
+            - config_audit
+            - artifact_inspection
+            - log_analysis
+            - metric_query
+            - pipeline_verification
+            - llm_rubric
+        pass_condition:
+          type: string
+          description: "Exact criteria for passing (e.g., 'branch coverage >= 80%')"
+        automation_strategy:
+          type: string
+          description: "Generic description of how to automate this check"
+        integration_point:
+          type: string
+          description: "When in the lifecycle this check runs"
+          enum:
+            - pre_commit
+            - pr_check
+            - merge_gate
+            - deploy_gate
+            - post_deploy
+            - scheduled
+        rubric_bundle_hash:
+          type: string
+          description: "SHA-256 of the locked rubric JSON (for LLM checks)"
+        implements_principles:
+          type: array
+          description: "Principle IDs this check verifies"
+          items:
+            type: string
+            pattern: "^[A-Z]{2,4}-\\d{3}$"
+
+  # ---------------------------------------------------------------------------
+  # Profile: A project-type weight configuration
+  # ---------------------------------------------------------------------------
+  - name: profile
+    description: >-
+      A predefined or custom weight configuration that adjusts principle
+      weights, severity levels, and tier thresholds for a specific project
+      type (e.g., API service, CLI tool, data pipeline).
+    base: procedural
+    schema:
+      required:
+        - profile_id
+        - name
+      properties:
+        profile_id:
+          type: string
+          description: "Profile identifier (e.g., api-service, cli-tool)"
+        name:
+          type: string
+          description: "Human-readable profile name"
+        description:
+          type: string
+          description: "What project type this profile targets"
+        domain_weights:
+          type: object
+          description: "Per-domain weight multipliers (domain_name → float)"
+        item_overrides:
+          type: array
+          description: "Per-item weight/severity/tier overrides"
+          items:
+            type: object
+            properties:
+              principle_id:
+                type: string
+              weight:
+                type: integer
+              severity:
+                type: string
+              tier:
+                type: integer
+        tier_thresholds:
+          type: object
+          description: "Custom tier thresholds for this profile"
+          properties:
+            tier_1_minimum:
+              type: number
+            tier_2_minimum:
+              type: number
+            tier_3_minimum:
+              type: number
+
+  # ---------------------------------------------------------------------------
+  # Assessment: A point-in-time evaluation result
+  # ---------------------------------------------------------------------------
+  - name: assessment
+    description: >-
+      A point-in-time assessment run recording scores per principle,
+      per domain, and composite. Includes metadata about which profile
+      and configuration were used.
+    base: episodic
+    traits:
+      - scored
+    schema:
+      required:
+        - assessment_id
+        - timestamp
+        - composite_score
+        - tier_achieved
+      properties:
+        assessment_id:
+          type: string
+          description: "Unique assessment run identifier"
+        timestamp:
+          type: string
+          format: date-time
+          description: "When this assessment was run"
+        profile_used:
+          type: string
+          description: "Profile ID used for this assessment"
+        composite_score:
+          type: number
+          description: "Overall readiness score (0-100)"
+          minimum: 0
+          maximum: 100
+        tier_achieved:
+          type: integer
+          description: "Highest tier met (0=none, 1=MVP, 2=Prod, 3=Enterprise)"
+          enum: [0, 1, 2, 3]
+        domain_scores:
+          type: object
+          description: "Per-domain scores (domain_name → 0-100)"
+        items_passed:
+          type: integer
+          description: "Number of checklist items passing"
+        items_failed:
+          type: integer
+          description: "Number of checklist items failing"
+        items_suppressed:
+          type: integer
+          description: "Number of items marked N/A"
+        delta_from_previous:
+          type: number
+          description: "Score change from previous assessment"
+        regression_flags:
+          type: array
+          description: "Items that regressed since previous assessment"
+          items:
+            type: string
+
+  # ---------------------------------------------------------------------------
+  # Tier: Maturity tier definition
+  # ---------------------------------------------------------------------------
+  - name: tier-definition
+    description: >-
+      Definition of a maturity tier including composite threshold,
+      floor rules, and framework equivalence mappings.
+    base: semantic
+    schema:
+      required:
+        - tier_level
+        - name
+        - composite_minimum
+      properties:
+        tier_level:
+          type: integer
+          description: "Tier number (1, 2, or 3)"
+          enum: [1, 2, 3]
+        name:
+          type: string
+          description: "Tier name"
+          enum:
+            - Minimum Viable
+            - Production-Grade
+            - Enterprise-Grade
+        composite_minimum:
+          type: number
+          description: "Minimum composite score required"
+        floor_rules:
+          type: array
+          description: "Mandatory conditions beyond composite score"
+          items:
+            type: string
+        framework_equivalences:
+          type: object
+          description: "Mappings to external frameworks (e.g., CMMI, NIST, SAMM)"
+
+  # ---------------------------------------------------------------------------
+  # Override: A per-project modification to a principle or profile
+  # ---------------------------------------------------------------------------
+  - name: override
+    description: >-
+      A per-project override that modifies a principle's weight, severity,
+      tier, or applicability. Includes required justification for audit trail.
+      Also covers item suppression (marking items as N/A).
+    base: procedural
+    schema:
+      required:
+        - target_id
+        - override_type
+        - justification
+      properties:
+        target_id:
+          type: string
+          description: "ID of the principle or profile being overridden"
+        override_type:
+          type: string
+          description: "What aspect is being overridden"
+          enum:
+            - weight
+            - severity
+            - tier
+            - applicability
+            - suppression
+        original_value:
+          type: string
+          description: "Original value before override"
+        new_value:
+          type: string
+          description: "New value after override"
+        justification:
+          type: string
+          description: "Required explanation for why this override exists"
+        approved_by:
+          type: string
+          description: "Who approved this override"
+        review_date:
+          type: string
+          format: date
+          description: "When this override should be reviewed"
+
+# =============================================================================
+# TRAITS
+# =============================================================================
+# Custom trait for the assessment framework.
+
+traits:
+  scored:
+    description: "Entity carries a numeric score, weight, and maturity tier assignment"
+    fields:
+      score:
+        type: number
+        description: "Normalized score (0.0 to 1.0) or composite (0 to 100)"
+        minimum: 0
+        maximum: 100
+      weight:
+        type: integer
+        description: "Scoring weight for aggregation"
+        minimum: 1
+        maximum: 10
+      tier:
+        type: integer
+        description: "Maturity tier (1=MVP, 2=Production, 3=Enterprise)"
+        enum: [1, 2, 3]
+      assessment_mode:
+        type: string
+        description: "How this entity is evaluated"
+        enum:
+          - deterministic
+          - llm_assisted
+          - both
+
+# =============================================================================
+# RELATIONSHIPS
+# =============================================================================
+# 6 relationship types for the assessment framework.
+
+relationships:
+  implements:
+    description: "A check implements (verifies) a principle"
+    from:
+      - check
+    to:
+      - principle
+    symmetric: false
+
+  conflicts_with:
+    description: "Two principles are in tension and require trade-off guidance"
+    from:
+      - principle
+    to:
+      - principle
+    symmetric: true
+
+  prerequisite_of:
+    description: "A principle must be satisfied before another can be meaningfully assessed"
+    from:
+      - principle
+    to:
+      - principle
+    symmetric: false
+
+  assessed_by:
+    description: "A principle or profile has been evaluated in an assessment run"
+    from:
+      - principle
+      - profile
+    to:
+      - assessment
+    symmetric: false
+
+  overrides:
+    description: "An override modifies a principle or profile configuration"
+    from:
+      - override
+    to:
+      - principle
+      - profile
+    symmetric: false
+
+  suppresses:
+    description: "An override suppresses (marks N/A) a principle or check"
+    from:
+      - override
+    to:
+      - principle
+      - check
+    symmetric: false
+
+# =============================================================================
+# DISCOVERY
+# =============================================================================
+# Regex patterns for automatic namespace suggestion when capturing memories.
+
+discovery:
+  enabled: true
+  confidence_threshold: 0.5
+  patterns:
+    # Product & Specification
+    - pattern: "(?i)\\b(requirement|user\\s+story|acceptance\\s+criteria|definition\\s+of\\s+done|BDD|specification)\\b"
+      namespace: _eng/product
+      confidence: 0.7
+
+    # Architecture & Design
+    - pattern: "(?i)\\b(SOLID|hexagonal|CQRS|microservice|monolith|domain.driven|bounded\\s+context|API\\s+design)\\b"
+      namespace: _eng/architecture
+      confidence: 0.7
+
+    # Coding Practices
+    - pattern: "(?i)\\b(clean\\s+code|naming\\s+convention|DRY|KISS|YAGNI|code\\s+smell|refactor|design\\s+pattern)\\b"
+      namespace: _eng/coding
+      confidence: 0.7
+
+    # Test-Driven Development
+    - pattern: "(?i)\\b(TDD|test.first|red.green.refactor|mutation\\s+test|property.based|test\\s+pyramid|coverage)\\b"
+      namespace: _eng/tdd
+      confidence: 0.7
+
+    # Security
+    - pattern: "(?i)\\b(OWASP|injection|XSS|CSRF|auth[nz]|secret|zero\\s+trust|threat\\s+model|CVE|vulnerability)\\b"
+      namespace: _eng/security
+      confidence: 0.75
+
+    # CI/CD & Delivery
+    - pattern: "(?i)\\b(CI/CD|pipeline|deploy|canary|blue.green|feature\\s+flag|GitOps|rollback|artifact)\\b"
+      namespace: _eng/cicd
+      confidence: 0.7
+
+    # Observability & Telemetry
+    - pattern: "(?i)\\b(observability|structured\\s+log|distributed\\s+trac|SLI|SLO|error\\s+budget|OpenTelemetry|metric)\\b"
+      namespace: _eng/observability
+      confidence: 0.7
+
+    # Event-Driven & Messaging
+    - pattern: "(?i)\\b(event\\s+sourc|pub.sub|dead\\s+letter|saga|choreograph|orchestrat|idempotent\\s+consumer|backpressure)\\b"
+      namespace: _eng/messaging
+      confidence: 0.7
+
+    # Data Management
+    - pattern: "(?i)\\b(schema\\s+migrat|ACID|BASE|eventual\\s+consist|CDC|data\\s+mesh|replication|GDPR)\\b"
+      namespace: _eng/data
+      confidence: 0.7
+
+    # Performance & Reliability
+    - pattern: "(?i)\\b(circuit\\s+breaker|chaos\\s+engineer|load\\s+shed|cache\\s+strateg|rate\\s+limit|error\\s+budget|capacity\\s+plan)\\b"
+      namespace: _eng/reliability
+      confidence: 0.7
+
+    # Developer Experience
+    - pattern: "(?i)\\b(developer\\s+experience|DevEx|cognitive\\s+load|inner\\s+loop|golden\\s+path|onboarding|code\\s+review)\\b"
+      namespace: _eng/devex
+      confidence: 0.65
+
+    # Governance & Compliance
+    - pattern: "(?i)\\b(audit\\s+trail|compliance|segregation\\s+of\\s+duties|policy\\s+as\\s+code|license\\s+compliance|SOX|GDPR)\\b"
+      namespace: _eng/governance
+      confidence: 0.7
+
+    # Version Control & Collaboration
+    - pattern: "(?i)\\b(trunk.based|gitflow|conventional\\s+commit|branch\\s+protect|monorepo|CODEOWNERS|merge\\s+strateg)\\b"
+      namespace: _eng/vcs
+      confidence: 0.65
+
+    # Configuration & Environment
+    - pattern: "(?i)\\b(twelve.factor|12.factor|config.as.code|secret\\s+rotat|immutable\\s+infra|environment\\s+parity)\\b"
+      namespace: _eng/config
+      confidence: 0.7
+
+    # Dependency Management
+    - pattern: "(?i)\\b(SemVer|lockfile|SBOM|SLSA|dependency\\s+pin|vendor|supply\\s+chain\\s+attest)\\b"
+      namespace: _eng/dependencies
+      confidence: 0.7
+
+    # Incident Management
+    - pattern: "(?i)\\b(blameless\\s+postmortem|runbook|game\\s+day|incident\\s+command|MTTD|MTTR|on.call|operational\\s+readiness)\\b"
+      namespace: _eng/incidents
+      confidence: 0.7
+
+    # Accessibility & i18n
+    - pattern: "(?i)\\b(WCAG|a11y|accessibility|screen\\s+reader|ARIA|i18n|l10n|RTL|CLDR|pseudo.locali)\\b"
+      namespace: _eng/a11y
+      confidence: 0.7
+
+    # Assessment (episodic)
+    - pattern: "(?i)\\b(assessment\\s+run|audit\\s+result|compliance\\s+score|readiness\\s+score|tier\\s+achieved)\\b"
+      namespace: _eng/assessment
+      confidence: 0.65
+
+    # Scoring (procedural)
+    - pattern: "(?i)\\b(weight\\s+override|project\\s+profile|scoring\\s+config|suppression|tier\\s+threshold)\\b"
+      namespace: _eng/scoring
+      confidence: 0.65
