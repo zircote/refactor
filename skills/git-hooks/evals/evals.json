@@ -1,0 +1,48 @@
+{
+  "skill_name": "git-hooks",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/git-hooks",
+      "expected_output": "Should analyze the current project (this refactor plugin — Go-based, with GitHub Actions CI, Makefile, golangci-lint, etc.), detect no existing hook manager, recommend lefthook or pre-commit, present tiered recommendations with rationale tied to what it found in CI, and ask which hooks to install.",
+      "files": [],
+      "expectations": [
+        "The skill detected the project's primary language(s) by examining package manifests (go.mod, package.json, pyproject.toml, or similar)",
+        "The skill checked for existing hook managers (husky, pre-commit, lefthook) and reported whether any were found",
+        "The skill examined CI/CD configuration files (e.g., .github/workflows/*.yml) to identify what checks already run remotely",
+        "The skill detected existing linter/formatter configurations (e.g., golangci-yml, eslint, ruff, prettier) that are actually configured in the project",
+        "The skill organized recommendations into tiers or priority levels based on what it found, not a generic checklist",
+        "The skill recommended a specific hook manager appropriate for the detected stack with rationale",
+        "The skill asked the user which hooks they want to install rather than silently installing anything",
+        "The skill mentioned --no-verify or a bypass mechanism for emergencies"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "/git-hooks --auto --dry-run",
+      "expected_output": "Should run full analysis silently, choose a hook manager based on detected stack, select tier 1 + applicable tier 2 hooks automatically, then display exactly what would be written without writing anything. Should include file paths and configuration content.",
+      "files": [],
+      "expectations": [
+        "The skill did NOT ask the user any interactive questions (auto mode skips elicitation)",
+        "The skill did NOT write or create any hook configuration files (dry-run mode)",
+        "The skill displayed the specific file paths that would be created or modified",
+        "The skill showed the actual configuration content that would be written (not just descriptions)",
+        "The skill selected a hook manager appropriate for the detected project stack",
+        "The skill selected hooks based on detected tooling — only recommending tools that are already configured in the project"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I keep getting CI failures because I forget to run the linter before pushing. Can you set up something to catch that?",
+      "expected_output": "Should trigger the git-hooks skill, analyze the project to find the specific linter and CI lint step, then propose a pre-commit hook that runs that linter on staged files. Should reference the actual CI config it found.",
+      "files": [],
+      "expectations": [
+        "The skill identified the specific linter tool configured in the project (not a generic recommendation)",
+        "The skill examined CI configuration to find the lint step and referenced it specifically",
+        "The skill proposed a pre-commit or pre-push hook that runs the detected linter on staged/changed files only (not the entire repo)",
+        "The skill explained how the proposed hook would prevent the CI failures the user described",
+        "The skill mentioned the estimated execution time or addressed speed concerns for the proposed hook"
+      ]
+    }
+  ]
+}
