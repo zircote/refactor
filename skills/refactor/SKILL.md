@@ -158,6 +158,16 @@ Run the following **AskUserQuestion** prompts sequentially:
 5. Set `refactoring_iteration = 0`
 6. If `autonomous_mode`: load convergence config: `convergence = config.autonomous.convergence` (defaults: `{perfectScore: 1.0, plateauDelta: 0.01, plateauWindow: 3, maxConsecutiveReverts: 3}`); load score weights: `score_weights = config.autonomous.scoreWeights` (defaults: `{tests: 0.50, quality: 0.25, security: 0.25}`)
 
+### Step 0.1.5: Pre-flight Workspace Cleanup
+
+**MANDATORY** — Before creating the team, remove any leftover working directories from prior interrupted runs:
+
+1. Run via Bash: `find . -maxdepth 1 -type d -name '*-autonomous' -o -name '*-workspace' | head -20`
+2. If any directories are found:
+   - Warn user: "Found stale working directories from a prior run: {list}. Removing."
+   - Run via Bash: `rm -rf ./*-autonomous/ ./*-workspace/`
+3. Verify `.gitignore` contains `*-autonomous/` pattern: Run via Bash: `grep -q '\*-autonomous/' .gitignore 2>/dev/null || echo '*-autonomous/' >> .gitignore`
+
 ### Step 0.2: Create Swarm Team and Blackboard
 
 **MANDATORY SWARM ORCHESTRATION — DO NOT USE PLAIN AGENT SPAWNS**
@@ -991,14 +1001,16 @@ Quality Scores:
 {if 'simplifier' in active_agents and is_focused: '- Simplification: W/10'}
 ```
 
-### Step 4.3: Shutdown Team
+### Step 4.3: Shutdown Team and Cleanup Working Directories
 
-**This step MUST execute regardless of success or failure in prior steps.** If any phase fails or the user interrupts, skip directly here.
+**This step MUST execute regardless of success or failure in prior steps.** If any phase fails or the user interrupts, skip directly here. This is a **finally block**.
 
-1. Send **shutdown_request** to all spawned teammates (those in `active_agents`) via SendMessage
-2. Wait up to **30 seconds** for shutdown confirmations. If any teammate does not respond within 30 seconds, proceed anyway — do not block on unresponsive agents
-3. Use **TeamDelete** to clean up the team. This forcefully terminates any remaining agents
-4. If TeamDelete fails, log the error and inform the user: "Team cleanup failed — run `TeamDelete` manually for team `{team_name}`"
+1. **Clean up working directories**: Run via Bash: `rm -rf ./*-autonomous/ ./*-workspace/`. These directories are ephemeral and MUST NOT be committed. Remove them unconditionally — even if the autonomous loop already cleaned up, this is a safety net.
+2. **Verify no working directories remain**: Run via Bash: `ls -d ./*-autonomous/ ./*-workspace/ 2>/dev/null || true`. If any remain, warn user.
+3. Send **shutdown_request** to all spawned teammates (those in `active_agents`) via SendMessage
+4. Wait up to **30 seconds** for shutdown confirmations. If any teammate does not respond within 30 seconds, proceed anyway — do not block on unresponsive agents
+5. Use **TeamDelete** to clean up the team. This forcefully terminates any remaining agents
+6. If TeamDelete fails, log the error and inform the user: "Team cleanup failed — run `TeamDelete` manually for team `{team_name}`"
 
 ## Orchestration Notes
 
@@ -1033,7 +1045,7 @@ Quality Scores:
 
 ### Team Lifecycle Safety
 - **Stale agent detection**: At the start of Phase 0, check for an existing team with the same name pattern (`refactor-*`). If found, run **TeamDelete** on it before creating a new team. This cleans up leaked agents from prior interrupted runs.
-- **Guaranteed cleanup**: Step 4.3 (Shutdown Team) is a **finally block** — it MUST execute even if prior phases fail, the user cancels, or an unrecoverable error occurs. If you cannot determine whether prior phases succeeded, still execute Step 4.3.
+- **Guaranteed cleanup**: Step 4.3 (Shutdown Team and Cleanup Working Directories) is a **finally block** — it MUST execute even if prior phases fail, the user cancels, or an unrecoverable error occurs. If you cannot determine whether prior phases succeeded, still execute Step 4.3. This includes removing `*-autonomous/` and `*-workspace/` directories unconditionally.
 - **Shutdown timeout**: Never wait indefinitely for shutdown confirmations. After 30 seconds, proceed with TeamDelete regardless. Cooperative shutdown is preferred but not required.
 - **No orphaned agents**: After TeamDelete, verify no teammates remain by checking the team config file. If it still exists, warn the user.
 
