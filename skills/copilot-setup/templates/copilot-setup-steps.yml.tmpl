@@ -1,0 +1,52 @@
+# Template: copilot-setup-steps.yml
+# IMPORTANT: Use /version-guard to verify all action versions before generating.
+# The versions below are PLACEHOLDERS — do not use them as-is.
+
+name: Copilot Setup Steps
+on:
+  workflow_dispatch:
+  push:
+    branches: [{{DEFAULT_BRANCH}}]
+    paths: [.github/workflows/copilot-setup-steps.yml]
+  pull_request:
+    branches: [{{DEFAULT_BRANCH}}]
+    paths: [.github/workflows/copilot-setup-steps.yml]
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    timeout-minutes: {{TIMEOUT_MINUTES}}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4  # VERIFY with /version-guard
+
+      # === Python (uv) ===
+      # - uses: astral-sh/setup-uv@v6  # VERIFY with /version-guard
+      # - run: uv sync --frozen --extra dev
+
+      # === Python (pip) ===
+      # - uses: actions/setup-python@v5  # VERIFY with /version-guard
+      #   with:
+      #     python-version-file: '.python-version'
+      # - run: pip install -r requirements.txt
+
+      # === Node.js (npm) ===
+      # - uses: actions/setup-node@v4  # VERIFY with /version-guard
+      #   with:
+      #     node-version-file: '.nvmrc'
+      # - run: npm ci
+
+      # === Go ===
+      # - uses: actions/setup-go@v5  # VERIFY with /version-guard
+      #   with:
+      #     go-version-file: 'go.mod'
+      # - run: go mod download
+
+      # === Rust ===
+      # - uses: dtolnay/rust-toolchain@stable  # VERIFY with /version-guard
+      # - run: cargo fetch
+
+      # === Verify toolchain ===
+      # - run: |
+      #     {{VERIFY_COMMANDS}}

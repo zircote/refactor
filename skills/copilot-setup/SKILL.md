@@ -8,6 +8,19 @@ argument-hint: "[--audit] [--improve] [--init] [--deploy <repo-or-org>]"
 
 You configure GitHub's Copilot coding agent to work well in specific repositories. This means generating instruction files, environment setup, and auto-merge workflows — but more importantly, it means understanding the project deeply enough to write instructions that actually change the agent's behavior.
 
+## Bundled Resources
+
+### References (read before generating)
+- `references/copilot-agent-mechanics.md` — Verified Copilot agent behavior, limitations, and what it ignores. **Read this before writing any instructions** to avoid recommending impossible things. Note: this file may go stale — always verify against current GitHub docs via web search.
+- `references/auto-merge-patterns.md` — Patterns for path-based auto-merge workflows compatible with branch protection. Includes workflow template and tier classification strategy.
+
+### Templates (use as starting points, then customize)
+- `templates/copilot-instructions.md.tmpl` — Skeleton for repo-wide instructions with `{{PLACEHOLDER}}` variables. Fill from elicitation results.
+- `templates/copilot-setup-steps.yml.tmpl` — Setup workflow with language-specific blocks (Python/Node/Go/Rust). Uncomment the relevant block.
+- `templates/copilot-auto-merge.yml.tmpl` — Auto-merge workflow with configurable `AUTO_SAFE` path array.
+
+> **Version verification is mandatory**: Every action version in templates is a placeholder. Before generating final files, use `/version-guard` to look up the current stable version of each GitHub Action (actions/checkout, astral-sh/setup-uv, actions/setup-node, etc.). Never use template versions as-is.
+
 ## How Copilot Coding Agent Actually Works
 
 Understanding these mechanics is essential for writing effective instructions:
@@ -242,9 +255,13 @@ Proceed? [Yes / Adjust]
 
 ## Phase 3: Generate Configuration Files
 
+Before generating, read `references/copilot-agent-mechanics.md` to refresh on current Copilot behavior and limitations. Use the templates in `templates/` as starting points — fill in `{{PLACEHOLDER}}` variables from elicitation results, then customize sections based on the specific repo.
+
+**Version check**: Run `/version-guard` for every GitHub Action version before writing workflow files.
+
 ### Step 3.1: copilot-instructions.md
 
-Write `.github/copilot-instructions.md` with these sections:
+Read `templates/copilot-instructions.md.tmpl` as the skeleton. Fill placeholders from elicitation, then write `.github/copilot-instructions.md` with these sections:
 
 ```markdown
 # {Project Name}

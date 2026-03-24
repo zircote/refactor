@@ -1,0 +1,75 @@
+# {{PROJECT_NAME}}
+
+## Project Overview
+{{PROJECT_DESCRIPTION}}
+
+## Stack
+{{STACK_LIST}}
+
+## Project Structure
+```
+{{DIRECTORY_LAYOUT}}
+```
+
+## How to Build and Test
+Run before every push:
+```bash
+{{TEST_COMMAND}}
+```
+{{TEST_BREAKDOWN}}
+
+## Coding Conventions
+{{CODING_CONVENTIONS}}
+
+## Commit Messages
+Use conventional commits:
+```
+<type>({{SCOPE_HINT}}): <description>
+```
+
+Types: {{COMMIT_TYPES}}
+
+Good examples:
+{{COMMIT_EXAMPLES_GOOD}}
+
+Bad examples (never use these):
+{{COMMIT_EXAMPLES_BAD}}
+
+{{NO_AI_ATTRIBUTION}}
+
+## PR Description Format
+```markdown
+## Summary
+Brief description of what changed and why.
+
+## Changes
+- Bullet list of specific changes
+
+## Test Plan
+- How the changes were tested
+
+## Related Issues
+Closes #N (if applicable)
+```
+
+## Review Feedback
+When a reviewer mentions @copilot:
+1. Read all review comments carefully
+2. Make the requested changes
+3. Run `{{TEST_COMMAND}}` before pushing — all checks must pass
+4. Push follow-up commits to the same branch
+5. Do not create a new PR for review fixes
+
+## File Restrictions
+
+**Off-limits — never modify:**
+{{OFF_LIMITS_PATHS}}
+
+**Requires extra care:**
+{{CAUTION_PATHS}}
+
+**Safe to modify freely:**
+{{SAFE_PATHS}}
+
+## What to Avoid
+{{ANTI_PATTERNS}}

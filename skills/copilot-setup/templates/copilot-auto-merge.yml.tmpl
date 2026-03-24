@@ -1,0 +1,81 @@
+# Template: copilot-auto-merge.yml
+# IMPORTANT: Use /version-guard to verify all action versions before generating.
+# Customize AUTO_SAFE array based on elicitation results.
+
+name: Copilot Auto-Merge
+on:
+  pull_request_review:
+    types: [submitted]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request && startsWith(github.head_ref, 'copilot/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4  # VERIFY with /version-guard
+        with:
+          fetch-depth: 0
+
+      - name: Check auto-merge eligibility
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          FILES=$(gh pr diff "${PR_NUMBER}" --name-only 2>/dev/null || echo "")
+          if [ -z "${FILES}" ]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Paths that can auto-merge after CI passes (no human review)
+          # Populated from elicitation step — customize per repo
+          AUTO_SAFE=(
+            {{AUTO_SAFE_PATHS}}
+          )
+
+          ELIGIBLE=true
+          while IFS= read -r file; do
+            [ -z "${file}" ] && continue
+            SAFE=false
+            for pattern in "${AUTO_SAFE[@]}"; do
+              [[ "${file}" == ${pattern}* ]] && SAFE=true && break
+            done
+            if [ "${SAFE}" = false ]; then
+              ELIGIBLE=false
+              break
+            fi
+          done <<< "${FILES}"
+
+          echo "eligible=${ELIGIBLE}" >> "$GITHUB_OUTPUT"
+
+      - name: Check CI status
+        if: steps.check.outputs.eligible == 'true'
+        id: ci
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          STATUS=$(gh pr checks "${PR_NUMBER}" --json name,state \
+            --jq '[.[] | select(.state != "SUCCESS" and .state != "SKIPPED")] | length')
+          echo "passing=$( [ "${STATUS}" = "0" ] && echo true || echo false )" >> "$GITHUB_OUTPUT"
+
+      - name: Auto-merge
+        if: steps.check.outputs.eligible == 'true' && steps.ci.outputs.passing == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr merge "${PR_NUMBER}" --auto --squash
+
+      - name: Label for review
+        if: steps.check.outputs.eligible == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr edit "${PR_NUMBER}" --add-label "needs-human-review" 2>/dev/null || true
