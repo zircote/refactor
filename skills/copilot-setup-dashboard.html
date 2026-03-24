@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autoresearch Dashboard — copilot-setup</title>
+<style>
+:root {
+    --pass: #16a34a; --fail: #dc2626; --neutral: #9ca3af;
+    --bg: #ffffff; --bg2: #f9fafb; --border: #e5e7eb;
+    --text: #111827; --text2: #6b7280;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; color: var(--text);
+       background: var(--bg); padding: 24px; max-width: 1100px; margin: 0 auto;
+       line-height: 1.5; }
+h1 { font-size: 1.5rem; margin-bottom: 4px; }
+h2 { font-size: 1.15rem; margin: 28px 0 12px; border-bottom: 2px solid var(--border);
+     padding-bottom: 6px; }
+.subtitle { color: var(--text2); margin-bottom: 20px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+         gap: 12px; margin-bottom: 24px; }
+.stat { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+        padding: 14px; }
+.stat .label { font-size: 0.8rem; color: var(--text2); text-transform: uppercase;
+               letter-spacing: 0.05em; }
+.stat .value { font-size: 1.4rem; font-weight: 700; margin-top: 2px; }
+.stat .value.up { color: var(--pass); }
+.stat .value.down { color: var(--fail); }
+table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-bottom: 16px; }
+th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+th { background: var(--bg2); font-weight: 600; position: sticky; top: 0; }
+tr:hover { background: #f3f4f6; }
+.pass { color: var(--pass); font-weight: 600; }
+.fail { color: var(--fail); font-weight: 600; }
+.cell-pass { background: #dcfce7; text-align: center; }
+.cell-fail { background: #fee2e2; text-align: center; }
+.cell-na { background: var(--bg2); text-align: center; color: var(--neutral); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.78rem;
+         font-weight: 600; }
+.badge-kept { background: #dcfce7; color: var(--pass); }
+.badge-reverted { background: #fee2e2; color: var(--fail); }
+.badge-baseline { background: #e0e7ff; color: #4338ca; }
+details { margin-bottom: 8px; }
+summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+.chart-container { margin: 16px 0; }
+.feedback-item { background: var(--bg2); border-left: 3px solid #2563eb;
+                 padding: 10px 14px; margin-bottom: 8px; border-radius: 0 6px 6px 0; }
+.claim-verified { color: var(--pass); }
+.claim-unverified { color: var(--fail); }
+footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--border);
+         color: var(--text2); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<h1>Autoresearch Dashboard</h1>
+<p class="subtitle">copilot-setup &middot; Iterations 0–0</p>
+<h2>Score Trajectory</h2>
+<div class="stats">
+<div class="stat"><div class="label">Starting Score</div><div class="value">100%</div></div>
+<div class="stat"><div class="label">Best Score</div><div class="value ">100%</div></div>
+<div class="stat"><div class="label">Improvement</div><div class="value ">+0% (+0%)</div></div>
+<div class="stat"><div class="label">Kept / Reverted</div><div class="value">0 / 0</div></div>
+</div>
+<div class="chart-container"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" style="max-width:600px;width:100%;height:auto;font-family:system-ui,sans-serif;font-size:11px">
+<line x1="50" y1="160.0" x2="580" y2="160.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="45" y="164.0" text-anchor="end" fill="#6b7280">0%</text>
+<line x1="50" y1="125.0" x2="580" y2="125.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="45" y="129.0" text-anchor="end" fill="#6b7280">25%</text>
+<line x1="50" y1="90.0" x2="580" y2="90.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="45" y="94.0" text-anchor="end" fill="#6b7280">50%</text>
+<line x1="50" y1="55.0" x2="580" y2="55.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="45" y="59.0" text-anchor="end" fill="#6b7280">75%</text>
+<line x1="50" y1="20.0" x2="580" y2="20.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="45" y="24.0" text-anchor="end" fill="#6b7280">100%</text>
+<text x="50.0" y="192" text-anchor="middle" fill="#6b7280">Iter 0</text>
+<circle cx="50.0" cy="20.0" r="4" fill="#2563eb"/>
+<text x="50.0" y="10.0" text-anchor="middle" fill="#2563eb" font-weight="600">100%</text>
+</svg></div>
+<table>
+<thead><tr><th>Iter</th><th>Score</th><th>Best</th><th>Action</th><th>Changelog</th></tr></thead>
+<tbody><tr><td>0</td><td>1.0</td><td>1.0</td><td><span class="badge badge-baseline">baseline</span></td><td>Initial evaluation</td></tr></tbody>
+</table>
+<h2>Expectation Heatmap</h2>
+<div style="overflow-x:auto">
+<table>
+<thead><tr><th>Expectation</th><th>Iter 0</th></tr></thead>
+<tbody><tr><td title="Audit identifies missing commit message conventions">Audit identifies missing commit message conventions</td><td class="cell-pass">PASS</td></tr><tr><td title="Audit identifies missing file/directory restrictions">Audit identifies missing file/directory restrictions</td><td class="cell-pass">PASS</td></tr><tr><td title="Audit identifies missing project structure">Audit identifies missing project structure</td><td class="cell-pass">PASS</td></tr><tr><td title="Audit identifies vague test command">Audit identifies vague test command</td><td class="cell-pass">PASS</td></tr><tr><td title="Audit offers to apply improvements">Audit offers to apply improvements</td><td class="cell-pass">PASS</td></tr><tr><td title="Audit provides numerical score">Audit provides numerical score</td><td class="cell-pass">PASS</td></tr><tr><td title="Audit provides specific replacement text suggestions">Audit provides specific replacement text suggestions</td><td class="cell-pass">PASS</td></tr><tr><td title="Deployment checklist presented">Deployment checklist presented</td><td class="cell-pass">PASS</td></tr><tr><td title="Explains positive framing approach">Explains positive framing approach</td><td class="cell-pass">PASS</td></tr><tr><td title="Fix explicitly lists .github/workflows/ as off-limits">Fix explicitly lists .github/workflows/ as off-limits</td><td class="cell-pass">PASS</td></tr><tr><td title="Fix includes concrete conventional commit examples">Fix includes concrete conventional commit examples</td><td class="cell-pass">PASS</td></tr><tr><td title="Identifies commit message problem and proposes format examples">Identifies commit message problem and proposes format examples</td><td class="cell-pass">PASS</td></tr><tr><td title="Identifies workflow modification problem and proposes file restrictions">Identifies workflow modification problem and proposes file restrictions</td><td class="cell-pass">PASS</td></tr><tr><td title="Makes targeted edits rather than full rewrite">Makes targeted edits rather than full rewrite</td><td class="cell-pass">PASS</td></tr><tr><td title="copilot-instructions.md includes Build and Test section with &#x27;make check&#x27;">copilot-instructions.md includes Build and Test section with &#x27;make check&#x27;</td><td class="cell-pass">PASS</td></tr><tr><td title="copilot-instructions.md includes PR description format">copilot-instructions.md includes PR description format</td><td class="cell-pass">PASS</td></tr><tr><td title="copilot-instructions.md includes a Project Overview section">copilot-instructions.md includes a Project Overview section</td><td class="cell-pass">PASS</td></tr><tr><td title="copilot-instructions.md includes commit format with conventional commit examples">copilot-instructions.md includes commit format with conventional commit examples</td><td class="cell-pass">PASS</td></tr><tr><td title="copilot-instructions.md includes file restrictions listing scripts/ as requiring review">copilot-instructions.md includes file restrictions listing scripts/ as requiring...</td><td class="cell-pass">PASS</td></tr><tr><td title="copilot-setup-steps.yml has job named &#x27;copilot-setup-steps&#x27;">copilot-setup-steps.yml has job named &#x27;copilot-setup-steps&#x27;</td><td class="cell-pass">PASS</td></tr></tbody>
+</table>
+</div>
+<h2>Per-Eval Breakdown</h2>
+<table>
+<thead><tr><th>Eval</th><th>Iter 0</th></tr></thead>
+<tbody><tr><td>eval-1</td><td class="pass">100%</td></tr><tr><td>eval-2</td><td class="pass">100%</td></tr><tr><td>eval-3</td><td class="pass">100%</td></tr></tbody>
+</table>
+<h2>Deterministic vs LLM Expectations</h2>
+<table>
+<thead><tr><th>Source</th><th>Iter 0</th></tr></thead>
+<tbody>
+<tr><td>Deterministic</td><td>0</td></tr>
+<tr><td>LLM</td><td>20</td></tr>
+</tbody>
+</table>
+<footer>Generated by autoresearch &middot; Self-contained HTML — no external dependencies</footer>
+</body>
+</html>
