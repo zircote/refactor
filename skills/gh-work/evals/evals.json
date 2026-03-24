@@ -1,0 +1,45 @@
+{
+  "skill_name": "gh-work",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/gh-work --audit stale",
+      "expected_output": "Should analyze the current repo for stale issues and discussions (>90 days inactive), categorize them (abandoned, blocked, forgotten wins, stale discussions), and present findings without modifying anything.",
+      "files": [],
+      "expectations": [
+        "The skill queried issues using gh CLI or GitHub MCP tools with a date-based filter to find inactive items",
+        "The skill categorized stale items into meaningful groups (not just a flat list)",
+        "The skill cited specific issue numbers, last activity dates, and current state for each stale item",
+        "The skill did NOT modify, close, or comment on any issues (audit mode is read-only)",
+        "The skill suggested specific next actions for each stale category (close, triage, follow up)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "/gh-work --audit triage",
+      "expected_output": "Should find issues missing labels, milestones, or assignees and present a triage table with intelligent suggestions based on issue content and existing conventions.",
+      "files": [],
+      "expectations": [
+        "The skill detected the existing label taxonomy before suggesting labels",
+        "The skill found issues that are unlabeled, unassigned, or without a milestone",
+        "The skill suggested specific labels for each untriaged issue based on the issue's content (not random labels)",
+        "The skill presented recommendations in a structured format (table or organized list)",
+        "The skill did NOT apply any changes (audit mode)",
+        "The skill used labels that actually exist in the repo's label set (not invented labels)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/gh-work --audit audit-labels",
+      "expected_output": "Should analyze the label ecosystem for gaps, inconsistencies, unused labels, and cross-repo divergence. Present findings with consolidation recommendations.",
+      "files": [],
+      "expectations": [
+        "The skill fetched the repo's full label list",
+        "The skill identified at least one category of issue: taxonomy gaps, inconsistencies, unused labels, or overloaded labels",
+        "The skill's recommendations referenced specific label names and counts",
+        "The skill did NOT create, rename, or delete any labels (audit mode)",
+        "The skill explained the rationale for each recommendation (not just 'consolidate these')"
+      ]
+    }
+  ]
+}
