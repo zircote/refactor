@@ -258,15 +258,55 @@ Write all findings to blackboard (key: `audit_{module}_findings`).
 
 ## Phase 3: Enterprise Readiness Assessment
 
-Read `references/enterprise-readiness-criteria.md` for scoring criteria.
+### Step 3.0: Check for Cogitations Onboarding
 
-Spawn parallel agents:
+Before spawning assessment agents, check whether this project is onboarded to cogitations:
+
+```bash
+ls .cogitations/config.yaml 2>/dev/null
+```
+
+**If `.cogitations/config.yaml` exists** — the project is onboarded. Use cogitations as the authoritative scoring system:
+
+1. Read `.cogitations/config.yaml` to get the active domains, profile, and tier target
+2. Read `.cogitations/last-assessment.json` to get the most recent domain scores, composite score, and trend
+3. Use cogitations' domain assessors (`cogitations:domain-assessor`) for any domains that overlap with Phase 3 concerns — these include: `security`, `cicd`, `config_environment`, `coding`, `tdd`, `architecture_design`, `governance_compliance`, `dependency_management`, `developer_experience`
+4. Apply cogitations' profile weights and scoring rubric (not the standalone rubric in `references/`)
+5. Report findings using cogitations' tier system (Tier 0: Prototype → Tier 3: Enterprise-Grade) alongside the audit's own P0-P2 categories
+6. Cross-reference: any Phase 2 findings (stubs, missing features, spec violations) that map to a cogitations domain should note which domain they impact and how they affect the domain score
+
+The synthesis report (Phase 4) should include a **Cogitations Integration** section:
+```markdown
+## Cogitations Assessment
+Profile: {profile}
+Composite Score: {score}/100
+Tier: {tier} ({tier_name})
+Trend: {trend} (prior: {prior_score})
+
+### Domain Scores
+| Domain | Score | Weight | Audit Findings |
+|---|---|---|---|
+| security | 89.6 | 0.8 | 2 findings (1 P0, 1 P2) |
+| tdd | 81.8 | 1.3 | 3 findings (all P2 test gaps) |
+| ... | ... | ... | ... |
+```
+
+**If `.cogitations/config.yaml` does NOT exist** — fall back to the standalone assessment:
+
+Read `references/enterprise-readiness-criteria.md` for scoring criteria. Spawn parallel agents:
 
 **Observability agent**: Check for structured logging (tracing crate, Python logging, winston), metrics collection (prometheus, statsd), health/readiness endpoints, distributed tracing (OpenTelemetry). Classify each as: production-grade / minimal / absent.
 
 **Resilience agent**: Check error recovery, connection pool management, graceful shutdown, timeout handling, retry logic with backoff, circuit breakers, backpressure. Search for panic/unwrap/expect in non-test code. Classify each as: robust / partial / missing.
 
 **Configuration agent**: Verify all configurable parameters are exposed, environment variable overrides work, configuration validates at startup, sensitive values are redacted from logs. Compare against any configuration spec.
+
+At the end of the standalone assessment, suggest cogitations onboarding:
+```
+Tip: This project is not onboarded to Cogitations. Run /cog-init to enable
+structured quality scoring with domain assessors, tier tracking, and
+autonomous improvement loops.
+```
 
 Write findings to blackboard (key: `enterprise_assessment`).
 
@@ -306,6 +346,14 @@ Produce a summary report:
 | Enterprise gaps | N | P2 |
 
 **Overall compliance**: X% (implemented / total requirements)
+
+## Cogitations Assessment (if onboarded)
+Profile: {profile} | Composite: {score}/100 | Tier: {tier} | Trend: {trend}
+
+| Domain | Score | Audit Impact |
+|---|---|---|
+| {domain} | {score} | {N findings, highest priority} |
+| ... | ... | ... |
 
 ## Top Findings
 1. ...
