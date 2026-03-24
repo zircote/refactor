@@ -266,36 +266,64 @@ Before spawning assessment agents, check whether this project is onboarded to co
 ls .cogitations/config.yaml 2>/dev/null
 ```
 
-**If `.cogitations/config.yaml` exists** — the project is onboarded. Use cogitations as the authoritative scoring system:
+**If `.cogitations/config.yaml` exists** — the project is onboarded. Use cogitations domain assessors AND the standalone rubric together:
 
-1. Read `.cogitations/config.yaml` to get the active domains, profile, and tier target
+#### Step 3.1: Load Cogitations State
+
+1. Read `.cogitations/config.yaml` to get active domains, disabled domains, profile, and tier target
 2. Read `.cogitations/last-assessment.json` to get the most recent domain scores, composite score, and trend
-3. Use cogitations' domain assessors (`cogitations:domain-assessor`) for any domains that overlap with Phase 3 concerns — these include: `security`, `cicd`, `config_environment`, `coding`, `tdd`, `architecture_design`, `governance_compliance`, `dependency_management`, `developer_experience`
-4. Apply cogitations' profile weights and scoring rubric (not the standalone rubric in `references/`)
-5. Report findings using cogitations' tier system (Tier 0: Prototype → Tier 3: Enterprise-Grade) alongside the audit's own P0-P2 categories
-6. Cross-reference: any Phase 2 findings (stubs, missing features, spec violations) that map to a cogitations domain should note which domain they impact and how they affect the domain score
+3. Note which domains are **disabled** — these represent gaps in cogitations coverage that the standalone rubric must fill
 
-The synthesis report (Phase 4) should include a **Cogitations Integration** section:
+#### Step 3.2: Run Cogitations Domain Assessors
+
+Use `cogitations:domain-assessor` agents for all **active** domains. These provide structured, weighted scoring with the project's established profile:
+- `security`, `cicd`, `config_environment`, `coding`, `tdd`, `architecture_design`, `governance_compliance`, `dependency_management`, `developer_experience`
+- Apply cogitations' profile weights and tier system (Tier 0: Prototype → Tier 3: Enterprise-Grade)
+- Cross-reference Phase 2 findings (stubs, missing features, spec violations) to the cogitations domains they impact — note which domain score each finding affects
+
+#### Step 3.3: Run Standalone Rubric for Disabled Domains
+
+Read `references/enterprise-readiness-criteria.md` and run the standalone assessment agents for dimensions that cogitations has **disabled** or does not cover. Common gaps include:
+
+- **Observability** (often disabled for CLI tools, plugins, libraries) — spawn observability agent: structured logging, metrics, health endpoints, distributed tracing
+- **Resilience** (often disabled for non-server projects) — spawn resilience agent: error recovery, connection pools, graceful shutdown, timeouts, retries, backpressure
+- **Performance/Reliability** (often disabled for plugins) — spawn performance agent if applicable
+
+Only spawn agents for disabled/missing dimensions — do not duplicate work cogitations already covers.
+
+#### Step 3.4: Merge Scoring
+
+Produce a unified assessment that combines both systems:
+- Cogitations domains: use cogitations scores, weights, and tier classification
+- Standalone dimensions: use the rubric's 0-3 scoring (absent/minimal/partial/production-grade)
+- Map standalone scores into the cogitations tier context for a coherent overall picture
+
+The synthesis report (Phase 4) should include a **Cogitations + Rubric Assessment** section:
 ```markdown
-## Cogitations Assessment
-Profile: {profile}
-Composite Score: {score}/100
-Tier: {tier} ({tier_name})
-Trend: {trend} (prior: {prior_score})
+## Enterprise Readiness Assessment
 
-### Domain Scores
+### Cogitations Domains (active)
+Profile: {profile} | Composite: {score}/100 | Tier: {tier} | Trend: {trend}
+
 | Domain | Score | Weight | Audit Findings |
 |---|---|---|---|
 | security | 89.6 | 0.8 | 2 findings (1 P0, 1 P2) |
 | tdd | 81.8 | 1.3 | 3 findings (all P2 test gaps) |
 | ... | ... | ... | ... |
+
+### Standalone Assessment (cogitations-disabled dimensions)
+| Dimension | Score | Rating | Key Findings |
+|---|---|---|---|
+| observability | 1/3 | minimal | Printf logging, no metrics |
+| resilience | 2/3 | partial | Missing graceful shutdown |
+| ... | ... | ... | ... |
 ```
 
-**If `.cogitations/config.yaml` does NOT exist** — fall back to the standalone assessment:
+**If `.cogitations/config.yaml` does NOT exist** — use the standalone rubric only:
 
-Read `references/enterprise-readiness-criteria.md` for scoring criteria. Spawn parallel agents:
+Read `references/enterprise-readiness-criteria.md` for scoring criteria. Spawn all three assessment agents:
 
-**Observability agent**: Check for structured logging (tracing crate, Python logging, winston), metrics collection (prometheus, statsd), health/readiness endpoints, distributed tracing (OpenTelemetry). Classify each as: production-grade / minimal / absent.
+**Observability agent**: Check for structured logging, metrics collection, health/readiness endpoints, distributed tracing (OpenTelemetry). Classify each as: production-grade / minimal / absent.
 
 **Resilience agent**: Check error recovery, connection pool management, graceful shutdown, timeout handling, retry logic with backoff, circuit breakers, backpressure. Search for panic/unwrap/expect in non-test code. Classify each as: robust / partial / missing.
 
