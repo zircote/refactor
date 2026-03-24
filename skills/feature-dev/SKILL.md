@@ -572,13 +572,18 @@ Agent tool with:
 
 ### Step 5.4: Test Verification
 
-1. Run the test suite (team lead or via feature-code agent):
-   ```bash
-   {test_runner_command for detected language}
-   ```
-2. If failures: coordinate fixes with feature-code agent (max 3 attempts).
-3. If still failing after 3 attempts: ask user for guidance.
-4. Record final test status as `test_run_status`.
+1. **TaskCreate**: "Run the full test suite for [{feature}]. Report pass/fail status with failure details."
+   - **TaskUpdate**: assign owner to "test-writer"
+   - **SendMessage** to "test-writer": "Task #{id} assigned: run test suite after implementation. Start now."
+2. Wait for completion.
+3. If failures:
+   - **TaskCreate**: "Fix test failures: [paste failure report from test-writer]. Analyze root causes, implement fixes, preserve feature functionality."
+     - **TaskUpdate**: assign owner to "feature-code"
+     - **SendMessage** to "feature-code": "Task #{id} assigned: fix test failures. Start now."
+   - Wait for completion.
+   - Re-run test verification (max 3 attempts).
+4. If still failing after 3 attempts: ask user for guidance.
+5. Record final test status as `test_run_status`.
 
 ## Phase 6: Quality Review
 
@@ -668,9 +673,20 @@ SendMessage to "code-reviewer-{i}": "Task #{id} assigned: feature review. Start 
    - `gate_passed = rigor_ok AND coverage_ok`
 
 5. **If `autonomous_mode`**: Skip user presentation. Auto-resolve:
-   - Auto-fix all code review findings with confidence >= 80 (create tasks for feature-code, wait for completion).
+   - Auto-fix all code review findings with confidence >= 80:
+     - **TaskCreate**: "Fix code review findings (confidence >= 80): [paste findings with file:line locations and remediation guidance]."
+       - **TaskUpdate**: assign owner to "feature-code"
+       - **SendMessage** to "feature-code": "Task #{id} assigned: fix code review findings. Start now."
+     - Wait for completion.
    - If gate failed but `rigor_score >= 0.5` and `coverage_pct >= 60%`: auto-override with relaxed autonomous thresholds. Log: "Quality gate auto-overridden (autonomous): rigor {rigor_score}, coverage {coverage_pct}%."
-   - If gate failed below relaxed thresholds: attempt one fix cycle (create improvement tasks, re-validate). If still failing, proceed with override and document.
+   - If gate failed below relaxed thresholds: attempt one fix cycle:
+     - **TaskCreate**: "Improve implementation to raise quality gate scores. Current: rigor {rigor_score}, coverage {coverage_pct}%. Target: rigor >= 0.5, coverage >= 60%."
+       - **TaskUpdate**: assign owner to "feature-code"
+       - **SendMessage** to "feature-code": "Task #{id} assigned: improve implementation for quality gate. Start now."
+     - **TaskCreate**: "Improve test coverage to meet quality gate. Current: {coverage_pct}%. Add tests for uncovered paths identified in coverage_report."
+       - **TaskUpdate**: assign owner to "test-writer"
+       - **SendMessage** to "test-writer": "Task #{id} assigned: improve test coverage. Start now."
+     - Wait for both to complete. Re-validate gate. If still failing, proceed with override and document.
    - Store `quality_gate_override = !gate_passed` and proceed to Phase 7.
 
    **If NOT `autonomous_mode`**: **Present to user** using **AskUserQuestion**:
@@ -682,8 +698,13 @@ SendMessage to "code-reviewer-{i}": "Task #{id} assigned: feature review. Start 
    - If gate passed: Options: "Fix critical code issues now", "Fix all issues", "Proceed as-is"
 
 6. **If gate failed AND user chose Fix** (interactive mode only):
-   - Create improvement tasks for feature-code (implementation gaps) and test-writer (coverage gaps)
-   - Wait for completion
+   - **TaskCreate**: "Fix implementation gaps identified by code reviewers: [paste findings grouped by severity]."
+     - **TaskUpdate**: assign owner to "feature-code"
+     - **SendMessage** to "feature-code": "Task #{id} assigned: fix implementation gaps from review. Start now."
+   - **TaskCreate**: "Improve test coverage to meet quality gate. Current: {coverage_pct}%. Add tests for uncovered paths identified in coverage_report."
+     - **TaskUpdate**: assign owner to "test-writer"
+     - **SendMessage** to "test-writer": "Task #{id} assigned: improve test coverage for quality gate. Start now."
+   - Wait for both to complete.
    - Re-run Step 6.3 (quality validation only — code reviewers already done)
    - Re-evaluate gate
    - Re-present to user (max 2 re-validation loops before asking user to override or abandon)
