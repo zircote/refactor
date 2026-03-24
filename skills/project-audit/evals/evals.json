@@ -1,0 +1,68 @@
+{
+  "skill_name": "project-audit",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/project-audit --discovery-only",
+      "expected_output": "Produces a structured project manifest identifying language (Python), build tool (uv/Makefile), test command (make check/pytest), modules (scripts/, agents/, skills/), API surface (MCP tools), security model (none/minimal), test infrastructure (pytest, hypothesis, CI workflows), and spec sources (CLAUDE.md, docs/). Does NOT proceed to Phase 1.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "file_contains",
+          "path": "manifest.json",
+          "pattern": "python",
+          "name": "Discovers Python language",
+          "case_insensitive": true
+        },
+        {
+          "type": "file_contains",
+          "path": "manifest.json",
+          "pattern": "pytest",
+          "name": "Discovers pytest test runner",
+          "case_insensitive": true
+        }
+      ],
+      "expectations": [
+        "The manifest identifies Python 3.10+ as the primary language",
+        "The manifest identifies uv as the package manager",
+        "The manifest identifies make check as the primary test command",
+        "The manifest lists modules including scripts/, agents/, skills/",
+        "The manifest identifies CI workflows in .github/workflows/",
+        "The skill stops after Phase 0 and does not proceed to spec comprehension",
+        "The manifest is presented in a structured format (JSON or clear sections)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "/project-audit --focus=tests --skip-issues",
+      "expected_output": "Runs discovery (Phase 0) then test coverage analysis (Phase 2.4) only. Counts tests per module, identifies untested code paths, checks for conformance tests. Produces a test gap report without creating GitHub issues.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "Phase 0 discovery runs and identifies the test infrastructure (pytest, conftest.py, fixtures/)",
+        "The audit counts the number of tests (should find 700+ from pytest --collect-only or similar)",
+        "The audit identifies which scripts/ modules have corresponding test files",
+        "The audit reports the coverage threshold (80% minimum from pyproject.toml)",
+        "The audit does NOT create GitHub issues (--skip-issues respected)",
+        "The audit does NOT run enterprise readiness or spec comprehension phases (--focus=tests respected)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "run a full project audit on this repo. I want to know what's incomplete, what's stubbed out, and how production-ready it is. Don't create issues yet, just give me the report.",
+      "expected_output": "Full audit across all phases (0-4, skip 5). Discovers project, extracts implicit requirements from CLAUDE.md and docs, audits implementation, assesses enterprise readiness, produces a prioritized synthesis report with compliance percentage.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "Phase 0 discovery produces a project manifest",
+        "Phase 1 extracts requirements from available sources (CLAUDE.md, docs/, README)",
+        "Phase 2 searches for TODO/FIXME/stub markers in source code",
+        "Phase 3 assesses observability, resilience, and configuration maturity",
+        "Phase 4 produces a synthesis report with the priority categories table (P0/P1/P2)",
+        "The report includes an overall compliance percentage",
+        "Phase 5 is skipped per user request ('don't create issues yet')",
+        "The audit uses swarm orchestration (multiple agents working in parallel)"
+      ]
+    }
+  ]
+}
