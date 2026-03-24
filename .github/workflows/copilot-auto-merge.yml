@@ -1,0 +1,106 @@
+name: Copilot Auto-Merge
+
+on:
+  pull_request_review:
+    types: [submitted]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request && startsWith(github.head_ref, 'copilot/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check auto-merge eligibility
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Get all changed files in this PR
+          FILES=$(gh pr diff "${PR_NUMBER}" --name-only 2>/dev/null || echo "")
+
+          if [ -z "${FILES}" ]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "reason=Could not fetch changed files" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Auto-merge safe paths (no human review needed)
+          AUTO_SAFE=(
+            "docs/"
+            "evals/"
+            "tests/"
+            "CHANGELOG.md"
+            "README.md"
+            "CONTRIBUTING.md"
+            ".editorconfig"
+            ".gitignore"
+          )
+
+          ELIGIBLE=true
+          BLOCKED_FILE=""
+
+          while IFS= read -r file; do
+            [ -z "${file}" ] && continue
+            SAFE=false
+            for pattern in "${AUTO_SAFE[@]}"; do
+              if [[ "${file}" == ${pattern}* ]]; then
+                SAFE=true
+                break
+              fi
+            done
+            if [ "${SAFE}" = false ]; then
+              ELIGIBLE=false
+              BLOCKED_FILE="${file}"
+              break
+            fi
+          done <<< "${FILES}"
+
+          echo "eligible=${ELIGIBLE}" >> "$GITHUB_OUTPUT"
+          if [ "${ELIGIBLE}" = true ]; then
+            echo "reason=All changed files are in auto-merge safe paths" >> "$GITHUB_OUTPUT"
+          else
+            echo "reason=File '${BLOCKED_FILE}' requires human review" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check CI status
+        if: steps.check.outputs.eligible == 'true'
+        id: ci
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Verify all required checks have passed
+          STATUS=$(gh pr checks "${PR_NUMBER}" --json name,state --jq '[.[] | select(.state != "SUCCESS" and .state != "SKIPPED")] | length')
+          if [ "${STATUS}" = "0" ]; then
+            echo "passing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "passing=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Enable auto-merge
+        if: steps.check.outputs.eligible == 'true' && steps.ci.outputs.passing == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "Auto-merging PR #${PR_NUMBER}: ${{ steps.check.outputs.reason }}"
+          gh pr merge "${PR_NUMBER}" --auto --squash
+
+      - name: Label PRs requiring review
+        if: steps.check.outputs.eligible == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "PR #${PR_NUMBER} requires human review: ${{ steps.check.outputs.reason }}"
+          gh pr edit "${PR_NUMBER}" --add-label "needs-human-review" 2>/dev/null || true

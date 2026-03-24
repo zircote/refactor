@@ -1,0 +1,106 @@
+{
+  "skill_name": "copilot-setup",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I need to set up the GitHub Copilot coding agent for this repo. We're a Python project using uv, pytest, ruff, and mypy. Our CI runs `make check` which does lint + typecheck + test + security. I want Copilot to follow our conventional commit format and run tests before pushing. Docs changes can auto-merge, but scripts/ and .github/ need human review. Just generate the files, don't actually deploy them.",
+      "expected_output": "Generates .github/copilot-instructions.md covering project overview, stack, test commands, commit format, coding conventions, file restrictions, and PR format. Also generates copilot-setup-steps.yml with uv setup and copilot-auto-merge.yml with path-based policy. Presents a deployment checklist.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "file_exists",
+          "path": ".github/copilot-instructions.md",
+          "name": "copilot-instructions.md created"
+        },
+        {
+          "type": "file_contains",
+          "path": ".github/copilot-instructions.md",
+          "pattern": "make check",
+          "name": "Instructions include test command"
+        },
+        {
+          "type": "file_contains",
+          "path": ".github/copilot-instructions.md",
+          "pattern": "conventional",
+          "name": "Instructions mention conventional commits",
+          "case_insensitive": true
+        },
+        {
+          "type": "file_contains",
+          "path": ".github/copilot-instructions.md",
+          "pattern": "ruff",
+          "name": "Instructions mention ruff linter"
+        },
+        {
+          "type": "file_contains",
+          "path": ".github/copilot-instructions.md",
+          "pattern": "mypy",
+          "name": "Instructions mention mypy"
+        },
+        {
+          "type": "file_contains",
+          "path": ".github/copilot-instructions.md",
+          "pattern": "scripts/",
+          "name": "Instructions reference scripts directory"
+        },
+        {
+          "type": "file_exists",
+          "path": ".github/workflows/copilot-setup-steps.yml",
+          "name": "copilot-setup-steps.yml created"
+        },
+        {
+          "type": "file_contains",
+          "path": ".github/workflows/copilot-setup-steps.yml",
+          "pattern": "copilot-setup-steps",
+          "name": "Setup workflow has required job name"
+        },
+        {
+          "type": "file_contains",
+          "path": ".github/workflows/copilot-setup-steps.yml",
+          "pattern": "uv",
+          "name": "Setup workflow installs uv"
+        }
+      ],
+      "expectations": [
+        "copilot-instructions.md includes a Project Overview or equivalent section describing what the project does",
+        "copilot-instructions.md includes a Build and Test section with the exact command 'make check'",
+        "copilot-instructions.md includes commit message format with conventional commit examples (feat:, fix:, etc.)",
+        "copilot-instructions.md includes file restrictions listing scripts/ as requiring review",
+        "copilot-instructions.md includes a PR description format template or guidance",
+        "copilot-setup-steps.yml is valid YAML with the job named exactly 'copilot-setup-steps'",
+        "A deployment checklist or execution plan is presented to the user"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "/copilot-setup --audit\n\nHere is our current .github/copilot-instructions.md:\n\n# Our Project\nWe use Python. Please follow best practices.\n\n## Testing\nRun tests before pushing.\n\n## Code Style\nFollow PEP 8.",
+      "expected_output": "Identifies that the instructions are too vague (no specific test command, no commit format, no file restrictions, no project structure). Produces a scored audit report with specific improvement suggestions for each gap. Offers to apply fixes.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The audit identifies that 'Run tests before pushing' is too vague and should specify the exact test command",
+        "The audit identifies missing commit message convention instructions",
+        "The audit identifies missing file/directory restrictions",
+        "The audit identifies missing project structure information",
+        "The audit provides a numerical score or rating for the current instructions",
+        "The audit provides specific replacement text suggestions, not just 'add more detail'",
+        "The audit offers to apply the suggested improvements"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/copilot-setup --improve\n\nCopilot keeps writing commit messages like 'Update files' and 'Fix bug'. Also it modified our .github/workflows/ci.yml directly even though we told it not to touch workflows. Can you fix the instructions?",
+      "expected_output": "Diagnoses two problems: (1) bad commit messages due to missing format examples, (2) workflow file modification despite restrictions. Makes targeted edits to copilot-instructions.md adding explicit commit format with examples and strengthening file restriction language for .github/workflows/. Does not rewrite the entire file.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill identifies the commit message problem and proposes adding explicit format examples",
+        "The skill identifies the workflow modification problem and proposes strengthening file restrictions",
+        "The fix includes concrete conventional commit examples (e.g., 'feat:', 'fix:', 'refactor:')",
+        "The fix explicitly lists .github/workflows/ as off-limits or requiring special care",
+        "The skill makes targeted edits rather than rewriting the entire instructions file",
+        "The skill explains why positive framing works better than negative ('do use X format' vs 'don't write bad messages')"
+      ]
+    }
+  ]
+}
