@@ -6,13 +6,6 @@ for multi-language test architecture.
 
 from .audit import log_operation
 from .coverage_report import parse_coverage, run_coverage
-from .protocols import (
-    CoverageAnalyzer,
-    CoverageParser,
-    OutputParser,
-    ProjectDetector,
-    TestRunner,
-)
 from .detect_project import detect_language, detect_project, detect_test_framework
 from .exceptions import (
     CoverageParseError,
@@ -20,6 +13,13 @@ from .exceptions import (
     RefactorError,
     SubprocessError,
     UnsupportedLanguageError,
+)
+from .protocols import (
+    CoverageAnalyzer,
+    CoverageParser,
+    OutputParser,
+    ProjectDetector,
+    TestRunner,
 )
 from .run_tests import run_tests
 from .utils import find_project_root, format_results, parse_json_output

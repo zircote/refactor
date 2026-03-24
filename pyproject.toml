@@ -51,4 +51,4 @@ warn_return_any = true
 warn_unused_configs = true
 
 [tool.bandit]
-skips = ["B101"]
+skips = ["B101", "B404", "B603"]

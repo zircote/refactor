@@ -62,7 +62,11 @@ def test_detect_project_satisfies_project_detector() -> None:
 
 def _custom_runner(path: str, lang: str) -> dict[str, object]:
     return {
-        "passed": 0, "failed": 0, "errors": 0, "output": "", "exit_code": 0,
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "output": "",
+        "exit_code": 0,
     }
 
 

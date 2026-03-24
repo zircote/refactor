@@ -29,9 +29,7 @@ class TestGetAuditPath:
 class TestLogOperation:
     """Tests for structured audit log entries."""
 
-    def test_writes_json_entry(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_writes_json_entry(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         log_file = tmp_path / "audit.log"
         monkeypatch.setenv("REFACTOR_AUDIT_LOG", str(log_file))
 
@@ -62,18 +60,14 @@ class TestLogOperation:
         monkeypatch.setenv("REFACTOR_AUDIT_LOG", str(log_file))
 
         log_operation(action="test_run", resource="proj1", result="success")
-        log_operation(
-            action="coverage_analysis", resource="proj2", result="failure"
-        )
+        log_operation(action="coverage_analysis", resource="proj2", result="failure")
 
         lines = log_file.read_text().strip().split("\n")
         assert len(lines) == 2
         assert json.loads(lines[0])["action"] == "test_run"
         assert json.loads(lines[1])["action"] == "coverage_analysis"
 
-    def test_no_details_omitted(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_no_details_omitted(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         log_file = tmp_path / "audit.log"
         monkeypatch.setenv("REFACTOR_AUDIT_LOG", str(log_file))
 
@@ -92,9 +86,7 @@ class TestLogOperation:
         log_operation(action="test", resource=".", result="success")
         assert log_file.exists()
 
-    def test_actor_from_user_env(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_actor_from_user_env(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         log_file = tmp_path / "audit.log"
         monkeypatch.setenv("REFACTOR_AUDIT_LOG", str(log_file))
         monkeypatch.setenv("USER", "test-actor")
@@ -102,12 +94,8 @@ class TestLogOperation:
         entry = log_operation(action="test", resource=".", result="success")
         assert entry["actor"] == "test-actor"
 
-    def test_survives_unwritable_path(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv(
-            "REFACTOR_AUDIT_LOG", "/nonexistent/readonly/audit.log"
-        )
+    def test_survives_unwritable_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("REFACTOR_AUDIT_LOG", "/nonexistent/readonly/audit.log")
 
         # Should not raise — logs a warning instead
         entry = log_operation(action="test", resource=".", result="success")
