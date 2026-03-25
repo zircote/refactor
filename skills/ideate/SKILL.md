@@ -22,7 +22,7 @@ Phase 3 (full specification) requires explicit user confirmation that the direct
 
 ## Phase 1: Elicitation
 
-Extract the raw idea through conversation. Use AskUserQuestion to ask one or two questions at a time — never dump a wall of questions.
+Extract the raw idea through conversation. **Always use the AskUserQuestion tool** to ask questions — never embed questions as plain text in your response. This ensures the user gets a clear, focused prompt and the conversation blocks until they answer. Ask one or two questions at a time — never dump a wall of questions.
 
 Adapt your questions to what the user has already told you. The goal is to understand:
 
@@ -34,7 +34,7 @@ Adapt your questions to what the user has already told you. The goal is to under
 
 Some users will answer all of this in their first message. Others will give you one sentence. Meet them where they are. If the user gives you enough to move forward, move forward — don't interrogate them for completeness.
 
-If the user wants to explore multiple ideas before committing to one, support that. Track candidates as a numbered list and help them compare trade-offs, effort, and value — but **the user makes the final selection**. Present your analysis neutrally. You may share observations about feasibility or dependencies, but do not make the choice for them. Ask which candidate they want to develop further. Never say "build X first" or "I recommend Y" — instead say "which of these do you want to explore?"
+If the user wants to explore multiple ideas before committing to one, support that. Track candidates as a numbered list and help them compare trade-offs, effort, and value — but **the user makes the final selection**. Present your analysis neutrally. You may share observations about feasibility or dependencies, but do not make the choice for them. Use AskUserQuestion to ask which candidate they want to develop further. Never say "build X first" or "I recommend Y" — instead ask "which of these do you want to explore?"
 
 ## Phase 2: Development
 
@@ -64,7 +64,7 @@ Structure your synthesis as — use these exact headings in your output:
 
 ### 2.3: Iterate
 
-Ask the user: does this capture what you're thinking? Use AskUserQuestion to get their reaction. They may:
+Use AskUserQuestion to ask the user: does this capture what you're thinking? They may:
 
 - Confirm it's right — move to Phase 3
 - Correct or refine — update your synthesis and present again
@@ -130,7 +130,7 @@ Produce a feature specification formatted for /feature-dev consumption.
 
 Include the full specification directly in your response — do not put it in a separate file and summarize. The spec must appear inline in the transcript so that all sections (Acceptance Criteria, Test Plan, etc.) are visible in the conversation output.
 
-Present the plan to the user and ask:
+Present the plan to the user and use AskUserQuestion to ask:
 
 > Ready to hand off to /feature-dev, or do you want to refine further?
 
@@ -145,3 +145,4 @@ If the user wants to refine, return to the relevant phase and iterate.
 - **Concise responses.** One or two questions at a time. Short paragraphs. No filler.
 - **Codebase-grounded.** Every suggestion should reference what actually exists in the project. Generic advice is worthless — specific, contextualized guidance is the goal.
 - **Honest about uncertainty.** If you don't know something, say so. If an approach has real risks, surface them. The user is better served by honest assessment than by enthusiasm.
+- **Always use AskUserQuestion for elicitation.** Every question directed at the user — whether clarifying, confirming, or choosing between options — must go through the AskUserQuestion tool, not inline text. This applies in Phase 1, Phase 2.3, Phase 3 handoff confirmation, and any other point where you need user input before proceeding. Never embed questions as plain text output — the AskUserQuestion tool ensures the conversation blocks until the user responds.
