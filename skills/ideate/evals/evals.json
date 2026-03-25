@@ -1,0 +1,203 @@
+{
+  "skill_name": "ideate",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have this half-baked idea — what if our CLI tool could generate a visual dependency graph of all the assessment domains? Like which domains depend on findings from other domains. I think it would help users understand why their scores look the way they do.",
+      "expected_output": "The skill should recognize this as a Phase 1/2 idea (partially formed), research the codebase for domain relationships, and produce a structured concept synthesis with problem statement, proposed solution, scope boundaries, integration points referencing actual files, and open questions. Should NOT generate code.",
+      "files": [],
+      "expectations": [
+        {
+          "text": "Response includes a clear problem statement restating the user's idea",
+          "type": "semantic"
+        },
+        {
+          "text": "Response identifies specific files in the codebase relevant to domain relationships (e.g., corpus YAML files, scoring pipeline)",
+          "type": "semantic"
+        },
+        {
+          "text": "Response explicitly states what is in scope and what is out of scope",
+          "type": "semantic"
+        },
+        {
+          "text": "Response surfaces at least one trade-off or risk",
+          "type": "semantic"
+        },
+        {
+          "text": "Response does NOT contain any code implementations (no Python, no bash scripts, no function definitions)",
+          "type": "semantic"
+        },
+        {
+          "text": "Response asks the user a follow-up question to refine the idea (via AskUserQuestion or equivalent)",
+          "type": "semantic"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "file_contains",
+          "file": "transcript.md",
+          "literal": "Problem",
+          "description": "Transcript contains a problem statement section"
+        },
+        {
+          "type": "file_contains",
+          "file": "transcript.md",
+          "literal": "scope",
+          "description": "Transcript discusses scope boundaries"
+        },
+        {
+          "type": "file_not_contains",
+          "file": "transcript.md",
+          "literal": "def ",
+          "description": "Transcript does not contain Python function definitions (no code generation)"
+        },
+        {
+          "type": "file_not_contains",
+          "file": "transcript.md",
+          "literal": "```python",
+          "description": "Transcript does not contain Python code blocks (no code generation)"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I want to add webhook notifications so that when cog-loop finishes an iteration, it can POST results to a Slack channel or any HTTP endpoint. Here's what I'm thinking: configurable URL in .cogitations/config.yaml, POST with JSON body containing iteration number, score, action (kept/reverted), and proposal title. Should support basic auth headers. That's pretty much it — can you turn this into a plan for /feature-dev?",
+      "expected_output": "The skill should recognize this as a mostly-formed idea (skip to Phase 3), validate the plan against the codebase, and produce a complete feature specification with acceptance criteria, technical approach referencing actual files, and test plan. Should offer handoff to /feature-dev.",
+      "files": [],
+      "expectations": [
+        {
+          "text": "Response produces a feature specification with title, summary, problem statement, and acceptance criteria",
+          "type": "semantic"
+        },
+        {
+          "text": "Response includes a Technical Approach section referencing specific files to create or modify",
+          "type": "semantic"
+        },
+        {
+          "text": "Response includes a Test Plan section",
+          "type": "semantic"
+        },
+        {
+          "text": "Response includes a Risks and Mitigations section",
+          "type": "semantic"
+        },
+        {
+          "text": "Response asks whether the user is ready to hand off to /feature-dev",
+          "type": "semantic"
+        },
+        {
+          "text": "Response references .cogitations/config.yaml as the configuration location",
+          "type": "semantic"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "file_contains",
+          "file": "transcript.md",
+          "literal": "Acceptance Criteria",
+          "description": "Transcript contains acceptance criteria section"
+        },
+        {
+          "type": "file_contains",
+          "file": "transcript.md",
+          "literal": "Test Plan",
+          "description": "Transcript contains test plan section"
+        },
+        {
+          "type": "file_contains",
+          "file": "transcript.md",
+          "literal": "feature-dev",
+          "description": "Transcript mentions handoff to /feature-dev"
+        },
+        {
+          "type": "file_contains",
+          "file": "transcript.md",
+          "literal": "config.yaml",
+          "description": "Transcript references the config file"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "hmm so I'm not sure exactly what I want but something about making cogitations smarter about knowing when to stop trying. like right now it just keeps going until iterations run out or proposals are exhausted but what if it could tell that it's not making progress and try a completely different strategy instead of just stopping",
+      "expected_output": "The skill should recognize this as a vague Phase 1 idea, ask clarifying questions to understand what 'different strategy' means, and explore the existing convergence detection code. Should NOT jump to a full plan — should stay in elicitation/development mode.",
+      "files": [],
+      "expectations": [
+        {
+          "text": "Response acknowledges the vagueness and asks clarifying questions rather than jumping to a solution",
+          "type": "semantic"
+        },
+        {
+          "text": "Response references existing convergence detection mechanisms in the codebase (results_log.sh check-stuck, check-plateau, or similar)",
+          "type": "semantic"
+        },
+        {
+          "text": "Response asks no more than 2-3 questions (not a wall of questions)",
+          "type": "semantic"
+        },
+        {
+          "text": "Response does NOT produce a complete feature specification yet — stays in exploratory mode",
+          "type": "semantic"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "file_contains",
+          "file": "transcript.md",
+          "literal": "?",
+          "description": "Transcript contains at least one question mark (asking clarifying questions)"
+        },
+        {
+          "type": "file_not_contains",
+          "file": "transcript.md",
+          "literal": "## Acceptance Criteria",
+          "description": "Transcript does not contain a full spec with acceptance criteria (should stay exploratory)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I've got three ideas and I'm not sure which to pursue: (1) a 'cog diff' command that shows what changed between two assessment runs, (2) a GitHub Action that runs cog assess on PRs and comments the score delta, (3) adding a 'watch mode' to the CLI that re-runs assessment whenever files change. Which would be most valuable?",
+      "expected_output": "The skill should support multi-idea brainstorming. It should briefly evaluate each idea (feasibility, value, effort) using codebase knowledge, help the user compare them, and ask which they want to develop further. Should NOT force a choice or pick for the user.",
+      "files": [],
+      "expectations": [
+        {
+          "text": "Response addresses all three ideas individually, not just one",
+          "type": "semantic"
+        },
+        {
+          "text": "Response provides a comparison or assessment of trade-offs between the ideas",
+          "type": "semantic"
+        },
+        {
+          "text": "Response asks the user which they want to develop further rather than choosing for them",
+          "type": "semantic"
+        },
+        {
+          "text": "Response references actual codebase artifacts when evaluating feasibility (e.g., existing CLI commands, assessment output format, CI integration points)",
+          "type": "semantic"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "file_contains",
+          "file": "transcript.md",
+          "literal": "cog diff",
+          "description": "Transcript addresses the first idea"
+        },
+        {
+          "type": "file_contains",
+          "file": "transcript.md",
+          "literal": "GitHub Action",
+          "description": "Transcript addresses the second idea"
+        },
+        {
+          "type": "file_contains",
+          "file": "transcript.md",
+          "literal": "watch",
+          "description": "Transcript addresses the third idea"
+        }
+      ]
+    }
+  ]
+}
