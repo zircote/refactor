@@ -1,10 +1,16 @@
-[
-  {
-    "event": "PostToolUse",
-    "matcher": {
-      "tool_name": "Write",
-      "file_path_pattern": ".*(_test\\.rs|test_.*\\.py|.*\\.test\\.ts|.*\\.spec\\.ts|_test\\.go)$"
-    },
-    "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-test-write.sh"
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-test-write.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
-]
+}

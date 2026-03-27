@@ -11,6 +11,11 @@ if [[ -z "$file_path" ]]; then
 	exit 0
 fi
 
+# Only act on test files
+if [[ ! "$file_path" =~ (_test\.rs|test_.*\.py|.*\.test\.ts|.*\.spec\.ts|_test\.go)$ ]]; then
+	exit 0
+fi
+
 filename=$(basename "$file_path")
 ext="${filename##*.}"
 
