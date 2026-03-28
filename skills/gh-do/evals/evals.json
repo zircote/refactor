@@ -1,0 +1,117 @@
+{
+  "skill_name": "gh-do",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/gh-do issue 42 --repo zircote/swagger-php",
+      "expected_output": "The skill reads issue #42 from zircote/swagger-php, triages it by classifying type/priority/area from the issue content, applies labels, removes triage labels, then routes to the appropriate action workflow based on the classification.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill runs 'gh issue view 42 --repo zircote/swagger-php' with JSON fields including number, title, body, labels, assignees, state, comments to fetch the full issue context",
+        "The skill applies a type label (one of type/bug, type/feature, type/docs, type/question, type/chore) based on keyword analysis of the issue title and body",
+        "The skill applies a priority label (one of priority/critical, priority/high, priority/medium, priority/low) based on severity indicators in the issue content",
+        "The skill removes 'needs-triage' and/or 'status/triage' labels after classification using 'gh issue edit 42 --repo zircote/swagger-php --remove-label'",
+        "For a bug or feature issue, the skill creates a branch named 'gh-do/issue-42-<slug>' from the main branch SHA and creates a draft PR whose body starts with 'Resolves zircote/swagger-php#42' on its own line before the Summary section"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "hey can you process this bug report? it's issue 15 in my current repo. the user says the login page crashes when they enter special characters",
+      "expected_output": "The skill detects single-item mode with issue 15, resolves the current repo via gh repo view, triages the issue as type/bug with appropriate priority, and routes to the bug fix workflow.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill resolves the current repo by running 'gh repo view --json nameWithOwner -q .nameWithOwner' since no --repo flag was provided",
+        "The skill classifies the issue as 'type/bug' because the prompt mentions 'bug report' and 'crashes'",
+        "The skill assigns at least priority/medium (the default for bugs) or higher given the crash keyword",
+        "The skill creates a feature branch with the pattern 'gh-do/issue-15-<slug>' and proceeds to implement a fix rather than just triaging",
+        "The skill creates a draft PR with 'Resolves <owner>/<repo>#15' in the PR body (not just the title), followed by Summary, Changes, and Test Plan sections"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/gh-do --sweep --repo zircote/swagger-php --limit 5 --dry-run",
+      "expected_output": "The skill assembles a prioritized queue from zircote/swagger-php, reports what would be done for each item without executing mutations, and presents a numbered checklist plan.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill runs the preflight check to verify the 'needs-triage' label exists in zircote/swagger-php, creating it if missing",
+        "The skill queries issues with 'needs-triage' or 'status/triage' labels, unlabeled issues, PRs with changes requested, PRs with failing checks, and discussions — gathering all candidate items",
+        "The skill orders the queue by the defined priority: critical issues first, then high issues, then PRs with changes requested, then PRs with failing CI, then triage-labeled issues, then unlabeled issues, then discussions, then medium/low issues, then draft PRs",
+        "Because --dry-run is set, the skill reports planned labels and actions for each item WITHOUT executing any mutations (no gh issue edit, no gh pr create, no branch creation)",
+        "The output is limited to at most 5 items due to --limit 5"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "/gh-do --sweep --repo zircote/swagger-php --limit 8",
+      "expected_output": "The skill assembles the queue and, finding more than 1 item, auto-escalates to swarm mode with parallel workers using TeamCreate and TaskCreate.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill assembles the prioritized queue from zircote/swagger-php using the same discovery logic as sweep (issues with triage labels, unlabeled issues, PRs needing attention, discussions)",
+        "When the queue contains more than 1 item, the skill reports 'escalating to swarm mode' and does NOT process items sequentially",
+        "The skill calls TeamCreate with team_name 'gh-do-swarm' to create the parallel processing team",
+        "The skill creates ALL tasks upfront from the queue using TaskCreate (one task per item, up to 8 items from --limit), each with item details including type, repo, number, title, priority, and URL",
+        "Each task description includes confirmation rules: draft PRs and labels proceed without asking, but merging PRs and closing issues are flagged for leader review"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "/gh-do pr 33 --repo zircote/swagger-php",
+      "expected_output": "The skill reads PR #33, determines its state (changes requested, approved, draft, or failing CI), triages it, then routes to the correct PR sub-workflow.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill runs 'gh pr view 33 --repo zircote/swagger-php' with JSON fields including reviews, statusCheckRollup, isDraft, mergeable, headRefName, baseRefName, and also fetches the diff with 'gh pr diff 33'",
+        "The skill applies a size label based on the file count and diff line count of the PR",
+        "For a PR with changes requested: the skill checks out the PR branch, reads review comments, implements requested changes, commits, pushes, and re-requests review — it does NOT create a new PR",
+        "For a PR that is approved with passing checks: the skill asks the user for confirmation before merging, it does NOT auto-merge",
+        "For a PR with failing checks: the skill reads CI logs, checks out the branch, fixes failures, commits and pushes, then reports what was fixed"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "/gh-do discussion 8 --repo zircote/swagger-php",
+      "expected_output": "The skill reads discussion #8 via GraphQL, determines its category, and routes to the correct discussion workflow.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill fetches the discussion using the GraphQL API query that retrieves id, title, body, category name, comments, and labels — not the REST API since discussions are not available via gh issue/pr view",
+        "If the discussion category is 'Ideas' or describes a feature request: the skill creates a new issue from the discussion using 'gh issue create' with a link back to the discussion URL, then follows the Issue Workflow to create a branch and draft PR that references the NEW issue number (not the discussion number) with 'Resolves owner/repo#N'",
+        "If the discussion category is 'Q&A': the skill drafts an answer based on codebase analysis and posts it as a comment, potentially marking it as answered",
+        "If the discussion category is 'RFCs': the skill posts a structured review comment covering feasibility, risks, and alternatives",
+        "The skill comments on the discussion linking any newly created issue, so the discussion author is notified of the conversion"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "/gh-do --swarm --batch 8 --repo zircote/swagger-php --limit 20",
+      "expected_output": "The skill assembles the queue, creates the swarm team, creates all tasks upfront, spawns 8 parallel workers with worktree isolation, and enters the leader coordination loop.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill creates the team with TeamCreate using team_name 'gh-do-swarm' before spawning any workers",
+        "The skill creates ALL tasks upfront from the prioritized queue (up to 20 from --limit) using TaskCreate, each with subject format '[repo] type #N: title' and detailed description including item type, repo, number, priority, and instructions",
+        "The skill spawns exactly 8 worker agents (matching --batch 8) as background teammates, each with isolation: 'worktree' to prevent branch collisions between workers",
+        "Each worker prompt instructs workers to loop continuously (claim task, execute, complete, claim next) until no pending unowned tasks remain — workers must NOT stop after one task or wait for leader instructions between tasks",
+        "The leader monitors progress via SendMessage from workers, handles flags for destructive actions (merge, close) by presenting them to the user for confirmation, and sends shutdown_request when all tasks complete"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "/gh-do 99",
+      "expected_output": "The skill receives only a bare number with no type specified, auto-detects whether #99 is an issue, PR, or discussion, resolves the current repo, and proceeds with the appropriate workflow.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill resolves the repo from 'gh repo view --json nameWithOwner -q .nameWithOwner' since no --repo was provided",
+        "The skill auto-detects the item type by trying issue first ('gh issue view 99'), then PR ('gh pr view 99'), then discussion (GraphQL query) — it does NOT require the user to specify the type",
+        "After detecting the item type, the skill proceeds through the full triage pipeline: classify type/priority/area, apply labels, remove triage labels",
+        "The skill routes to the correct action workflow based on the detected item type (Issue Workflow, PR Workflow, or Discussion Workflow) without asking the user which type it is",
+        "If the item cannot be found as any type (issue, PR, or discussion), the skill reports a clear error rather than proceeding with assumptions"
+      ]
+    }
+  ]
+}
