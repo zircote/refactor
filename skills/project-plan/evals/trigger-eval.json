@@ -1,0 +1,102 @@
+[
+  {
+    "query": "plan my next sprint",
+    "should_trigger": true
+  },
+  {
+    "query": "what should I work on next?",
+    "should_trigger": true
+  },
+  {
+    "query": "/project-plan --autonomous",
+    "should_trigger": true
+  },
+  {
+    "query": "clean up my project board",
+    "should_trigger": true
+  },
+  {
+    "query": "sync orphaned issues to the board",
+    "should_trigger": true
+  },
+  {
+    "query": "I need to organize my GitHub Projects board",
+    "should_trigger": true
+  },
+  {
+    "query": "do some board hygiene across my repos",
+    "should_trigger": true
+  },
+  {
+    "query": "update my project board with the latest issue statuses",
+    "should_trigger": true
+  },
+  {
+    "query": "prioritize the items on my board for this sprint",
+    "should_trigger": true
+  },
+  {
+    "query": "set up sprint planning for my project",
+    "should_trigger": true
+  },
+  {
+    "query": "create a new GitHub issue for the login bug",
+    "should_trigger": false
+  },
+  {
+    "query": "review my pull request #45",
+    "should_trigger": false
+  },
+  {
+    "query": "refactor the auth module to use dependency injection",
+    "should_trigger": false
+  },
+  {
+    "query": "fix the failing CI pipeline",
+    "should_trigger": false
+  },
+  {
+    "query": "add labels to all untriaged issues",
+    "should_trigger": false
+  },
+  {
+    "query": "set up GitHub Actions for this repo",
+    "should_trigger": false
+  },
+  {
+    "query": "write unit tests for the config loader",
+    "should_trigger": false
+  },
+  {
+    "query": "deploy the latest release to production",
+    "should_trigger": false
+  },
+  {
+    "query": "audit the codebase for security vulnerabilities",
+    "should_trigger": false
+  },
+  {
+    "query": "generate a changelog from recent commits",
+    "should_trigger": false
+  },
+  {
+    "query": "triage my open issues and add labels",
+    "should_trigger": false
+  },
+  {
+    "query": "assign reviewers to open pull requests",
+    "should_trigger": false
+  },
+  {
+    "query": "create a milestone for the v2.0 release",
+    "should_trigger": false
+  },
+  {
+    "query": "archive done items on my project board and rebalance the sprint",
+    "should_trigger": true
+  },
+  {
+    "query": "move all completed items to the Done column on my board",
+    "should_trigger": true
+  }
+]

@@ -208,6 +208,47 @@ When quality gates fail, the user can choose to fix (max 2 re-validation loops),
 }
 ```
 
+## Project Plan Configuration (`projectPlan`)
+
+These fields configure the `/project-plan` skill. They live under the `projectPlan` key and are entirely independent of the `/refactor` and `/feature-dev` settings above.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `projectNumber` | `integer \| null` | `null` | GitHub Projects v2 board number. `null` = auto-detect from `gh project list`. |
+| `projectOwner` | `string \| null` | `null` | Board owner (`@me`, org name). `null` = current user. |
+| `defaultMode` | `"interactive" \| "autonomous"` | `"interactive"` | Default mode when no flag provided. |
+| `sprintLength` | `integer` | `14` | Sprint duration in days. Used for sprint planning heuristics. |
+| `autoArchiveDays` | `integer` | `14` | Days after which Done items are auto-archived. |
+| `enableUiOps` | `boolean` | `false` | Enable Chrome DevTools UI operations by default. |
+| `uiOps.views` | `boolean` | `true` | Create/update board views during UI ops. |
+| `uiOps.workflows` | `boolean` | `true` | Configure board automation workflows during UI ops. |
+| `uiOps.verification` | `boolean` | `true` | Screenshot-verify UI operations. |
+
+The `projectPlan` section is optional. If missing, all defaults are applied silently. The skill merges missing keys with defaults at runtime — partial config is fine.
+
+**Example — project plan with explicit board and autonomous default:**
+```json
+{
+  "version": "4.0",
+  "iterations": 3,
+  "postRefactor": { "..." },
+  "featureDev": { "..." },
+  "projectPlan": {
+    "projectNumber": 3,
+    "projectOwner": "@me",
+    "defaultMode": "autonomous",
+    "sprintLength": 14,
+    "autoArchiveDays": 14,
+    "enableUiOps": false,
+    "uiOps": {
+      "views": true,
+      "workflows": true,
+      "verification": true
+    }
+  }
+}
+```
+
 ## Error Handling
 
 All GitHub operations are non-blocking. If any operation fails (e.g., `gh` not authenticated, no remote configured), the plugin logs a warning and continues. The refactor workflow is never blocked by a publishing or PR creation failure.

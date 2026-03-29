@@ -1,0 +1,169 @@
+{
+  "skill_name": "project-plan",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/project-plan --autonomous",
+      "expected_output": "Runs the full autonomous pipeline: loads config (or creates defaults silently), reads CLAUDE.md constitution, snapshots the board via gh project CLI, defaults to board-hygiene goal, generates changeset, auto-applies operations with confidence >= 0.70, prints machine-parseable summary. No AskUserQuestion prompts at any point.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill detects autonomous mode from the --autonomous flag and does NOT call AskUserQuestion at any point during the entire run",
+        "The skill reads .claude/CLAUDE.md (or CLAUDE.md) and extracts constitution dimensions — reporting a completeness score like 'N/6 dimensions'",
+        "The skill runs 'gh project list --owner @me --format json' or uses config to determine the board, then runs 'gh project field-list' and 'gh project item-list' to snapshot board state",
+        "The skill defaults to 'board-hygiene' goal when no goal text is provided after the flag",
+        "The changeset includes operations with confidence scores (0.0-1.0) and only auto-applies operations at or above the 0.70 threshold",
+        "The skill runs 'gh project item-archive', 'gh project item-add', or 'gh project item-edit' commands for the auto-applied operations",
+        "The summary output includes: repo name, board reference, goal, constitution completeness, applied count, suggestions count, and board state after changes"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I want to plan my next sprint. I have a bunch of issues piling up and need to decide what goes into the next 2-week sprint.",
+      "expected_output": "The skill enters interactive mode, elicits the session goal via AskUserQuestion (user should pick sprint planning), reads constitution and board, generates a changeset that includes hygiene ops plus scored item selection for the sprint, presents the changeset for approval before executing.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill presents a goal elicitation question via AskUserQuestion with options including 'Board hygiene', 'Sprint planning', 'Prioritize', 'Board sync', and 'Custom goal'",
+        "The skill reads the CLAUDE.md constitution and extracts available dimensions for alignment scoring",
+        "The skill snapshots the board and also fetches open issues ('gh issue list --state open') and PRs ('gh pr list --state open') for the current repo",
+        "The changeset includes board-hygiene operations first (archive stale Done items, flag stale In Progress) PLUS sprint-specific operations that score and select unplanned items for the sprint",
+        "Sprint item selection references signals: label priority, milestone proximity, dependency count, and constitution alignment (if constitution completeness >= 70%)",
+        "The full changeset is presented to the user for approval before any mutations are executed — interactive mode never auto-applies without confirmation",
+        "The summary shows board state before and after, including how many items were added to the sprint"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/project-plan --dry-run --autonomous clean up the board and sync orphaned issues",
+      "expected_output": "Runs autonomous pipeline with board-sync + board-hygiene goals inferred from the text, generates the full changeset, prints it as a formatted table showing each operation with confidence scores, but does NOT execute any mutations. No gh project item-edit/archive/add commands should run.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill parses both --dry-run and --autonomous flags from $ARGUMENTS",
+        "The skill detects the goal from the remaining argument text — 'clean up' maps to board-hygiene and 'sync orphaned issues' maps to board-sync, resulting in combined board-hygiene + board-sync operations",
+        "The changeset output is a formatted table showing operation type (ARCHIVE, ADD, MOVE, EDIT), target item description, field, from/to values, confidence score, and reason for each operation",
+        "The changeset distinguishes auto-apply operations (confidence >= 0.70, marked with checkmark) from suggestions (below threshold, marked with flag)",
+        "The skill does NOT execute any mutations — no 'gh project item-archive', 'gh project item-add', or 'gh project item-edit' commands are run",
+        "The output includes a count summary line like 'CHANGESET (N operations, M auto-apply, K suggestions)'"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "/project-plan --autonomous\n\nHere is the repo's CLAUDE.md:\n\n# My Library\nA utility library for string manipulation.",
+      "expected_output": "The skill reads this sparse 2-line CLAUDE.md, scores constitution completeness below 50% (only 1/6 dimensions found — Mission/Purpose), skips alignment scoring entirely, and still proceeds with board-hygiene operations. Does not fail, warn loudly, or ask for more constitution detail.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill extracts whatever it can from the sparse CLAUDE.md — at minimum the Mission/Purpose dimension ('utility library for string manipulation')",
+        "The constitution completeness score is below 50% (at most 1-2 of 6 dimensions found: Mission, Branching, Build & Test, Commit Conventions, Active Priorities, Constraints)",
+        "The skill explicitly notes that alignment scoring is skipped due to insufficient constitution completeness — it does not attempt to score changeset operations against constitution principles",
+        "The skill still proceeds with board-hygiene operations normally — sparse CLAUDE.md does not block or degrade board operations",
+        "The skill does NOT prompt the user to improve their CLAUDE.md or warn that constitution is 'incomplete' — it treats sparse input as expected reality across the 190-repo fleet"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "/project-plan --help",
+      "expected_output": "Prints a man-page formatted help output with PROJECT-PLAN(1) GPM Skills Manual header, covering NAME, SYNOPSIS, DESCRIPTION, MODES, FLAGS, EXAMPLES sections. Does not execute any phases or read any files.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The output follows man-page format with 'PROJECT-PLAN(1)' and 'GPM Skills Manual' in the header",
+        "The output includes a NAME section describing what the skill does",
+        "The output includes a SYNOPSIS section showing the command format with flags: --autonomous, --ui-ops, --dry-run, and optional goal text",
+        "The output includes a DESCRIPTION or MODES section explaining autonomous, interactive, and dry-run modes",
+        "The output includes at least 2 usage EXAMPLES showing real invocations (e.g., '/project-plan --autonomous', '/project-plan plan my sprint')",
+        "The skill does NOT read CLAUDE.md, snapshot the board, or execute any planning phases — help output is the complete response"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "/project-plan --autonomous\n\nNote: This repository has no GitHub Projects v2 board configured. gh project list returns an empty result.",
+      "expected_output": "When no GitHub Projects v2 board exists for the user/org, the skill handles this gracefully in autonomous mode: detects the absence via 'gh project list', skips all board operations without error, and prints a summary noting that no board was found. Does not offer to create a board (that's interactive-only behavior).",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill runs 'gh project list --owner @me --format json' (or equivalent) and detects that no boards exist or no boards match the config",
+        "In autonomous mode, the skill does NOT call AskUserQuestion to offer board creation — it skips board operations silently",
+        "The skill prints a summary that clearly indicates no board was found and board operations were skipped",
+        "The skill does NOT crash, throw an error, or exit with a non-zero status — it degrades gracefully",
+        "The skill still reads the CLAUDE.md constitution (board absence doesn't skip constitution reading)",
+        "If running in interactive mode instead, the skill WOULD offer to create a board via AskUserQuestion — this is the behavioral difference between modes"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "/project-plan --autonomous --ui-ops\n\nAssume Chrome DevTools MCP tools are available (navigate_page, take_screenshot, click, drag, wait_for).",
+      "expected_output": "After completing the standard Phase 0-5 pipeline, the skill enters Phase 6 (UI Operations) because --ui-ops was specified. It navigates to the GitHub Projects board in Chrome, takes a verification screenshot, performs UI-only operations (view creation, item reordering), and verifies each operation with a follow-up screenshot.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill runs the full Phase 0-5 pipeline (config, constitution, board snapshot, goal, changeset, execution) before entering Phase 6",
+        "Phase 6 uses Chrome DevTools MCP tools: navigate_page to open the board URL (github.com/users/{owner}/projects/{number}), take_screenshot to verify state",
+        "The skill performs at least one UI-specific operation that has no CLI equivalent — such as creating a board view, reordering items within a column, or configuring board-level settings",
+        "Each UI operation is followed by a verification screenshot (take_screenshot) to confirm the change took effect"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "/project-plan --autonomous --ui-ops\n\nNote: Chrome DevTools MCP tools are NOT available in this session. ToolSearch for chrome-devtools returns no results.",
+      "expected_output": "The skill detects that Chrome DevTools MCP tools are unavailable despite --ui-ops being requested. It completes Phases 0-5 normally via CLI/API, then skips Phase 6 entirely with an informational note. No crash, no error.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill checks for Chrome DevTools MCP tool availability before entering Phase 6",
+        "The skill detects that Chrome DevTools tools are NOT available (ToolSearch returns no matches)",
+        "Phase 6 is skipped entirely — no navigate_page, take_screenshot, click, or drag calls are attempted",
+        "The skill prints an informational note explaining that UI operations were skipped because Chrome DevTools MCP is not available",
+        "The skill does NOT crash, throw an error, or abort — Phases 0-5 complete normally and the summary is still printed",
+        "The summary includes the note about skipped UI operations so the user knows to enable Chrome DevTools for next time"
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "/project-plan --autonomous --ui-ops\n\nAssume Chrome DevTools MCP tools are available. During view creation, the first take_screenshot verification shows the view was NOT created (element not found in snapshot). Simulate a UI operation failure.",
+      "expected_output": "The skill attempts a UI operation, detects the verification failure via take_screenshot, retries the operation once, and if verification still fails, skips that operation with a warning and continues to the next UI operation.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill attempts a UI operation (e.g., view creation) using click/fill via Chrome DevTools MCP",
+        "After the operation, take_screenshot or take_snapshot is used to verify the result",
+        "The verification detects that the operation did not succeed (expected element not found)",
+        "The skill retries the operation exactly once — not zero times, not more than once",
+        "After the retry fails verification again, the skill skips that operation with a warning message",
+        "The skill continues to the next UI operation rather than aborting Phase 6 entirely"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "I just installed the refactor plugin and want to set up project planning for the first time.\n\nNote: No .claude/refactor.config.json exists yet, or it exists but has no projectPlan section.",
+      "expected_output": "The skill detects the missing projectPlan config section and runs the first-run interactive setup wizard with 3 AskUserQuestion prompts: Q1 (Project Board), Q2 (Sprint Length), Q3 (UI Operations). After the wizard, it writes the projectPlan section to .claude/refactor.config.json and proceeds to Phase 1.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill detects that projectPlan section is missing from config and enters the first-run wizard flow",
+        "Q1 asks about which project board to manage via AskUserQuestion with auto-detected boards as options",
+        "Q2 asks about sprint length via AskUserQuestion with options: 1 week, 2 weeks (default), 3 weeks, 4 weeks",
+        "Q3 asks about UI operations via AskUserQuestion with options: No CLI/API only (default), Yes requires Chrome DevTools",
+        "After all 3 questions, the skill writes the projectPlan section to .claude/refactor.config.json",
+        "The skill then proceeds to Phase 1 (Constitution Reading) — the wizard does not end the session"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "Let's review the project board together and figure out priorities.\n\nDuring the session, after the changeset is presented, the user responds: \"looks good, just do it\"",
+      "expected_output": "The skill starts in interactive mode, elicits goals, generates changeset, presents it for approval. When the user says 'just do it', the skill detects this as a conversational mode shift to autonomous and applies the changeset without further confirmation prompts.",
+      "files": [],
+      "deterministic_checks": [],
+      "expectations": [
+        "The skill starts in interactive mode (no --autonomous flag) and presents a goal elicitation question via AskUserQuestion",
+        "After goal selection and changeset generation, the changeset is presented to the user for approval",
+        "When the user responds with 'just do it', the skill detects this phrase as a conversational mode shift signal",
+        "The skill switches to autonomous_mode = true for the remaining execution phases",
+        "The skill applies all changeset operations with confidence >= 0.70 without further AskUserQuestion prompts",
+        "The summary confirms that autonomous mode was activated mid-session via conversational shift"
+      ]
+    }
+  ]
+}
