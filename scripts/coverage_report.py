@@ -8,27 +8,21 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .audit import log_operation
 from .exceptions import CoverageParseError, SubprocessError, UnsupportedLanguageError
-from .utils import parse_json_output
+from .languages import get_config
+from .utils import parse_json_output, run_subprocess
 
-# Coverage commands per language
-_COVERAGE_COMMANDS: dict[str, list[list[str]]] = {
-    "rust": [["cargo", "tarpaulin", "--out", "json"]],
-    "python": [
-        ["python", "-m", "coverage", "run", "-m", "pytest"],
-        ["python", "-m", "coverage", "json"],
-    ],
-    "typescript": [["npx", "c8", "--reporter=json", "vitest", "run"]],
-    "go": [["go", "test", "-coverprofile=coverage.out", "./..."]],
-}
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from .types import CoverageData, CoverageResult, UncoveredFile
 
 
-def run_coverage(path: str, lang: str) -> dict[str, Any]:
+def run_coverage(path: str, lang: str) -> CoverageResult:
     """Execute coverage tool for the given language and return raw output.
 
     Args:
@@ -36,39 +30,22 @@ def run_coverage(path: str, lang: str) -> dict[str, Any]:
         lang: Language identifier (rust, python, typescript, go).
 
     Returns:
-        Dict with keys: output, exit_code, coverage (parsed coverage dict).
-        On failure, includes an error key.
+        CoverageResult with keys: output, exit_code, coverage.
+
+    Raises:
+        UnsupportedLanguageError: If the language is not supported.
+        SubprocessError: If a coverage command fails or is not found.
     """
-    commands = _COVERAGE_COMMANDS.get(lang)
-    if commands is None:
+    config = get_config(lang)
+    if config is None:
         raise UnsupportedLanguageError(lang)
 
+    commands = config.coverage_commands
     combined_output = ""
     last_exit_code = 0
 
     for cmd in commands:
-        try:
-            result = subprocess.run(
-                cmd,
-                cwd=path,
-                capture_output=True,
-                text=True,
-                timeout=600,
-            )
-        except FileNotFoundError as exc:
-            raise SubprocessError(
-                f"command not found: {exc}",
-                command=" ".join(cmd),
-                exit_code=-1,
-                output=combined_output,
-            ) from exc
-        except subprocess.TimeoutExpired as exc:
-            raise SubprocessError(
-                "coverage execution timed out after 600s",
-                command=" ".join(cmd),
-                exit_code=-1,
-                output=combined_output,
-            ) from exc
+        result = run_subprocess(cmd, cwd=path, timeout=600, output_so_far=combined_output)
 
         combined_output += result.stdout + result.stderr
         last_exit_code = result.returncode
@@ -87,34 +64,30 @@ def run_coverage(path: str, lang: str) -> dict[str, Any]:
     if coverage_data is None:
         coverage_data = parse_coverage(combined_output, lang)
 
-    cov_result = {
+    cov_result: CoverageResult = {
         "output": combined_output,
         "exit_code": last_exit_code,
         "coverage": coverage_data,
     }
 
-    total_pct = coverage_data.get("total_percent") if coverage_data else None
+    total_pct = coverage_data.get("coverage_pct") if coverage_data else None
     log_operation(
         action="coverage_analysis",
         resource=f"{path} ({lang})",
         result="success" if last_exit_code == 0 else "failure",
-        details={"total_percent": total_pct} if total_pct is not None else None,
+        details={"coverage_pct": total_pct} if total_pct is not None else None,
     )
 
     return cov_result
 
 
-def _read_coverage_file(path: str, lang: str) -> dict[str, Any] | None:
+def _read_coverage_file(path: str, lang: str) -> CoverageData | None:
     """Attempt to read a coverage JSON file produced by the tool."""
     root = Path(path)
-    candidates: dict[str, list[str]] = {
-        "rust": ["tarpaulin-report.json"],
-        "python": ["coverage.json"],
-        "typescript": ["coverage/coverage-final.json"],
-        "go": [],  # Go uses coverage.out (text), not JSON
-    }
+    config = get_config(lang)
+    coverage_files = config.coverage_files if config else []
 
-    for filename in candidates.get(lang, []):
+    for filename in coverage_files:
         filepath = root / filename
         if filepath.exists():
             try:
@@ -127,25 +100,11 @@ def _read_coverage_file(path: str, lang: str) -> dict[str, Any] | None:
     return None
 
 
-def _normalize_coverage(data: dict[str, Any], lang: str) -> dict[str, Any]:
-    """Normalize parsed coverage data into a common format."""
-    if lang == "rust":
-        return _normalize_rust_coverage(data)
-    elif lang == "python":
-        return _normalize_python_coverage(data)
-    elif lang == "typescript":
-        return _normalize_typescript_coverage(data)
-    raise CoverageParseError(
-        f"coverage normalization not implemented for language: {lang}",
-        raw_output=str(data),
-    )
-
-
-def _normalize_rust_coverage(data: dict[str, Any]) -> dict[str, Any]:
+def _normalize_rust_coverage(data: dict[str, Any]) -> CoverageData:
     """Normalize tarpaulin JSON output."""
     total_lines = 0
     covered_lines = 0
-    uncovered_files: list[dict[str, Any]] = []
+    uncovered_files: list[UncoveredFile] = []
 
     for file_entry in data.get("files", []):
         file_total = file_entry.get("coverable", 0)
@@ -172,14 +131,14 @@ def _normalize_rust_coverage(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _normalize_python_coverage(data: dict[str, Any]) -> dict[str, Any]:
+def _normalize_python_coverage(data: dict[str, Any]) -> CoverageData:
     """Normalize coverage.py JSON output."""
     totals = data.get("totals", {})
     total_lines = totals.get("num_statements", 0)
     covered_lines = total_lines - totals.get("missing_lines", 0)
     pct = totals.get("percent_covered", 0.0)
 
-    uncovered_files: list[dict[str, Any]] = []
+    uncovered_files: list[UncoveredFile] = []
     for filename, file_data in data.get("files", {}).items():
         missing = file_data.get("missing_lines", [])
         if missing:
@@ -198,11 +157,11 @@ def _normalize_python_coverage(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _normalize_typescript_coverage(data: dict[str, Any]) -> dict[str, Any]:
+def _normalize_typescript_coverage(data: dict[str, Any]) -> CoverageData:
     """Normalize c8/istanbul JSON coverage output."""
     total_lines = 0
     covered_lines = 0
-    uncovered_files: list[dict[str, Any]] = []
+    uncovered_files: list[UncoveredFile] = []
 
     for filename, file_data in data.items():
         stmt_map = file_data.get("statementMap", {})
@@ -230,7 +189,25 @@ def _normalize_typescript_coverage(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def parse_coverage(output: str, lang: str) -> dict[str, Any]:
+_NORMALIZERS: dict[str, Callable[[dict[str, Any]], CoverageData]] = {
+    "rust": _normalize_rust_coverage,
+    "python": _normalize_python_coverage,
+    "typescript": _normalize_typescript_coverage,
+}
+
+
+def _normalize_coverage(data: dict[str, Any], lang: str) -> CoverageData:
+    """Normalize parsed coverage data into a common format."""
+    normalizer = _NORMALIZERS.get(lang)
+    if normalizer is None:
+        raise CoverageParseError(
+            f"coverage normalization not implemented for language: {lang}",
+            raw_output=str(data),
+        )
+    return normalizer(data)
+
+
+def parse_coverage(output: str, lang: str) -> CoverageData:
     """Parse coverage from raw command output when no JSON file is available.
 
     Args:
@@ -238,8 +215,11 @@ def parse_coverage(output: str, lang: str) -> dict[str, Any]:
         lang: Language identifier.
 
     Returns:
-        Normalized coverage dict with total_lines, covered_lines,
-        coverage_pct, uncovered_files. Returns error dict on failure.
+        Normalized CoverageData with total_lines, covered_lines,
+        coverage_pct, uncovered_files.
+
+    Raises:
+        CoverageParseError: If the output cannot be parsed.
     """
     # Try to extract JSON from the output
     data = parse_json_output(output)
@@ -256,7 +236,7 @@ def parse_coverage(output: str, lang: str) -> dict[str, Any]:
     )
 
 
-def _parse_go_text_coverage(output: str) -> dict[str, Any]:
+def _parse_go_text_coverage(output: str) -> CoverageData:
     """Parse Go coverage percentage from 'go test -cover' output."""
 
     # Look for "coverage: XX.X% of statements"

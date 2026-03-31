@@ -7,63 +7,13 @@ by inspecting project manifest files and conventions.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 from .exceptions import ProjectDetectionError, UnsupportedLanguageError
+from .languages import LANGUAGE_PRIORITY, LANGUAGES, get_config
 
-# Priority order: Rust > Python > TypeScript > Go
-_LANGUAGE_MARKERS: list[tuple[str, list[str]]] = [
-    ("rust", ["Cargo.toml"]),
-    ("python", ["pyproject.toml"]),
-    ("typescript", ["package.json", "tsconfig.json"]),
-    ("go", ["go.mod"]),
-]
-
-_FRAMEWORK_MAP: dict[str, dict[str, str]] = {
-    "rust": {
-        "test_runner": "cargo test",
-        "coverage_tool": "cargo-tarpaulin",
-        "property_lib": "proptest",
-    },
-    "python": {
-        "test_runner": "pytest",
-        "coverage_tool": "coverage.py",
-        "property_lib": "hypothesis",
-    },
-    "typescript": {
-        "test_runner": "vitest",
-        "coverage_tool": "c8",
-        "property_lib": "fast-check",
-    },
-    "go": {
-        "test_runner": "go test",
-        "coverage_tool": "go tool cover",
-        "property_lib": "rapid",
-    },
-}
-
-# Conventional source and test directory names per language
-_SOURCE_DIRS: dict[str, list[str]] = {
-    "rust": ["src"],
-    "python": ["src", "lib"],
-    "typescript": ["src", "lib"],
-    "go": ["."],
-}
-
-_TEST_DIRS: dict[str, list[str]] = {
-    "rust": ["tests"],
-    "python": ["tests", "test"],
-    "typescript": ["tests", "test", "__tests__"],
-    "go": ["."],
-}
-
-# Common test file glob patterns per language
-_TEST_PATTERNS: dict[str, list[str]] = {
-    "rust": ["**/tests/**/*.rs", "**/src/**/*_test.rs", "**/*_tests.rs"],
-    "python": ["**/test_*.py", "**/*_test.py", "**/tests/**/*.py"],
-    "typescript": ["**/*.test.ts", "**/*.spec.ts", "**/*.test.tsx", "**/*.spec.tsx"],
-    "go": ["**/*_test.go"],
-}
+if TYPE_CHECKING:
+    from .types import FrameworkInfo, ProjectInfo
 
 
 def detect_language(path: str) -> str | None:
@@ -82,28 +32,34 @@ def detect_language(path: str) -> str | None:
     if not root.is_dir():
         return None
 
-    for lang, markers in _LANGUAGE_MARKERS:
-        if all((root / marker).exists() for marker in markers):
-            return lang
+    for lang_name in LANGUAGE_PRIORITY:
+        config = LANGUAGES[lang_name]
+        if all((root / marker).exists() for marker in config.markers):
+            return lang_name
 
     return None
 
 
-def detect_test_framework(path: str, lang: str) -> dict[str, str]:
+def detect_test_framework(lang: str) -> FrameworkInfo:
     """Map a detected language to its test runner, coverage tool, and property lib.
 
     Args:
-        path: Filesystem path to the project root (reserved for future use).
         lang: Language identifier from detect_language().
 
     Returns:
         Dict with keys: test_runner, coverage_tool, property_lib.
-        Returns an error dict if the language is unsupported.
+
+    Raises:
+        UnsupportedLanguageError: If the language is not in the registry.
     """
-    framework = _FRAMEWORK_MAP.get(lang)
-    if framework is None:
+    config = get_config(lang)
+    if config is None:
         raise UnsupportedLanguageError(lang)
-    return dict(framework)
+    return {
+        "test_runner": config.test_runner,
+        "coverage_tool": config.coverage_tool,
+        "property_lib": config.property_lib,
+    }
 
 
 def _find_existing_dirs(root: Path, candidates: list[str]) -> list[str]:
@@ -118,29 +74,24 @@ def _find_existing_dirs(root: Path, candidates: list[str]) -> list[str]:
 
 def _find_existing_tests(root: Path, patterns: list[str]) -> list[str]:
     """Glob for test files matching language-specific patterns."""
-    test_files: list[str] = []
+    test_files: set[str] = set()
     for pattern in patterns:
-        test_files.extend(str(p.relative_to(root)) for p in root.glob(pattern))
-    # Deduplicate while preserving order
-    seen: set[str] = set()
-    unique: list[str] = []
-    for f in sorted(test_files):
-        if f not in seen:
-            seen.add(f)
-            unique.append(f)
-    return unique
+        test_files.update(str(p.relative_to(root)) for p in root.glob(pattern))
+    return sorted(test_files)
 
 
-def detect_project(path: str) -> dict[str, Any]:
+def detect_project(path: str) -> ProjectInfo:
     """Full project detection: language, framework, directories, and existing tests.
 
     Args:
         path: Filesystem path to the project root.
 
     Returns:
-        JSON-serializable dict with keys: path, language, framework,
-        source_dirs, test_dirs, existing_tests. Returns an error dict
-        if the path is invalid or no language is detected.
+        ProjectInfo dict with keys: path, language, framework,
+        source_dirs, test_dirs, existing_tests.
+
+    Raises:
+        ProjectDetectionError: If the path is invalid or no language is detected.
     """
     root = Path(path).resolve()
     if not root.is_dir():
@@ -150,10 +101,11 @@ def detect_project(path: str) -> dict[str, Any]:
     if lang is None:
         raise ProjectDetectionError("no supported language detected", path=str(root))
 
-    framework = detect_test_framework(str(root), lang)
-    source_dirs = _find_existing_dirs(root, _SOURCE_DIRS.get(lang, []))
-    test_dirs = _find_existing_dirs(root, _TEST_DIRS.get(lang, []))
-    existing_tests = _find_existing_tests(root, _TEST_PATTERNS.get(lang, []))
+    config = LANGUAGES[lang]
+    framework = detect_test_framework(lang)
+    source_dirs = _find_existing_dirs(root, config.source_dirs)
+    test_dirs = _find_existing_dirs(root, config.test_dirs)
+    existing_tests = _find_existing_tests(root, config.test_patterns)
 
     return {
         "path": str(root),

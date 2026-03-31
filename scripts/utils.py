@@ -6,11 +6,18 @@ Provides project root discovery, JSON parsing, and result formatting.
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
-# Manifest files that indicate a project root
-_ROOT_MARKERS = ("Cargo.toml", "pyproject.toml", "package.json", "go.mod")
+from .exceptions import SubprocessError
+from .languages import LANGUAGES
+
+# Derive root markers from the language registry to stay in sync.
+# Flattened and deduplicated, preserving registry priority order.
+_ROOT_MARKERS: tuple[str, ...] = tuple(
+    dict.fromkeys(marker for config in LANGUAGES.values() for marker in config.markers)
+)
 
 
 def find_project_root(start_path: str) -> str:
@@ -39,6 +46,55 @@ def find_project_root(start_path: str) -> str:
             # Reached filesystem root without finding a marker
             return str(current)
         current = parent
+
+
+def run_subprocess(
+    cmd: list[str],
+    cwd: str,
+    timeout: int,
+    *,
+    output_so_far: str = "",
+) -> subprocess.CompletedProcess[str]:
+    """Execute a subprocess with standardized error handling.
+
+    Wraps subprocess.run with consistent conversion of FileNotFoundError
+    and TimeoutExpired into SubprocessError.
+
+    Args:
+        cmd: Command and arguments to execute.
+        cwd: Working directory for the command.
+        timeout: Maximum execution time in seconds.
+        output_so_far: Any output accumulated from prior steps (included
+            in the SubprocessError for multi-step command pipelines).
+
+    Returns:
+        The completed process result.
+
+    Raises:
+        SubprocessError: If the command is not found or times out.
+    """
+    try:
+        return subprocess.run(
+            cmd,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except FileNotFoundError as exc:
+        raise SubprocessError(
+            f"command not found: {exc}",
+            command=" ".join(cmd),
+            exit_code=-1,
+            output=output_so_far,
+        ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise SubprocessError(
+            f"execution timed out after {timeout}s",
+            command=" ".join(cmd),
+            exit_code=-1,
+            output=output_so_far,
+        ) from exc
 
 
 def _extract_balanced_json(output: str, open_char: str, close_char: str) -> dict[str, Any] | None:
@@ -141,20 +197,38 @@ def _format_project_results(results: dict[str, Any]) -> list[str]:
     ]
 
 
-def format_results(results: dict[str, Any]) -> str:
+_FORMATTERS: dict[str, Any] = {
+    "test": _format_test_results,
+    "coverage": _format_coverage_results,
+    "project": _format_project_results,
+}
+
+
+def format_results(results: dict[str, Any], result_type: str | None = None) -> str:
     """Format a results dict as a human-readable summary.
 
-    Handles test results, coverage results, and project detection.
-    Falls back to a generic key-value format for other dicts.
+    When result_type is provided, dispatches directly to the matching
+    formatter. When None, falls back to key-sniffing for backward
+    compatibility.
 
     Args:
         results: Dict to format.
+        result_type: Optional explicit type — "test", "coverage", or "project".
 
     Returns:
         Multi-line human-readable string.
     """
     lines: list[str] = []
 
+    if result_type is not None:
+        formatter = _FORMATTERS.get(result_type)
+        if formatter:
+            if "error" in results:
+                lines.append(f"Error: {results['error']}")
+            lines.extend(formatter(results))
+            return "\n".join(lines)
+
+    # Fallback: key-sniffing dispatch for backward compatibility
     if "error" in results:
         lines.append(f"Error: {results['error']}")
     if "passed" in results and "failed" in results:

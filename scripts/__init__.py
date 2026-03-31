@@ -14,6 +14,7 @@ from .exceptions import (
     SubprocessError,
     UnsupportedLanguageError,
 )
+from .languages import LANGUAGES, LanguageConfig, get_config
 from .protocols import (
     CoverageAnalyzer,
     CoverageParser,
@@ -22,14 +23,37 @@ from .protocols import (
     TestRunner,
 )
 from .run_tests import run_tests
-from .utils import find_project_root, format_results, parse_json_output
+from .types import (
+    CoverageData,
+    CoverageResult,
+    FrameworkInfo,
+    ProjectInfo,
+    TestCounts,
+    TestResult,
+    UncoveredFile,
+)
+from .utils import find_project_root, format_results, parse_json_output, run_subprocess
 
 __all__ = [
+    # Protocols
     "TestRunner",
     "OutputParser",
     "CoverageAnalyzer",
     "CoverageParser",
     "ProjectDetector",
+    # TypedDicts
+    "TestCounts",
+    "TestResult",
+    "FrameworkInfo",
+    "CoverageData",
+    "CoverageResult",
+    "ProjectInfo",
+    "UncoveredFile",
+    # Language registry
+    "LanguageConfig",
+    "LANGUAGES",
+    "get_config",
+    # Functions
     "log_operation",
     "detect_language",
     "detect_test_framework",
@@ -40,6 +64,8 @@ __all__ = [
     "find_project_root",
     "parse_json_output",
     "format_results",
+    "run_subprocess",
+    # Exceptions
     "RefactorError",
     "SubprocessError",
     "UnsupportedLanguageError",

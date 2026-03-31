@@ -47,18 +47,18 @@ class TestDetectLanguage:
 
 
 class TestDetectTestFramework:
-    def test_rust_framework(self, tmp_path: Path):
-        fw = detect_test_framework(str(tmp_path), "rust")
+    def test_rust_framework(self):
+        fw = detect_test_framework("rust")
         assert fw["test_runner"] == "cargo test"
         assert fw["coverage_tool"] == "cargo-tarpaulin"
 
-    def test_python_framework(self, tmp_path: Path):
-        fw = detect_test_framework(str(tmp_path), "python")
+    def test_python_framework(self):
+        fw = detect_test_framework("python")
         assert fw["test_runner"] == "pytest"
 
-    def test_unknown_language_raises(self, tmp_path: Path):
+    def test_unknown_language_raises(self):
         with pytest.raises(UnsupportedLanguageError, match="unsupported language: unknown"):
-            detect_test_framework(str(tmp_path), "unknown")
+            detect_test_framework("unknown")
 
 
 class TestDetectProject:
