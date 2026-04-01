@@ -1,0 +1,265 @@
+{
+  "skill_name": "pr-sweep",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/pr-sweep 42",
+      "expected_output": "Sweeps PR #42 through the full pipeline: Copilot review gate, comment remediation, rebase, CI hard gate, final verification, and auto-merge",
+      "files": [],
+      "expectations": [
+        "requests Copilot review via mcp__github__request_copilot_review if not already present",
+        "waits for Copilot review completion by polling every 30 seconds",
+        "fetches and remediates all review comments (Copilot + human) with 100% reply rate",
+        "CI is a hard gate — waits for all checks to pass, not advisory",
+        "auto-merges via gh pr merge --squash --delete-branch when all gates pass"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "PR #88 doesn't have a copilot review yet. sweep it — request the review, wait for it, fix whatever copilot finds, and merge if CI is green",
+      "expected_output": "Requests Copilot review, waits for completion, remediates Copilot comments, pushes, waits for CI green, merges",
+      "files": [],
+      "expectations": [
+        "detects that Copilot review is missing by checking gh pr view --json reviews",
+        "requests Copilot review via mcp__github__request_copilot_review",
+        "polls for Copilot review completion every 30 seconds with a 10-minute timeout",
+        "treats Copilot comments identically to human reviewer comments — same priority categorization and confidence scoring",
+        "waits for CI to pass as a hard gate before merging"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/pr-sweep 55 --auto",
+      "expected_output": "Sweeps PR #55 in auto mode — Copilot review requested and waited on, but the Copilot review times out after 10 minutes, so PR is skipped",
+      "files": [],
+      "expectations": [
+        "requests Copilot review if not present",
+        "polls for completion with a 10-minute timeout",
+        "if Copilot review times out, skips the PR with reason 'Copilot review timed out after 10 minutes'",
+        "does NOT proceed to comment remediation or merge when Copilot gate fails",
+        "logs the skip reason in the per-PR summary report"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "PR #33 has feedback from both jake and copilot. jake flagged a security issue, copilot suggested better error handling. sweep it through",
+      "expected_output": "Remediates both human and Copilot comments with equal treatment, pushes, waits for CI green, merges",
+      "files": [],
+      "expectations": [
+        "processes jake's security comment with P1 (Bug/Issue) or P0 (Blocking) priority",
+        "processes Copilot's error handling suggestion with equal triage — not filtered as bot noise",
+        "applies fixes for both comments based on confidence scoring",
+        "replies to both jake and Copilot comments — 100% reply rate",
+        "resolves both threads after push and verifies CI green before merge"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "/pr-sweep 42 --auto",
+      "expected_output": "Sweeps PR #42 in auto mode. CI fails on first attempt, retries once. CI passes on retry, PR is merged",
+      "files": [],
+      "expectations": [
+        "waits for CI completion after push via gh pr checks --watch",
+        "on CI failure, logs which checks failed",
+        "retries CI once by pushing an empty commit or re-triggering",
+        "waits for CI again after retry",
+        "if CI passes on retry, proceeds to final verification and merge"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "/pr-sweep 77",
+      "expected_output": "Sweeps PR #77. CI fails twice (initial + retry), PR is skipped with reason",
+      "files": [],
+      "expectations": [
+        "waits for CI after push — CI fails",
+        "retries once — CI fails again",
+        "skips PR with reason 'CI failed after retry: <failing check names>'",
+        "does NOT attempt merge when CI hard gate fails",
+        "logs skip reason in summary and continues to next PR if batch"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "/pr-sweep 99 --auto",
+      "expected_output": "Sweeps PR #99 in auto mode. Rebase encounters unresolvable merge conflict, PR is skipped",
+      "files": [],
+      "expectations": [
+        "attempts rebase onto base branch via git rebase origin/${BASE_BRANCH}",
+        "detects merge conflict during rebase",
+        "in --auto mode, runs git rebase --abort and skips PR",
+        "skips PR with reason 'Unresolvable merge conflict in <files>'",
+        "does NOT attempt to push, wait for CI, or merge when rebase fails"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "/pr-sweep --dry-run",
+      "expected_output": "Discovers all open PRs, shows the sweep plan for each with triage summaries, but makes no changes",
+      "files": [],
+      "expectations": [
+        "discovers all open PRs via gh pr list --state open",
+        "filters out draft PRs from the list",
+        "displays triage summary with priority categories and confidence scores for each PR",
+        "labels output as 'DRY RUN — no changes were made'",
+        "does NOT apply fixes, push, merge, or resolve threads"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "/pr-sweep --no-merge",
+      "expected_output": "Sweeps all open PRs through the full pipeline but stops before merging. Reports readiness status",
+      "files": [],
+      "expectations": [
+        "processes each PR through all gates: Copilot review, remediation, rebase, CI",
+        "skips Phase 13 (merge) due to --no-merge flag",
+        "reports each PR as READINESS-ONLY instead of MERGED",
+        "still enforces CI green as a hard gate — skips PR if CI fails",
+        "generates sweep summary showing PRs readiness count instead of merged count"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "/pr-sweep --auto --confidence=90",
+      "expected_output": "Sweeps all open PRs autonomously with 90% confidence threshold",
+      "files": [],
+      "expectations": [
+        "discovers all open PRs since no PR numbers specified",
+        "operates in non-interactive auto mode without prompting",
+        "uses 90 as the confidence threshold instead of default 95",
+        "auto-accepts fixes scoring >= 90% and posts 'Below confidence threshold' replies for those below",
+        "processes each PR sequentially — one fully completed before starting the next"
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "/pr-sweep 10 22 35",
+      "expected_output": "Processes PRs #10, #22, and #35 sequentially through the full sweep pipeline",
+      "files": [],
+      "expectations": [
+        "expands arguments to PR list [10, 22, 35]",
+        "processes each PR sequentially — #10 fully completed (including merge) before starting #22",
+        "checks out each PR's branch before processing via gh pr checkout",
+        "sequential processing prevents merge conflict cascading between PRs",
+        "generates per-PR summaries AND a batch sweep summary at the end"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "/pr-sweep 10..15 --auto",
+      "expected_output": "Expands range to PRs #10-15, sweeps all 6 autonomously through the full pipeline",
+      "files": [],
+      "expectations": [
+        "expands range syntax 10..15 to PR list [10, 11, 12, 13, 14, 15]",
+        "operates in auto mode — no interactive prompts for any PR",
+        "requests Copilot review on each PR if not already present",
+        "CI is a hard gate on each PR — retries once if needed",
+        "generates batch sweep summary with per-PR results and skip reason breakdown"
+      ]
+    },
+    {
+      "id": 13,
+      "prompt": "/pr-sweep --auto",
+      "expected_output": "All open PRs fail their respective gates — sweep summary shows all skipped with reasons",
+      "files": [],
+      "expectations": [
+        "discovers all open PRs and attempts to sweep each",
+        "each PR encounters a gate failure (various reasons)",
+        "no PRs are merged — all are skipped",
+        "sweep summary shows 0 merged, N skipped",
+        "skip reasons are categorized in the summary (Copilot timeout, CI failed, merge conflict, etc.)"
+      ]
+    },
+    {
+      "id": 14,
+      "prompt": "/pr-sweep",
+      "expected_output": "Discovers all open PRs. Draft PRs are filtered out and skipped with a log message. Non-draft PRs are processed",
+      "files": [],
+      "expectations": [
+        "discovers all open PRs including drafts via gh pr list",
+        "filters draft PRs from the processing list during Phase 0.1",
+        "logs each skipped draft: 'Skipping PR #N (draft): <title>'",
+        "draft skips are counted separately in the batch summary as 'Drafts skipped'",
+        "non-draft PRs proceed through the full pipeline"
+      ]
+    },
+    {
+      "id": 15,
+      "prompt": "/pr-sweep --auto",
+      "expected_output": "No open PRs found — sweep completes with a clean report and no errors",
+      "files": [],
+      "expectations": [
+        "discovers zero open PRs via gh pr list",
+        "does NOT error or crash on empty PR list",
+        "generates a clean sweep summary showing 0 PRs discovered, 0 merged, 0 skipped",
+        "completes without any git or gh operations beyond the initial discovery",
+        "reports completion clearly to the user"
+      ]
+    },
+    {
+      "id": 16,
+      "prompt": "PR #200 has 12 comments across 6 files — 8 from the team lead and 4 from copilot. sweep it through, fix everything, and merge",
+      "expected_output": "Remediates all 12 comments from both human and Copilot reviewers, replies to 100%, resolves all threads, passes CI, merges",
+      "files": [],
+      "expectations": [
+        "fetches both inline code review comments and top-level PR comments",
+        "treats all 12 comments equally — human and Copilot get same triage and scoring",
+        "achieves 100% reply rate — all 12 comments get a reply",
+        "resolves all 12 threads after push via GraphQL mutations",
+        "Phase 12 final verification confirms 100% reply rate and all threads resolved before merge"
+      ]
+    },
+    {
+      "id": 17,
+      "prompt": "/pr-sweep 42 --merge-method=rebase",
+      "expected_output": "Sweeps PR #42 through the full pipeline and merges via rebase instead of squash",
+      "files": [],
+      "expectations": [
+        "processes PR #42 through all gates (Copilot, comments, rebase, CI)",
+        "uses gh pr merge --rebase --delete-branch instead of --squash",
+        "does NOT use squash merge — the --merge-method=rebase flag overrides the default",
+        "deletes the branch after merge (--delete-branch)",
+        "per-PR summary shows 'Merge: rebase-merged' instead of 'squash-merged'"
+      ]
+    },
+    {
+      "id": 18,
+      "prompt": "sweep all my PRs and merge them — full auto, fix everything copilot and the reviewers found",
+      "expected_output": "Discovers all open PRs, processes each autonomously through the full pipeline, merges those that pass all gates",
+      "files": [],
+      "expectations": [
+        "maps natural language to --auto mode via the flag inference table",
+        "discovers all open PRs via gh pr list since no specific PRs named",
+        "requests Copilot review on each PR if not already present",
+        "CI is a hard gate — each PR must have all checks green to merge",
+        "generates batch sweep summary with per-PR results showing MERGED/SKIPPED status"
+      ]
+    },
+    {
+      "id": 19,
+      "prompt": "/pr-sweep 10 22 35 --auto",
+      "expected_output": "Sweeps 3 PRs. PR #10 merges, PR #22 is skipped (CI failure), PR #35 merges. Summary shows skip reasons",
+      "files": [],
+      "expectations": [
+        "processes all 3 PRs sequentially regardless of individual failures",
+        "PR that passes all gates is merged successfully",
+        "PR that fails CI after retry is skipped with specific reason",
+        "sweep summary clearly shows which PRs merged and which were skipped with reasons",
+        "skip reasons section in summary categorizes failures (e.g., 'CI failed after retry: 1')"
+      ]
+    },
+    {
+      "id": 20,
+      "prompt": "the reviewer left 5 comments — 2 I agree with, 3 are just opinions. sweep PR #44, fix the 2, explain the 3, resolve everything, and merge if CI passes",
+      "expected_output": "Fixes 2 accepted comments, rejects 3 with explanations, achieves 100% reply rate, resolves all threads, waits for CI green, merges",
+      "files": [],
+      "expectations": [
+        "applies fixes for 2 accepted comments with 'Fixed in <sha>' replies",
+        "posts rejection replies with explanations for 3 declined comments",
+        "achieves 100% reply rate (5/5 comments replied)",
+        "resolves ALL 5 threads after push — both fixed and rejected threads",
+        "CI green is verified as a hard gate before merge — if CI fails, retry once then skip"
+      ]
+    }
+  ]
+}

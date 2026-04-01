@@ -1,0 +1,22 @@
+[
+  { "query": "/pr-sweep 42", "should_trigger": true },
+  { "query": "sweep all my PRs and merge them", "should_trigger": true },
+  { "query": "/pr-sweep --auto --confidence=90", "should_trigger": true },
+  { "query": "sweep PRs 10 through 15 autonomously", "should_trigger": true },
+  { "query": "/pr-sweep --no-merge --dry-run", "should_trigger": true },
+  { "query": "process all open PRs end to end — copilot review, fixes, CI, merge", "should_trigger": true },
+  { "query": "clean up my PRs and merge everything that passes", "should_trigger": true },
+  { "query": "/pr-sweep 10 22 35 --merge-method=rebase", "should_trigger": true },
+  { "query": "sweep PR #88 — make sure copilot reviews it first", "should_trigger": true },
+  { "query": "merge all ready PRs after making sure CI is green", "should_trigger": true },
+  { "query": "fix PR comments on #287 — sarah left feedback about error handling", "should_trigger": false },
+  { "query": "address the PR feedback and push the fixes", "should_trigger": false },
+  { "query": "create a PR for my feature branch", "should_trigger": false },
+  { "query": "review comments without fixing anything — just score them", "should_trigger": false },
+  { "query": "just read the comments on my PR and tell me what people said", "should_trigger": false },
+  { "query": "just rebase my branch onto main", "should_trigger": false },
+  { "query": "commit and push my changes", "should_trigger": false },
+  { "query": "write a code review for this pull request", "should_trigger": false },
+  { "query": "check CI status on PR #42", "should_trigger": false },
+  { "query": "configure copilot for this repo", "should_trigger": false }
+]
