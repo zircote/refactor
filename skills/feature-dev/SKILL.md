@@ -38,8 +38,10 @@ Parse `$ARGUMENTS` for the following **before** any other processing:
      - **Phase 3 (Clarifying Questions)**: Skip user interaction. Make design decisions based on codebase patterns discovered in Phase 2. Document decisions made.
      - **Phase 4 (Architecture Selection)**: Instead of presenting options to the user, evaluate all architect proposals and select the best one automatically using this priority: (1) highest alignment with existing codebase conventions, (2) pragmatic balance of quality and simplicity, (3) smallest blast radius. Document the choice and rationale.
      - **Phase 5 (Implementation Approval)**: Skip — proceed directly.
-     - **Phase 6 (Review Disposition)**: Auto-fix all findings with confidence >= 80. Override quality gate only if rigor >= 0.5 and coverage >= 60% (relaxed thresholds for autonomous). Document any overrides.
+     - **Phase 6 (Review Disposition)**: Auto-fix all findings with confidence >= 80. Override quality gate only if rigor >= `config.featureDev.testArchitect.autonomousMinimumRigorScore` (default: 0.5) and coverage >= `config.featureDev.testArchitect.autonomousMinimumCoverage` (default: 60%). These thresholds are configurable — raise them for stricter autonomous quality gates. Document any overrides.
   If `--autonomous` is not present, set `autonomous_mode = false` and all interactive gates operate normally.
+
+- `--context-reset` — Reset orchestrator context between major phases. Writes full state to blackboard checkpoint, then spawns a fresh session to continue. Use for extremely long autonomous runs (20+ iterations). Default: summarize-and-discard without context reset.
 
 - `--iterations=N` — Override the max iteration count for autonomous mode. `N` must be a positive integer (1-20). If present, extract and remove from `$ARGUMENTS` and store as `cli_iterations`. Only meaningful when combined with `--autonomous`.
 
@@ -71,7 +73,9 @@ After extracting flags, the remaining `$ARGUMENTS` is the feature description. I
     "testArchitect": {
       "enabled": true,
       "minimumRigorScore": 0.7,
-      "minimumCoverage": 80
+      "minimumCoverage": 80,
+      "autonomousMinimumRigorScore": 0.5,    // Minimum rigor score for autonomous quality gate override
+      "autonomousMinimumCoverage": 60        // Minimum coverage % for autonomous quality gate override
     }
   }
 }
@@ -89,7 +93,9 @@ After extracting flags, the remaining `$ARGUMENTS` is the feature description. I
   "testArchitect": {
     "enabled": true,
     "minimumRigorScore": 0.7,
-    "minimumCoverage": 80
+    "minimumCoverage": 80,
+    "autonomousMinimumRigorScore": 0.5,
+    "autonomousMinimumCoverage": 60
   }
 }
 ```
@@ -135,7 +141,33 @@ You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with te
    - "Phase 6: Quality Review"
    - "Phase 7: Summary + Cleanup"
 
-   After all 8 tasks are created, **proceed immediately to Phase 1** (Phase 0.2 is a template reference, not an action step).
+   After all 8 tasks are created, **proceed immediately to Step 0.1.5** (checkpoint check).
+
+### Step 0.1.5: Check for Existing Checkpoint
+
+Check blackboard for existing checkpoint from a prior interrupted run:
+
+  blackboard_read(task_id="{blackboard_id}", key="checkpoint")
+
+If checkpoint exists and is valid (non-null, has checkpoint_phase field):
+  - Display: "Found checkpoint from prior run: {checkpoint_phase}, Feature: {feature_summary}."
+  - In interactive mode: Ask user "Resume from checkpoint or restart fresh?"
+  - In autonomous mode: Resume automatically.
+  - If resume: restore state variables (phase, iteration, feature_spec, chosen_architecture) from checkpoint, skip completed phases
+  - If restart: clear checkpoint via blackboard_write with empty value
+
+After each major phase completes, write checkpoint to blackboard:
+  blackboard_write(task_id="{blackboard_id}", key="checkpoint", value=JSON.stringify({
+    checkpoint_phase: "Phase N",
+    iteration: current_iteration (if autonomous),
+    best_score: best.score (if autonomous),
+    feature_spec: feature_spec_summary,
+    chosen_architecture: architecture_name,
+    files_modified: [...],
+    autonomous_mode: boolean
+  }))
+
+**Checkpoint write points**: Write checkpoint after Phase 2 (exploration), Phase 4 (architecture), Phase 4.5 (test plan), and in the autonomous loop after LOG (Step 5.2.D).
 
 ## Phase 0.2: Task Discovery Protocol Template
 
@@ -266,6 +298,16 @@ SendMessage to "code-explorer-{i}": "Task #{id} assigned: codebase exploration. 
    ```
 6. Present comprehensive summary of findings and patterns to the user.
 
+**Context compaction**: Write phase summary to blackboard:
+  blackboard_write(task_id="{blackboard_id}", key="phase_2_summary", value=JSON.stringify({
+    phase: "Phase 2: Codebase Exploration",
+    agents_used: ["code-explorer-1", ..., "code-explorer-N"],
+    key_findings: [list of essential files, patterns, integration points],
+    complexity_assessment: "simple|medium|complex"
+  }))
+
+Summarize explorer findings into a compact record of key facts. Discard the raw exploration transcripts from your working context — the consolidated codebase_context remains on the blackboard for agents to read.
+
 ## Phase 3: Clarifying Questions
 
 **Goal**: Fill in gaps surfaced by codebase exploration.
@@ -348,6 +390,17 @@ SendMessage to "architect-{i}": "Task #{id} assigned: architecture design. Start
    ```
    blackboard_write(task_id="{blackboard_id}", key="chosen_architecture", value="{selected blueprint}")
    ```
+
+**Context compaction**: Write phase summary to blackboard:
+  blackboard_write(task_id="{blackboard_id}", key="phase_4_summary", value=JSON.stringify({
+    phase: "Phase 4: Architecture Design",
+    agents_used: ["architect-1", ..., "architect-N"],
+    architectures_proposed: [brief name/description for each],
+    chosen_architecture: architecture_name,
+    selection_rationale: "brief rationale"
+  }))
+
+Summarize architect proposals into a compact record of key decisions. Discard the raw design transcripts from your working context — the chosen_architecture remains on the blackboard for agents to read.
 
 ## Phase 4.5: Test Architecture Planning
 
@@ -437,14 +490,39 @@ SendMessage to "test-planner": "Task #{id} assigned: create test plan for chosen
 
 For `i = 1` to `max_iterations`:
 
+Inform user: "Autonomous iteration {i}/{max_iterations}: Starting MODIFY phase — targeting: {contract priorities or 'baseline improvements'}."
+
+#### Sprint Contract (Autonomous Only)
+
+Before each iteration, negotiate what "done" looks like:
+
+1. If architects were spawned:
+   - **TaskCreate**: "Propose priorities for autonomous iteration {i}. Read blackboard key 'iteration_{i-1}_weaknesses' (if exists). Propose top 3 improvements with testable done-criteria."
+     - Assign to first available architect
+   - Write contract to blackboard: key="iteration_{i}_contract"
+
 #### 5.2.A: MODIFY — Implement Iteration
 
-1. **TaskCreate**: "Iteration {i}: Implement the feature [{feature}] following the chosen architecture. Read codebase_context, chosen_architecture, clarifications, and feature_spec from blackboard. {If i > 1: 'Build on previous iteration. Focus on addressing weaknesses from prior scoring.'} Write clean, well-integrated code."
+1. If iteration > 1: read blackboard key `iteration_{i-1}_weaknesses` and include `priority_for_next` as explicit targets for feature-code
+2. **TaskCreate**: "Iteration {i}: Implement the feature [{feature}] following the chosen architecture. Read codebase_context, chosen_architecture, clarifications, and feature_spec from blackboard. {If i > 1: 'Build on previous iteration. Focus on addressing weaknesses from prior scoring. Priority targets: {priority_for_next from iteration_{i-1}_weaknesses}.'} Write clean, well-integrated code."
    - Assign to "feature-code", send message, wait for completion
-2. **TaskCreate**: "Iteration {i}: Run the existing test suite against the updated implementation. The test plan is fixed (from Phase 4.5). Do NOT modify test logic — only verify pass/fail status. Write results to {workspace}/iteration-{i}/test-results.json."
+3. **TaskCreate**: "Iteration {i}: Run the existing test suite against the updated implementation. The test plan is fixed (from Phase 4.5). Do NOT modify test logic — only verify pass/fail status. Write results to {workspace}/iteration-{i}/test-results.json."
    - Assign to "test-writer", send message, wait for completion
-3. If test failures: coordinate fix with feature-code, re-test (max 3 attempts)
-4. Track `changelog` from agent reports
+4. If test failures: coordinate fix with feature-code, re-test (max 3 attempts)
+5. Track `changelog` from agent reports
+
+#### 5.2.A.1: Evaluator Pass (Autonomous)
+
+The code-reviewer acts as an independent evaluator — grading the iteration against the chosen architecture BEFORE scoring. This separation catches issues that self-evaluation misses.
+
+1. **TaskCreate**: "EVALUATOR MODE: Grade iteration {i} implementation against the chosen architecture blueprint (blackboard key 'chosen_architecture'). For each acceptance criterion: (1) Is it implemented? (2) Is the implementation correct? (3) Are there gaps? Report PASS or FAIL with specific findings."
+   - **TaskUpdate**: assign owner to "evaluator" (spawn code-reviewer with name "evaluator" if not already spawned)
+   - **SendMessage** to "evaluator": "Task #{id} assigned: evaluate iteration {i} against architecture. Start now."
+2. Wait for completion
+3. If evaluator reports FAIL:
+   - Send findings to feature-code for remediation
+   - Wait for fixes
+   - Re-run evaluator (max 2 rounds)
 
 #### 5.2.B: EVALUATE — Score the Iteration
 
@@ -454,6 +532,18 @@ For `i = 1` to `max_iterations`:
    - Assign to "code-reviewer", send message, wait for completion
 4. Compute: `bash scripts/score.sh {workspace} {i} {score_weights.tests} {score_weights.quality} {score_weights.security}`
 5. Store as `score_i`
+
+#### Write Weakness Feedback
+
+blackboard_write(task_id="{blackboard_id}", key="iteration_{i}_weaknesses", value=JSON.stringify({
+  iteration: i,
+  score: score_i,
+  low_scoring_areas: [from review-scores.json],
+  evaluator_feedback: [from evaluator pass],
+  priority_for_next: [top 3 areas to improve]
+}))
+
+The next iteration reads this to know exactly what to focus on, replacing vague "build on previous iteration" guidance.
 
 #### 5.2.C: KEEP or DISCARD
 
@@ -467,9 +557,22 @@ For `i = 1` to `max_iterations`:
   - `action = "reverted"`
   - Inform user: "Iteration {i}: score {score_i} (no improvement). REVERTED to v{best.version}."
 
+Inform user: "Autonomous iteration {i}/{max_iterations}: EVALUATE complete — score {score_i}. {KEPT/DISCARDED}."
+
 #### 5.2.D: LOG
 
 `bash scripts/results_log.sh append {workspace}/results.tsv {i} {score_i} {best.score} {action} "{changelog}"`
+
+**Checkpoint**: Write checkpoint to blackboard after each iteration:
+  blackboard_write(task_id="{blackboard_id}", key="checkpoint", value=JSON.stringify({
+    checkpoint_phase: "Phase 5-auto",
+    iteration: i,
+    best_score: best.score,
+    feature_spec: feature_spec_summary,
+    chosen_architecture: architecture_name,
+    files_modified: [...],
+    autonomous_mode: true
+  }))
 
 #### 5.2.E: CONVERGENCE CHECK
 
@@ -553,6 +656,8 @@ Agent tool with:
 
 ### Step 5.2: Implement
 
+Inform user: "Implementation: feature-code working on {feature description}..."
+
 1. **TaskCreate**: "Implement the feature [{feature}] following the chosen architecture blueprint. Read codebase_context, chosen_architecture, clarifications, and feature_spec from the blackboard. Follow codebase conventions strictly. Write clean, well-integrated code. Write implementation_report to blackboard when done."
    - **TaskUpdate**: assign owner to "feature-code"
    - **SendMessage** to "feature-code": "Task #{id} assigned: implement feature. Start now."
@@ -569,6 +674,26 @@ Agent tool with:
    - **SendMessage** to "test-writer": "Task #{id} assigned: generate test code from plan. Start now."
 2. Wait for completion.
 3. Read `test_generation_report` from blackboard.
+
+Inform user: "Implementation complete. Running evaluator pass..."
+
+### Step 5.3.5: Evaluator Pass
+
+The code-reviewer acts as an independent evaluator — grading the implementation against the chosen architecture BEFORE the full review swarm runs. This separation catches issues that self-evaluation misses.
+
+1. **Spawn code-reviewer in evaluator mode** (if not already spawned):
+   - Spawn one code-reviewer with name "evaluator" and prompt focused on grading against acceptance criteria
+
+2. **TaskCreate**: "EVALUATOR MODE: Grade the feature implementation against the chosen architecture blueprint (blackboard key 'chosen_architecture'). For each acceptance criterion: (1) Is it implemented? (2) Is the implementation correct? (3) Are there gaps? Report PASS or FAIL with specific findings."
+   - **TaskUpdate**: assign owner to "evaluator"
+   - **SendMessage** to "evaluator": "Task #{id} assigned: evaluate implementation against architecture. Start now."
+3. Wait for completion
+4. If evaluator reports FAIL:
+   - Send findings to feature-code for remediation
+   - Wait for fixes
+   - Re-run evaluator (max 2 rounds)
+
+Inform user: "Evaluator: {PASS/FAIL}. Proceeding to tests..."
 
 ### Step 5.4: Test Verification
 
@@ -678,9 +803,9 @@ SendMessage to "code-reviewer-{i}": "Task #{id} assigned: feature review. Start 
        - **TaskUpdate**: assign owner to "feature-code"
        - **SendMessage** to "feature-code": "Task #{id} assigned: fix code review findings. Start now."
      - Wait for completion.
-   - If gate failed but `rigor_score >= 0.5` and `coverage_pct >= 60%`: auto-override with relaxed autonomous thresholds. Log: "Quality gate auto-overridden (autonomous): rigor {rigor_score}, coverage {coverage_pct}%."
+   - If gate failed but `rigor_score >= ta_config.autonomousMinimumRigorScore` and `coverage_pct >= ta_config.autonomousMinimumCoverage`: auto-override with relaxed autonomous thresholds. Log: "Quality gate auto-overridden (autonomous): rigor {rigor_score}, coverage {coverage_pct}%."
    - If gate failed below relaxed thresholds: attempt one fix cycle:
-     - **TaskCreate**: "Improve implementation to raise quality gate scores. Current: rigor {rigor_score}, coverage {coverage_pct}%. Target: rigor >= 0.5, coverage >= 60%."
+     - **TaskCreate**: "Improve implementation to raise quality gate scores. Current: rigor {rigor_score}, coverage {coverage_pct}%. Target: rigor >= {ta_config.autonomousMinimumRigorScore}, coverage >= {ta_config.autonomousMinimumCoverage}%."
        - **TaskUpdate**: assign owner to "feature-code"
        - **SendMessage** to "feature-code": "Task #{id} assigned: improve implementation for quality gate. Start now."
      - **TaskCreate**: "Improve test coverage to meet quality gate. Current: {coverage_pct}%. Add tests for uncovered paths identified in coverage_report."
@@ -712,6 +837,19 @@ SendMessage to "code-reviewer-{i}": "Task #{id} assigned: feature review. Start 
 7. **If gate passed OR user chose Override** (or autonomous auto-resolved):
    - Store `quality_gate_override = !gate_passed` for summary reporting
    - Proceed to Phase 7
+
+**Context compaction**: Write phase summary to blackboard:
+  blackboard_write(task_id="{blackboard_id}", key="phase_6_summary", value=JSON.stringify({
+    phase: "Phase 6: Quality Review",
+    agents_used: ["code-reviewer-1", ..., "code-reviewer-N", "test-rigor-reviewer", "coverage-analyst"],
+    rigor_score: rigor_score,
+    coverage_pct: coverage_pct,
+    gate_passed: gate_passed,
+    quality_gate_override: quality_gate_override,
+    key_findings: [consolidated high-severity findings]
+  }))
+
+Summarize review findings into a compact record. Discard the raw review transcripts from your working context — the consolidated results remain on the blackboard.
 
 ## Phase 7: Summary + Cleanup
 
@@ -849,11 +987,20 @@ Suggested next steps:
 | `reviewer_{i}_findings` | code-reviewer-{i} | team lead | 6 |
 | `test_rigor_report` | test-rigor-reviewer | team lead | 6 |
 | `coverage_report` | coverage-analyst | team lead | 6 |
+| `checkpoint` | team lead | team lead | 0.1.5, 2, 4, 4.5, 5-auto |
+| `phase_2_summary` | team lead | team lead | 2 |
+| `phase_4_summary` | team lead | team lead | 4 |
+| `phase_6_summary` | team lead | team lead | 6 |
+| `iteration_{i}_weaknesses` | team lead | feature-code | 5-auto |
+| `iteration_{i}_contract` | architect | team lead, feature-code | 5-auto |
 
 ### Context Distribution
 - **Blackboard is primary**: All agents read context from the blackboard using their documented read keys
 - **Write once, read many**: Feature spec written in Phase 1, codebase context in Phase 2 — all downstream agents read as needed
 - **Inline fallback**: If blackboard is unavailable, embed context directly in task descriptions
+- **Validation**: After writing critical keys (`feature_spec`, `codebase_context`, `chosen_architecture`, `test_plan`, `checkpoint`), immediately read back:
+  result = blackboard_read(task_id="{blackboard_id}", key="<key>")
+If result is null or empty: retry the write once. If still failing, use the inline fallback and log a warning.
 
 ### Interactive Gates
 - **Phase 1**: 95% confidence elicitation — must understand the feature
