@@ -56,6 +56,16 @@ class TestDetectTestFramework:
         fw = detect_test_framework("python")
         assert fw["test_runner"] == "pytest"
 
+    def test_deprecated_two_arg_form(self):
+        """Backward compat: detect_test_framework(path, lang) ignores path."""
+        fw = detect_test_framework("/some/path", "rust")
+        assert fw["test_runner"] == "cargo test"
+        assert fw["coverage_tool"] == "cargo-tarpaulin"
+
+    def test_deprecated_two_arg_form_python(self):
+        fw = detect_test_framework("/any/path", "python")
+        assert fw["test_runner"] == "pytest"
+
     def test_unknown_language_raises(self):
         with pytest.raises(UnsupportedLanguageError, match="unsupported language: unknown"):
             detect_test_framework("unknown")

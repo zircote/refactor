@@ -40,11 +40,16 @@ def detect_language(path: str) -> str | None:
     return None
 
 
-def detect_test_framework(lang: str) -> FrameworkInfo:
+def detect_test_framework(lang_or_path: str, lang: str | None = None) -> FrameworkInfo:
     """Map a detected language to its test runner, coverage tool, and property lib.
 
+    Supports two call forms for backward compatibility:
+        detect_test_framework(lang)            — current API
+        detect_test_framework(path, lang)      — deprecated, path is ignored
+
     Args:
-        lang: Language identifier from detect_language().
+        lang_or_path: Language identifier, or a filesystem path (deprecated).
+        lang: Language identifier when first arg is a path (deprecated form).
 
     Returns:
         Dict with keys: test_runner, coverage_tool, property_lib.
@@ -52,9 +57,13 @@ def detect_test_framework(lang: str) -> FrameworkInfo:
     Raises:
         UnsupportedLanguageError: If the language is not in the registry.
     """
-    config = get_config(lang)
+    # Backward-compat shim: if called as detect_test_framework(path, lang),
+    # the second argument is the actual language; ignore the path.
+    effective_lang = lang if lang is not None else lang_or_path
+
+    config = get_config(effective_lang)
     if config is None:
-        raise UnsupportedLanguageError(lang)
+        raise UnsupportedLanguageError(effective_lang)
     return {
         "test_runner": config.test_runner,
         "coverage_tool": config.coverage_tool,

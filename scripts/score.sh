@@ -55,9 +55,10 @@ with open('${review_file}') as f:
     d = json.load(f)
 qs = d.get('quality_score', 0)
 ss = d.get('security_score', 0)
-# Auto-detect scale: if either score > 1.0, assume 0-10 scale and normalize
-if qs > 1.0 or ss > 1.0:
+# Auto-detect scale: normalize each score independently
+if qs > 1.0:
     qs = qs / 10.0
+if ss > 1.0:
     ss = ss / 10.0
 # Cap at 0.5 if blocking findings exist
 if d.get('blocking_findings', False):
