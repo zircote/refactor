@@ -435,7 +435,13 @@ gh pr list --state open --json number,title,headRefName,body \
   | jq '[.[] | select(.body | test("Resolves.*#'${ISSUE_NUMBER}'") or .headRefName | test("issue-'${ISSUE_NUMBER}'-"))]'
 ```
 
-If a matching PR exists: capture PR number and branch, skip to Phase 3 (review the existing PR).
+If a matching PR exists: capture PR number and branch. Request Copilot review if not already present:
+
+```bash
+EXISTING_REVIEW=$(gh pr view ${PR_NUMBER} --json reviews -q '[.reviews[] | select(.author.login == "copilot-pull-request-reviewer[bot]" or .author.login == "copilot[bot]")] | length')
+```
+
+If `EXISTING_REVIEW == 0`: request Copilot review (same as Step 2.6). Then **skip to Phase 3** (review the existing PR). Steps 2.3-2.7 are bypassed — no branch, implementation, or PR creation needed.
 
 ### Step 2.3: Detect Complexity + Route
 
@@ -465,10 +471,16 @@ git checkout -b "${BRANCH}" "origin/${DEFAULT_BRANCH}"
 If the branch already exists (from a previous attempt):
 ```bash
 git checkout "${BRANCH}"
+```
+
+If `--skip-rebase` is NOT set:
+```bash
 git rebase "origin/${DEFAULT_BRANCH}"
 ```
 
 If rebase conflicts on an existing branch: delete the branch and recreate from scratch. The previous attempt's work is abandoned — a clean start is safer than resolving stale conflicts.
+
+If `--skip-rebase` is set: use the branch as-is without rebasing.
 
 ### Step 2.5: Implementation
 
@@ -596,9 +608,11 @@ blackboard_write(scope="{blackboard_id}", key="grind:checkpoint", value={
 
 Launch all three review layers in the **same tool-call message** for true parallel execution:
 
-#### Layer 1: Copilot (already requested in Step 2.6)
+#### Layer 1: Copilot (requested in Step 2.6 or Step 2.2 for existing PRs)
 
 Copilot is async — review was already requested. Polling begins in Step 3.2.
+
+**Note**: With triple-layer review, Copilot is a **soft gate** — timeout proceeds without Copilot findings (Sonnet + Codex still provide coverage). This differs from the original single-layer behavior where Copilot timeout skipped the entire issue.
 
 #### Layer 2: Sonnet Code-Reviewer
 
@@ -794,7 +808,7 @@ Score each actionable comment:
 
 Read before edit. Minimal fixes. Verify each fix (syntax, lint). If a fix breaks something, revert and flag.
 
-For adversarial findings that are design-level and cannot be auto-fixed: **skip item** with reason `"Adversarial finding requires manual review: <summary>"` if the finding is blocking (P0/P1). Non-blocking adversarial findings are logged but do not block.
+For adversarial findings that are design-level and cannot be auto-fixed: if the finding is blocking (P0/P1), **skip item** with reason `"Adversarial finding requires manual review: <summary>"`. Clean up the branch (`git checkout ${DEFAULT_BRANCH} && git branch -D ${BRANCH}`). Update manifest item state to `skipped`. **Jump to Phase 5** (Verification + Checkpoint) then Phase 6 (Loop Control). Non-blocking adversarial findings are logged but do not block.
 
 ---
 
@@ -882,7 +896,7 @@ git commit --allow-empty -m "ci: retry checks for PR #${PR_NUMBER}"
 git push origin ${BRANCH}
 ```
 
-If CI fails after retry: **skip issue** with reason `"CI failed after retry: <check names>"`.
+If CI fails after retry: **skip issue** with reason `"CI failed after retry: <check names>"`. Update manifest item state to `skipped`. **Jump to Phase 5** (Verification + Checkpoint) then Phase 6 (Loop Control).
 
 ### Step 4.6: Final Verification
 
@@ -892,11 +906,20 @@ Verify all gates hold before merge:
 - CI all green
 - Branch up-to-date with base
 
-If any verification fails: **skip issue** with reason.
+If branch is not up-to-date with base and `--skip-rebase` is NOT set:
+```bash
+git fetch origin ${DEFAULT_BRANCH}
+git rebase "origin/${DEFAULT_BRANCH}"
+```
+If rebase conflicts: **skip issue** with reason `"Rebase conflicts during final verification"`. Update manifest. **Jump to Phase 5** then Phase 6.
+
+If `--skip-rebase` is set and branch is behind: proceed to merge anyway (squash merge handles divergence).
+
+If any other verification fails: **skip issue** with reason. Update manifest. **Jump to Phase 5** then Phase 6.
 
 ### Step 4.7: Merge
 
-Skip if `--no-merge` is set (report as READINESS-ONLY).
+Skip if `--no-merge` is set (report as READINESS-ONLY). Update manifest item state to `"readiness-only"`. **Jump to Phase 5** then Phase 6.
 
 ```bash
 gh pr merge ${PR_NUMBER} --squash --delete-branch
@@ -908,7 +931,7 @@ gh pr merge ${PR_NUMBER} --merge --delete-branch
 gh pr merge ${PR_NUMBER} --rebase --delete-branch
 ```
 
-If merge is blocked: **skip issue** with reason `"Merge blocked: <error>"`.
+If merge is blocked: **skip issue** with reason `"Merge blocked: <error>"`. Update manifest. **Jump to Phase 5** then Phase 6.
 
 ---
 
