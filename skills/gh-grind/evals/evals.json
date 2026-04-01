@@ -1,0 +1,267 @@
+{
+  "skill_name": "gh-grind",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/gh-grind 42 --once",
+      "expected_output": "Grinds issue #42: creates branch, implements fix, creates ready PR, requests Copilot review, remediates comments, waits for CI green, merges, verifies issue closed",
+      "files": [],
+      "expectations": [
+        "creates branch gh-do/issue-42-<slug> from HEAD of default branch",
+        "implements the fix based on issue body and repo patterns",
+        "creates a READY PR (not draft) with 'Resolves owner/repo#42' in the body",
+        "requests Copilot review via gh api with copilot-pull-request-reviewer[bot]",
+        "CI is a hard gate — waits for all checks to pass before merge",
+        "merges via gh pr merge --squash --delete-branch",
+        "verifies issue #42 is closed after merge"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "issue #100 is an epic with sub-issues #101, #102, #103. grind through it",
+      "expected_output": "Detects epic, processes sub-issues #101, #102, #103 first in creation order, then closes the epic after all subs are merged",
+      "files": [],
+      "expectations": [
+        "detects issue #100 as an epic by finding sub-issue references in the body",
+        "extracts sub-issues and adds them to the queue ahead of the epic",
+        "processes sub-issues in creation-date order (oldest first)",
+        "each sub-issue gets the full pipeline: branch, implement, PR, sweep, merge",
+        "after all sub-issues are merged, verifies and closes the epic"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/gh-grind 55 --once",
+      "expected_output": "Issue #55 is a simple bug (type/bug label). Routes to inline implementation, not feature-dev swarm",
+      "files": [],
+      "expectations": [
+        "reads issue #55 labels and detects type/bug",
+        "routes to SIMPLE (inline) implementation — does NOT invoke feature-dev swarm",
+        "reads issue body and repo structure before implementing",
+        "commits with conventional format: fix: <description>",
+        "includes Resolves owner/repo#55 in commit body"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "/gh-grind 77 --once",
+      "expected_output": "Issue #77 is a complex feature (type/feature with complexity/high label). Routes to feature-dev swarm for implementation",
+      "files": [],
+      "expectations": [
+        "reads issue #77 labels and detects type/feature + complexity/high",
+        "routes to COMPLEX (feature-dev swarm) implementation",
+        "feature-dev runs multi-agent pipeline: explore, architect, implement, review",
+        "after feature-dev completes, verifies commit includes Resolves owner/repo#77",
+        "creates ready PR and proceeds through sweep gates"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "/gh-grind 42 --once --auto",
+      "expected_output": "CI fails on first attempt, retries once. CI passes on retry, PR is merged",
+      "files": [],
+      "expectations": [
+        "waits for CI completion after push using explicit check-sleep-recheck poll",
+        "detects CI failure on first attempt and logs failing check names",
+        "retries once by pushing an empty commit",
+        "waits for CI again after retry",
+        "CI passes on retry — proceeds to merge"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "/gh-grind 42 --once --auto",
+      "expected_output": "CI fails twice (initial + retry). Issue is skipped with reason, grind report shows skip",
+      "files": [],
+      "expectations": [
+        "CI fails on first attempt — retries once",
+        "CI fails again after retry",
+        "skips issue with reason 'CI failed after retry: <check names>'",
+        "does NOT attempt merge when CI hard gate fails",
+        "grind report shows issue as SKIPPED with CI failure reason"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "/gh-grind 88 --once --auto",
+      "expected_output": "Copilot review is requested but times out after 10 minutes. Issue is skipped",
+      "files": [],
+      "expectations": [
+        "requests Copilot review via gh api with copilot-pull-request-reviewer[bot]",
+        "polls for review using check-sleep-recheck loop (Step A/B/C pattern)",
+        "after 20 attempts (10 minutes), times out",
+        "skips issue with reason 'Copilot review timed out'",
+        "does NOT proceed to comment remediation or merge"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "/gh-grind 99 --once --auto",
+      "expected_output": "Rebase encounters unresolvable merge conflict. Issue is skipped",
+      "files": [],
+      "expectations": [
+        "attempts rebase onto default branch during sweep phase",
+        "detects unresolvable merge conflict",
+        "skips issue with reason 'Unresolvable merge conflict in <files>'",
+        "does NOT attempt to push, wait for CI, or merge",
+        "continues to next item if queue is not empty"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "/gh-grind --dry-run",
+      "expected_output": "Discovers all post-triage issues, displays the queue with priorities and epic detection, but makes no changes",
+      "files": [],
+      "expectations": [
+        "discovers all post-triage open issues via gh issue list with jq filter",
+        "detects epics and shows sub-issue relationships",
+        "displays prioritized queue with labels and types",
+        "labels output as 'DRY RUN — no changes were made'",
+        "does NOT create branches, implement, create PRs, or merge"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "/gh-grind --once --limit=3",
+      "expected_output": "Processes exactly 3 items from the queue, then generates a grind report and exits",
+      "files": [],
+      "expectations": [
+        "discovers all post-triage issues and assembles priority queue",
+        "processes items sequentially — each fully merged before next",
+        "stops after exactly 3 items regardless of remaining queue size",
+        "generates grind report showing 3 items processed",
+        "exits without polling for new work due to --once flag"
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "/gh-grind --once",
+      "expected_output": "Discovers all issues, processes each, queue empties, single-pass exits with grind report",
+      "files": [],
+      "expectations": [
+        "processes all post-triage issues in priority order",
+        "each item gets full pipeline: branch, implement, PR, sweep, merge",
+        "sequential processing — one item fully merged before next begins",
+        "after queue empties, generates grind report and exits (--once mode)",
+        "does NOT poll for new work due to --once flag"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "/gh-grind --poll=5",
+      "expected_output": "Queue empties after processing, polls every 5 minutes, finds a new issue, processes it",
+      "files": [],
+      "expectations": [
+        "processes all current items to completion",
+        "when queue empties, logs 'Queue empty. Polling in 5 minutes...'",
+        "sleeps for 5 minutes then re-assembles queue via gh issue list",
+        "when new item is found, processes it through full pipeline",
+        "continues polling after processing new items"
+      ]
+    },
+    {
+      "id": 13,
+      "prompt": "/gh-grind --once --auto",
+      "expected_output": "Every issue in the queue fails at various gates. Grind report shows all skipped with reasons",
+      "files": [],
+      "expectations": [
+        "attempts each item in priority order",
+        "each item encounters a gate failure (various reasons)",
+        "no items are merged — all are skipped",
+        "grind report shows 0 merged, N skipped",
+        "skip reasons are categorized (CI failure, Copilot timeout, merge conflict, etc.)"
+      ]
+    },
+    {
+      "id": 14,
+      "prompt": "/gh-grind 42 --once",
+      "expected_output": "Issue #42 already has an open PR. Skips implementation and branches, goes directly to sweep phase",
+      "files": [],
+      "expectations": [
+        "checks for existing PR matching issue #42 via gh pr list",
+        "finds a matching open PR (body contains Resolves or branch contains issue-42)",
+        "skips Phase 2 (branch) and Phase 3 (implementation) entirely",
+        "proceeds directly to Phase 5 (sweep) on the existing PR",
+        "sweeps the PR through Copilot review, CI, and merge gates"
+      ]
+    },
+    {
+      "id": 15,
+      "prompt": "/gh-grind 42 --once --auto",
+      "expected_output": "After merge, verifies issue #42 was auto-closed. If not, closes it explicitly",
+      "files": [],
+      "expectations": [
+        "after successful merge, checks issue state via gh issue view --json state",
+        "if issue is still open, closes it explicitly via gh issue close --reason completed",
+        "logs result as MERGED in the grind report",
+        "grind report shows issue #42 with commit SHA",
+        "verifies issue closure is the final step before moving to next item"
+      ]
+    },
+    {
+      "id": 16,
+      "prompt": "/gh-grind --once --auto",
+      "expected_output": "Mixed queue: priority/critical bug, priority/high feature, priority/medium chore. Processed in priority order",
+      "files": [],
+      "expectations": [
+        "assembles queue with items at different priority levels",
+        "processes priority/critical item first, regardless of creation date",
+        "then priority/high, then priority/medium",
+        "each item gets implementation routed by type: bug=inline, complex feature=feature-dev",
+        "grind report shows items in the order they were processed"
+      ]
+    },
+    {
+      "id": 17,
+      "prompt": "/gh-grind --no-merge --once",
+      "expected_output": "Processes all items through implementation and sweep but skips merge step. Reports as READINESS-ONLY",
+      "files": [],
+      "expectations": [
+        "implements each issue, creates PR, drives through Copilot + CI gates",
+        "skips Phase 5.11 (merge) due to --no-merge flag",
+        "reports each item as READINESS-ONLY instead of MERGED",
+        "CI is still a hard gate — items that fail CI are skipped",
+        "grind report shows readiness count instead of merged count"
+      ]
+    },
+    {
+      "id": 18,
+      "prompt": "/gh-grind --poll=15 --auto",
+      "expected_output": "Custom poll interval of 15 minutes. After queue empties, polls every 15 minutes for new work",
+      "files": [],
+      "expectations": [
+        "processes all current items",
+        "when queue empties, uses 15-minute poll interval (not default 10)",
+        "log message shows 'Polling in 15 minutes...'",
+        "re-assembles queue after each poll interval",
+        "continues indefinitely until stopped or new items arrive"
+      ]
+    },
+    {
+      "id": 19,
+      "prompt": "grind through my issues and merge everything — just keep going until the backlog is clear",
+      "expected_output": "Maps natural language to continuous grind mode, discovers all post-triage issues, processes each end-to-end, polls for new work when done",
+      "files": [],
+      "expectations": [
+        "maps natural language intent to default gh-grind mode (no --once, continuous polling)",
+        "discovers all post-triage issues via queue assembly",
+        "processes each issue through full pipeline: branch, implement, PR, sweep, merge",
+        "after queue empties, polls every 10 minutes (default) for new work",
+        "generates grind report when eventually stopped or interrupted"
+      ]
+    },
+    {
+      "id": 20,
+      "prompt": "/gh-grind --once --auto",
+      "expected_output": "Grind report with detailed skip reason breakdown: 2 merged, 1 CI failure, 1 Copilot timeout, 1 implementation failure",
+      "files": [],
+      "expectations": [
+        "grind report shows total items processed, merged count, skipped count",
+        "per-item results show MERGED with commit SHA or SKIPPED with specific reason",
+        "skip reasons section categorizes failures: CI failed, Copilot timeout, implementation failed",
+        "epic section shows partial completion status if applicable",
+        "report includes session duration and poll cycle count"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+[
+  { "query": "/gh-grind", "should_trigger": true },
+  { "query": "grind through my issues and merge everything", "should_trigger": true },
+  { "query": "/gh-grind --once --limit=5", "should_trigger": true },
+  { "query": "clear the backlog — implement, PR, and merge all open issues", "should_trigger": true },
+  { "query": "keep grinding until the queue is empty, poll every 5 minutes", "should_trigger": true },
+  { "query": "/gh-grind 42 55 67 --auto", "should_trigger": true },
+  { "query": "process all my open issues end to end and merge them", "should_trigger": true },
+  { "query": "/gh-grind --dry-run", "should_trigger": true },
+  { "query": "run the background work loop on this repo — implement everything and merge", "should_trigger": true },
+  { "query": "grind issues 10 through 20 autonomously", "should_trigger": true },
+  { "query": "triage issue #42 — classify and label it", "should_trigger": false },
+  { "query": "sweep the existing PRs and merge them", "should_trigger": false },
+  { "query": "fix the review comments on PR #55", "should_trigger": false },
+  { "query": "create a PR for my feature branch", "should_trigger": false },
+  { "query": "implement this one feature using the swarm pipeline", "should_trigger": false },
+  { "query": "just rebase my branch onto main", "should_trigger": false },
+  { "query": "commit and push my changes", "should_trigger": false },
+  { "query": "review this PR and leave feedback", "should_trigger": false },
+  { "query": "check CI status on PR #42", "should_trigger": false },
+  { "query": "label this issue as priority/high", "should_trigger": false }
+]
