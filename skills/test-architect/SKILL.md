@@ -55,10 +55,16 @@ Coverage analysis only: detect → run coverage tools → identify gaps → sugg
 
 ### Step 0.1: Detect Project
 
-Run project detection using the detection script:
+Run project detection using the detection module:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/detect_project.py <target_path>
+python3 -m scripts.detect_project <target_path>
+```
+
+Or, if running from outside the plugin root:
+
+```bash
+python3 -c "import sys; sys.path.insert(0, '${CLAUDE_PLUGIN_ROOT}'); from scripts.detect_project import detect_project; import json; print(json.dumps(detect_project(sys.argv[1])))" <target_path>
 ```
 
 Or detect manually:

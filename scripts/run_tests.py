@@ -57,6 +57,31 @@ _TYPESCRIPT_PATTERNS: dict[str, str] = {
 }
 
 
+def _parse_typescript_output(output: str) -> TestCounts:
+    """Parse vitest summary, preferring the 'Tests' line over 'Test Files'.
+
+    Vitest emits two summary lines:
+      Test Files  1 passed (1)
+      Tests       42 passed (42)
+
+    A naive first-match regex hits the 'Test Files' line and reports
+    passed=1 instead of passed=42. This parser looks for the 'Tests'
+    summary line specifically and falls back to the generic regex only
+    if no 'Tests' line is found.
+    """
+    tests_section = re.search(r"^\s*Tests\s+(.+)$", output, re.MULTILINE)
+    if tests_section:
+        line = tests_section.group(1)
+        passed_m = re.search(r"(\d+)\s+passed", line)
+        failed_m = re.search(r"(\d+)\s+failed", line)
+        return {
+            "passed": int(passed_m.group(1)) if passed_m else 0,
+            "failed": int(failed_m.group(1)) if failed_m else 0,
+            "errors": 0,
+        }
+    return _parse_regex_counts(output, _TYPESCRIPT_PATTERNS)
+
+
 def _parse_rust_output(output: str) -> TestCounts:
     """Parse cargo test summary line: 'test result: ok. X passed; Y failed; Z ignored'."""
     match = re.search(
@@ -75,11 +100,6 @@ def _parse_rust_output(output: str) -> TestCounts:
 def _parse_python_output(output: str) -> TestCounts:
     """Parse pytest summary line: 'X passed, Y failed, Z error'."""
     return _parse_regex_counts(output, _PYTHON_PATTERNS)
-
-
-def _parse_typescript_output(output: str) -> TestCounts:
-    """Parse vitest summary: 'Tests  X passed | Y failed'."""
-    return _parse_regex_counts(output, _TYPESCRIPT_PATTERNS)
 
 
 def _parse_go_output(output: str) -> TestCounts:
