@@ -103,10 +103,11 @@ class TestDetectProjectCLI:
         """python -m scripts.detect_project <path> must produce valid JSON."""
         import json
         import subprocess
+        import sys
 
         project = tmp_project("python")
         result = subprocess.run(
-            ["python3", "-m", "scripts.detect_project", str(project)],
+            [sys.executable, "-m", "scripts.detect_project", str(project)],
             capture_output=True,
             text=True,
             cwd=str(Path(__file__).parent.parent),
@@ -118,9 +119,10 @@ class TestDetectProjectCLI:
     def test_cli_entry_point_fails_on_bad_path(self):
         """python -m scripts.detect_project /bad/path must exit non-zero."""
         import subprocess
+        import sys
 
         result = subprocess.run(
-            ["python3", "-m", "scripts.detect_project", "/nonexistent/path"],
+            [sys.executable, "-m", "scripts.detect_project", "/nonexistent/path"],
             capture_output=True,
             text=True,
             cwd=str(Path(__file__).parent.parent),

@@ -58,7 +58,7 @@ After extracting flags, the remaining `$ARGUMENTS` is the feature description. I
 3. **If file does NOT exist**: Create with defaults and proceed.
 
 **Config schema v4.0** — feature-dev uses the `featureDev` and (if autonomous) `autonomous` sections:
-```json
+```jsonc
 {
   "version": "4.0",
   "iterations": 3,
