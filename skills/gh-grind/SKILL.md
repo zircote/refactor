@@ -993,6 +993,12 @@ git rebase "origin/${DEFAULT_BRANCH}"
 ```
 If rebase conflicts: **skip issue** with reason `"Rebase conflicts during final verification"`. Update manifest. **Jump to Phase 5** then Phase 6.
 
+If rebase succeeds: push the rebased branch and **re-run CI** before merging (the rebase changed the SHA — prior CI results are stale):
+```bash
+git push --force-with-lease origin ${BRANCH}
+```
+Then re-run the CI gate (Step 4.5 poll logic): poll `gh pr checks ${PR_NUMBER}` up to 30 attempts (30s apart). On first CI failure, retry once via empty commit push. If CI still fails after retry: **skip issue** with reason `"CI failed after final-verification rebase"`. Update manifest. **Jump to Phase 5** then Phase 6.
+
 If `--skip-rebase` is set and branch is behind: proceed to merge anyway (squash merge handles divergence).
 
 If any other verification fails: **skip issue** with reason. Update manifest. **Jump to Phase 5** then Phase 6.
