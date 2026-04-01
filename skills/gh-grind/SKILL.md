@@ -272,6 +272,7 @@ Store as `manifest`. Write to `.claude/grind-progress.json`.
       "routing": "SIMPLE",
       "state": "merged",
       "pr_number": 101,
+      "branch": "gh-do/issue-42-fix-null-pointer",
       "commit_sha": "abc1234",
       "review_layers": {
         "copilot": {"status": "approved", "findings": 0},
@@ -358,11 +359,36 @@ gh issue list --repo ${REPO} --state open \
 
 **Manifest-aware**: For each discovered issue, check if it already exists in `manifest.items`:
 - If `state == "merged"`: skip (already completed and issue closed).
-- If `state == "skipped"`: include in queue (available for retry — issue is still open).
-- If `state == "readiness-only"`: skip to Phase 3 for this item if `--no-merge` is NOT set (PR exists, ready to merge). If `--no-merge` is still set, skip entirely.
-- If `state == "in-progress"`: resume from where it left off (check for existing PR → Phase 3 if found, otherwise restart from Phase 2.4).
+- If `state == "skipped"`: reset to `"queued"` and include in queue (available for retry — issue is still open). Clear `skip_reason` and `completed_at`.
+- If `state == "readiness-only"` AND `--no-merge` is NOT set: add to a separate **merge-ready list** (not the main queue). These items follow the **Readiness-Only Merge Path** (see below) instead of the normal Phase 2-4 pipeline. If `--no-merge` is still set, skip entirely.
+- If `state == "in-progress"`: include in queue (previous session was interrupted — item restarts from Phase 2.1, which checks for existing PR in Step 2.2).
 - If `state == "queued"`: include in queue.
 - If not in manifest: add with `state: "queued"`.
+
+#### Readiness-Only Merge Path
+
+Items in the merge-ready list are processed **before** the main queue. For each:
+
+1. **Restore state from manifest**: Set `ISSUE_NUMBER = item.number`, `PR_NUMBER = item.pr_number`, `BRANCH = item.branch` (derive from PR if not stored: `gh pr view ${PR_NUMBER} --json headRefName -q '.headRefName'`).
+2. **Verify PR still exists and is open**:
+   ```bash
+   PR_STATE=$(gh pr view ${PR_NUMBER} --json state -q '.state')
+   ```
+   If PR is closed or merged by another process: update manifest to `"merged"` or `"skipped"`, skip to next item.
+3. **Verify CI is still green** (branch may have gone stale):
+   ```bash
+   gh pr checks ${PR_NUMBER}
+   ```
+   If CI is failing or stale: rebase and re-push, then re-run CI gate (Phase 4.5 logic). If rebase conflicts or CI fails after retry: update manifest to `"skipped"` with reason, skip to next item.
+4. **Merge** (Phase 4.7 logic):
+   ```bash
+   gh pr merge ${PR_NUMBER} --${MERGE_METHOD} --delete-branch
+   ```
+   If merge blocked: update manifest to `"skipped"` with reason, skip to next item.
+5. **Verify issue closed** (Phase 5.1 logic — merged items only).
+6. **Update manifest**: set state to `"merged"`, write to disk.
+
+After all merge-ready items are processed, continue with the main queue (Phase 2).
 
 ### Step 1.3: Epic Detection
 
@@ -573,7 +599,7 @@ PRBODY
 )"
 ```
 
-Capture the PR number. Update manifest item `pr_number`.
+Capture the PR number. Update manifest item `pr_number` and `branch`.
 
 #### Request Copilot Review
 
