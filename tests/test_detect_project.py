@@ -94,3 +94,37 @@ class TestDetectProject:
         assert "framework" in result
         assert "existing_tests" in result
         assert "path" in result
+
+
+class TestDetectProjectCLI:
+    """Regression: detect_project.py must be runnable as a module via python -m."""
+
+    def test_cli_entry_point_produces_json(self, tmp_project):
+        """python -m scripts.detect_project <path> must produce valid JSON."""
+        import json
+        import subprocess
+        import sys
+
+        project = tmp_project("python")
+        result = subprocess.run(
+            [sys.executable, "-m", "scripts.detect_project", str(project)],
+            capture_output=True,
+            text=True,
+            cwd=str(Path(__file__).parent.parent),
+        )
+        assert result.returncode == 0, f"CLI failed: {result.stderr}"
+        data = json.loads(result.stdout)
+        assert data["language"] == "python"
+
+    def test_cli_entry_point_fails_on_bad_path(self):
+        """python -m scripts.detect_project /bad/path must exit non-zero."""
+        import subprocess
+        import sys
+
+        result = subprocess.run(
+            [sys.executable, "-m", "scripts.detect_project", "/nonexistent/path"],
+            capture_output=True,
+            text=True,
+            cwd=str(Path(__file__).parent.parent),
+        )
+        assert result.returncode != 0

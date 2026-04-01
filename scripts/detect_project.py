@@ -124,3 +124,18 @@ def detect_project(path: str) -> ProjectInfo:
         "test_dirs": test_dirs,
         "existing_tests": existing_tests,
     }
+
+
+if __name__ == "__main__":
+    import json
+    import sys
+
+    if len(sys.argv) < 2:
+        print("Usage: python -m scripts.detect_project <target_path>", file=sys.stderr)
+        sys.exit(1)
+    try:
+        result = detect_project(sys.argv[1])
+        print(json.dumps(result, indent=2))
+    except (ProjectDetectionError, UnsupportedLanguageError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)

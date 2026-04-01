@@ -60,6 +60,8 @@ Parse `$ARGUMENTS` for the following **before** any other processing:
   6. Set `is_focused = true`
   7. If `--focus` is not provided: set `is_focused = false` and `active_agents = {code-explorer, architect, refactor-test, refactor-code, simplifier, code-reviewer}` (all 6 — test-architect agents excluded unless explicitly focused)
 
+- `--context-reset` — Reset orchestrator context between major phases. Writes full state to blackboard checkpoint, then spawns a fresh session to continue from the next phase. Use for extremely long autonomous runs (20+ iterations). Default: summarize-and-discard without context reset.
+
 After extracting flags, the remaining arguments are interpreted as:
 - If empty: refactor the entire codebase
 - If file path: refactor specific file(s)
@@ -186,6 +188,20 @@ You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with te
    ```
    Store the returned blackboard ID as `blackboard_id`. This will be passed to all teammates at spawn time so they can read/write shared context (codebase maps, baseline data, iteration results).
 
+**Step 0.2.3**: Check for existing checkpoint from a prior interrupted run:
+   ```
+   blackboard_read(task_id="{blackboard_id}", key="checkpoint")
+   ```
+
+   If checkpoint exists and is valid (non-null, parseable JSON):
+   - Display: "Found checkpoint from prior run: Phase {checkpoint.checkpoint_phase}, Iteration {checkpoint.iteration}, Score {checkpoint.best_score}."
+   - **In interactive mode** (`autonomous_mode = false`): Ask user "Resume from checkpoint or restart fresh?" via AskUserQuestion
+   - **In autonomous mode** (`autonomous_mode = true`): Resume automatically.
+   - **If resume**: restore state variables from checkpoint (`refactoring_iteration`, `best`, `scope`, `active_agents`, `autonomous_mode`), skip completed phases by jumping to the phase indicated in `checkpoint.checkpoint_phase`
+   - **If restart**: clear checkpoint via `blackboard_write(task_id="{blackboard_id}", key="checkpoint", value="")` and proceed normally
+
+   If checkpoint does not exist or is empty: proceed normally.
+
 3. Use **TaskCreate** to create the high-level phase tasks:
    - "Phase 0.5: Deep codebase discovery" (if code-explorer in active_agents)
    - "Phase 1: Foundation analysis (parallel)"
@@ -195,9 +211,16 @@ You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with te
    - "Phase 4: Report and cleanup"
    - **If autonomous_mode**: Create workspace directory: `{scope-slug}-autonomous/`
 
-### Step 0.3: Spawn Teammates
+### Step 0.3: Spawn Teammates (Deferred Spawning)
 
-Spawn only agents in `active_agents` using the **Agent tool** with `team_name: "refactor-team"`. The `team_name` parameter is REQUIRED on every Agent call — it registers the agent as a persistent teammate rather than a fire-and-forget subagent. Launch all selected agents in parallel.
+Spawn agents in phases to avoid wasting resources on early exit (e.g., scope clarification failure, discovery finding nothing to refactor). Only immediately-needed agents spawn here; others spawn just before their first use.
+
+**Phase 0.3 (upfront)**: code-explorer, refactor-test, refactor-code — needed for discovery and foundation.
+**Phase 1 (Step 0.9)**: architect, code-reviewer — deferred until after discovery completes successfully.
+**Phase 2 (at iteration start)**: simplifier, test-planner, test-writer, test-rigor-reviewer, coverage-analyst — deferred until the iteration loop begins.
+**convergence-reporter**: Spawned at finalization (no change).
+
+Spawn using the **Agent tool** with `team_name: "refactor-team"`. The `team_name` parameter is REQUIRED on every Agent call — it registers the agent as a persistent teammate rather than a fire-and-forget subagent. Launch all selected agents in parallel.
 
 Each teammate receives the same task-discovery protocol and blackboard ID in their spawn prompt. This is critical for preventing stuck agents:
 
@@ -236,50 +259,7 @@ TASK DISCOVERY PROTOCOL:
      6. NEVER commit code via git — only the team lead commits."
    ```
 
-2. **architect** teammate (**If "architect" in active_agents**):
-   ```
-   Agent tool with:
-     subagent_type: "refactor:architect"
-     team_name: "refactor-team"
-     name: "architect"
-     prompt: "You are the architect agent on a refactoring swarm team. The scope is: {scope}.
-
-     BLACKBOARD: {blackboard_id}
-     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
-     Use blackboard_write to share your optimization plans with key 'architect_plan'.
-
-     TASK DISCOVERY PROTOCOL:
-     1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
-     2. Call TaskGet on your assigned task to read the full description.
-     3. Work on the task.
-     4. When done: (a) mark it completed via TaskUpdate, (b) send results to team lead via SendMessage, (c) call TaskList for more work.
-     5. If no tasks assigned, wait for next message.
-     6. NEVER commit code via git — only the team lead commits."
-   ```
-
-3. **code-reviewer** teammate (**If "code-reviewer" in active_agents**):
-   ```
-   Agent tool with:
-     subagent_type: "refactor:code-reviewer"
-     team_name: "refactor-team"
-     name: "code-reviewer"
-     prompt: "You are the code reviewer agent on a refactoring swarm team. The scope is: {scope}.
-     You handle BOTH quality review (bugs, logic, conventions with confidence scoring) AND security review (regressions, secrets, OWASP with severity classification).
-
-     BLACKBOARD: {blackboard_id}
-     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
-     Use blackboard_write to share your baseline with key 'reviewer_baseline'.
-
-     TASK DISCOVERY PROTOCOL:
-     1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
-     2. Call TaskGet on your assigned task to read the full description.
-     3. Work on the task.
-     4. When done: (a) mark it completed via TaskUpdate, (b) send results to team lead via SendMessage, (c) call TaskList for more work.
-     5. If no tasks assigned, wait for next message.
-     6. NEVER commit code via git — only the team lead commits."
-   ```
-
-4. **refactor-test** teammate (**Always spawned**):
+2. **refactor-test** teammate (**Always spawned**):
    ```
    Agent tool with:
      subagent_type: "refactor:refactor-test"
@@ -299,7 +279,7 @@ TASK DISCOVERY PROTOCOL:
      6. NEVER commit code via git — only the team lead commits."
    ```
 
-5. **refactor-code** teammate (**Always spawned**):
+3. **refactor-code** teammate (**Always spawned**):
    ```
    Agent tool with:
      subagent_type: "refactor:refactor-code"
@@ -320,111 +300,11 @@ TASK DISCOVERY PROTOCOL:
      6. NEVER commit code via git — only the team lead commits."
    ```
 
-6. **simplifier** teammate (**If "simplifier" in active_agents**):
-   ```
-   Agent tool with:
-     subagent_type: "refactor:simplifier"
-     team_name: "refactor-team"
-     name: "simplifier"
-     prompt: "You are the simplifier agent on a refactoring swarm team. The scope is: {scope}.
+**Agents 4-8 are deferred to avoid idle agents during discovery:**
+- **simplifier**: Deferred to Phase 2 — see "Step 2.0.1: Spawn Phase 2 Agents" below.
+- **test-planner, test-writer, test-rigor-reviewer, coverage-analyst**: Deferred to **Step 0.9** if `testing` is in `active_agents` (they are needed in Phase 1.1/1.3). Otherwise deferred to Phase 2.
 
-     BLACKBOARD: {blackboard_id}
-     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
-
-     TASK DISCOVERY PROTOCOL:
-     1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
-     2. Call TaskGet on your assigned task to read the full description.
-     3. Work on the task.
-     4. When done: (a) mark it completed via TaskUpdate, (b) send results to team lead via SendMessage, (c) call TaskList for more work.
-     5. If no tasks assigned, wait for next message.
-     6. NEVER commit code via git — only the team lead commits."
-   ```
-
-7. **test-planner** teammate (**If "test-planner" in active_agents**):
-   ```
-   Agent tool with:
-     subagent_type: "refactor:test-planner"
-     team_name: "refactor-team"
-     name: "test-planner"
-     prompt: "You are the test planner agent on a refactoring swarm team. The scope is: {scope}.
-
-     BLACKBOARD: {blackboard_id}
-     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map.
-     Use blackboard_write to share your test plan with key 'test_plan'.
-
-     TASK DISCOVERY PROTOCOL:
-     1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
-     2. Call TaskGet on your assigned task to read the full description.
-     3. Work on the task.
-     4. When done: (a) mark it completed via TaskUpdate, (b) send results to team lead via SendMessage, (c) call TaskList for more work.
-     5. If no tasks assigned, wait for next message.
-     6. NEVER commit code via git — only the team lead commits."
-   ```
-
-8. **test-writer** teammate (**If "test-writer" in active_agents**):
-   ```
-   Agent tool with:
-     subagent_type: "refactor:test-writer"
-     team_name: "refactor-team"
-     name: "test-writer"
-     prompt: "You are the test writer agent on a refactoring swarm team. The scope is: {scope}. TDD red phase: tests MUST compile but FAIL.
-
-     BLACKBOARD: {blackboard_id}
-     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map.
-     Use blackboard_read(task_id='{blackboard_id}', key='test_plan') to read the test plan.
-
-     TASK DISCOVERY PROTOCOL:
-     1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
-     2. Call TaskGet on your assigned task to read the full description.
-     3. Work on the task.
-     4. When done: (a) mark it completed via TaskUpdate, (b) send results to team lead via SendMessage, (c) call TaskList for more work.
-     5. If no tasks assigned, wait for next message.
-     6. NEVER commit code via git — only the team lead commits."
-   ```
-
-9. **test-rigor-reviewer** teammate (**If "test-rigor-reviewer" in active_agents**):
-   ```
-   Agent tool with:
-     subagent_type: "refactor:test-rigor-reviewer"
-     team_name: "refactor-team"
-     name: "test-rigor-reviewer"
-     prompt: "You are the test rigor reviewer agent on a refactoring swarm team. The scope is: {scope}.
-
-     BLACKBOARD: {blackboard_id}
-     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map.
-     Use blackboard_read(task_id='{blackboard_id}', key='test_plan') to cross-reference against the plan.
-
-     TASK DISCOVERY PROTOCOL:
-     1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
-     2. Call TaskGet on your assigned task to read the full description.
-     3. Work on the task.
-     4. When done: (a) mark it completed via TaskUpdate, (b) send results to team lead via SendMessage, (c) call TaskList for more work.
-     5. If no tasks assigned, wait for next message.
-     6. NEVER commit code via git — only the team lead commits."
-   ```
-
-10. **coverage-analyst** teammate (**If "coverage-analyst" in active_agents**):
-    ```
-    Agent tool with:
-      subagent_type: "refactor:coverage-analyst"
-      team_name: "refactor-team"
-      name: "coverage-analyst"
-      prompt: "You are the coverage analyst agent on a refactoring swarm team. The scope is: {scope}.
-
-      BLACKBOARD: {blackboard_id}
-      Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map.
-      Use blackboard_write to share your coverage report with key 'coverage_report'.
-
-      TASK DISCOVERY PROTOCOL:
-      1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
-      2. Call TaskGet on your assigned task to read the full description.
-      3. Work on the task.
-      4. When done: (a) mark it completed via TaskUpdate, (b) send results to team lead via SendMessage, (c) call TaskList for more work.
-      5. If no tasks assigned, wait for next message.
-      6. NEVER commit code via git — only the team lead commits."
-    ```
-
-11. **convergence-reporter** teammate (**If autonomous_mode is true** — spawned deferred, at finalization):
+4. **convergence-reporter** teammate (**If autonomous_mode is true** — spawned deferred, at finalization):
    ```
    Agent tool with:
      subagent_type: "refactor:convergence-reporter"
@@ -445,6 +325,55 @@ TASK DISCOVERY PROTOCOL:
      6. NEVER commit code via git — only the team lead commits."
    ```
    **Note**: Do NOT spawn this agent in Phase 0.3. Spawn it in Phase 2 Step 2.2 (Finalization) when the convergence loop completes.
+
+### Step 0.9: Spawn Phase 1 Agents
+
+**Spawn agents needed for Phase 1 just before they are needed.** These agents are deferred from Phase 0.3 to avoid wasting resources if the run exits early (e.g., scope clarification failure, discovery finding nothing actionable).
+
+**Also spawn testing agents here if `testing` is in the focus areas** — test-planner, test-writer, test-rigor-reviewer, and coverage-analyst are used in Phase 1 Steps 1.1 and 1.3 for testing-focus runs. They must be spawned before Phase 1, not deferred to Phase 2. Use the same spawn templates as defined in Step 2.0.1 but launch them here. If testing is not in focus, they remain deferred to Phase 2.
+
+1. **architect** teammate (**If "architect" in active_agents**):
+   ```
+   Agent tool with:
+     subagent_type: "refactor:architect"
+     team_name: "refactor-team"
+     name: "architect"
+     prompt: "You are the architect agent on a refactoring swarm team. The scope is: {scope}.
+
+     BLACKBOARD: {blackboard_id}
+     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
+     Use blackboard_write to share your optimization plans with key 'architect_plan'.
+
+     TASK DISCOVERY PROTOCOL:
+     1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
+     2. Call TaskGet on your assigned task to read the full description.
+     3. Work on the task.
+     4. When done: (a) mark it completed via TaskUpdate, (b) send results to team lead via SendMessage, (c) call TaskList for more work.
+     5. If no tasks assigned, wait for next message.
+     6. NEVER commit code via git — only the team lead commits."
+   ```
+
+2. **code-reviewer** teammate (**If "code-reviewer" in active_agents**):
+   ```
+   Agent tool with:
+     subagent_type: "refactor:code-reviewer"
+     team_name: "refactor-team"
+     name: "code-reviewer"
+     prompt: "You are the code reviewer agent on a refactoring swarm team. The scope is: {scope}.
+     You handle BOTH quality review (bugs, logic, conventions with confidence scoring) AND security review (regressions, secrets, OWASP with severity classification).
+
+     BLACKBOARD: {blackboard_id}
+     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
+     Use blackboard_write to share your baseline with key 'reviewer_baseline'.
+
+     TASK DISCOVERY PROTOCOL:
+     1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
+     2. Call TaskGet on your assigned task to read the full description.
+     3. Work on the task.
+     4. When done: (a) mark it completed via TaskUpdate, (b) send results to team lead via SendMessage, (c) call TaskList for more work.
+     5. If no tasks assigned, wait for next message.
+     6. NEVER commit code via git — only the team lead commits."
+   ```
 
 ## Phase 0.5: Discovery
 
@@ -471,9 +400,39 @@ Write `codebase_context` to the shared blackboard for cross-agent access:
 1. **Write to blackboard**: Call `blackboard_write(task_id="{blackboard_id}", key="codebase_context", value=codebase_context)`. All teammates already have `blackboard_id` from their spawn prompts and can read via `blackboard_read`.
 2. **Fallback** (if blackboard write fails): Include `codebase_context` directly in every downstream task description under a `## Codebase Context` section.
 
+**Validation**: After writing critical keys (`codebase_context`, `architect_plan`, `reviewer_baseline`, `checkpoint`), immediately read back the key to verify:
+  ```
+  result = blackboard_read(task_id="{blackboard_id}", key="codebase_context")
+  ```
+If result is null or empty: retry the write once. If still failing, use the inline fallback.
+
 ### Step 0.5.4: Checkpoint
 
 - Inform user: "Phase 0.5 complete. Codebase discovery finished. {summary of key findings — entry points, layers, patterns}. Starting foundation analysis."
+- Write checkpoint:
+  ```
+  blackboard_write(task_id="{blackboard_id}", key="checkpoint", value=JSON.stringify({
+    checkpoint_phase: "Phase 0.5",
+    iteration: 0,
+    best_score: null,
+    best_snapshot_branch: null,
+    files_modified_total: [],
+    scope: scope,
+    active_agents: [...active_agents],
+    autonomous_mode: autonomous_mode
+  }))
+  ```
+- Write phase summary to blackboard:
+  ```
+  blackboard_write(task_id="{blackboard_id}", key="phase_0_5_summary", value=JSON.stringify({
+    phase: "Phase 0.5: Discovery",
+    agents_used: ["code-explorer"],
+    key_outputs: ["codebase_context written to blackboard"],
+    entry_points_found: N,
+    patterns_identified: [...summary...]
+  }))
+  ```
+- **Context compaction**: Summarize the code-explorer's findings into a compact list of key facts (entry points, layers, patterns, issues). Discard the raw exploration transcript from your working context — agents can still read the full `codebase_context` from the blackboard.
 
 ## Phase 1: Foundation (Parallel)
 
@@ -531,15 +490,52 @@ After Phase 1 parallel tasks complete, run sequential test-architect steps:
 
 ### Step 1.4: Checkpoint
 
+- Write checkpoint:
+  ```
+  blackboard_write(task_id="{blackboard_id}", key="checkpoint", value=JSON.stringify({
+    checkpoint_phase: "Phase 1",
+    iteration: 0,
+    best_score: null,
+    best_snapshot_branch: null,
+    files_modified_total: [],
+    scope: scope,
+    active_agents: [...active_agents],
+    autonomous_mode: autonomous_mode
+  }))
+  ```
 - Inform user with a message reflecting which agents ran:
   - Full run: "Phase 1 complete. Test coverage established. Architecture reviewed. Quality + security baseline recorded. Starting iteration loop."
   - Focused run: "Phase 1 complete. Test coverage established.{' Architecture reviewed.' if architect active}{' Quality + security baseline recorded.' if code-reviewer active}{' Test plan generated.' if test-planner active}{' Test code generated (TDD red phase).' if test-writer active}{' Test rigor score: X/1.0.' if test-rigor-reviewer active}{' Coverage: Y%.' if coverage-analyst active} Starting iteration loop ({max_iterations} iteration{s})."
+- Write phase summary to blackboard:
+  ```
+  blackboard_write(task_id="{blackboard_id}", key="phase_1_summary", value=JSON.stringify({
+    phase: "Phase 1: Foundation",
+    agents_used: [list of agents that ran in Phase 1],
+    key_outputs: ["test baseline established", "architect plan written", "reviewer baseline recorded"],
+    test_status: "all passing" or "failures noted",
+    architect_priorities: [top 3 if architect ran],
+    security_baseline: summary if code-reviewer ran
+  }))
+  ```
+- **Context compaction**: Summarize each agent's Phase 1 output into key facts (test count, coverage %, top priorities, baseline findings count). Discard verbose agent transcripts from your working context — agents can still read full outputs from the blackboard.
 
 ## Phase 2: Autonomous Convergence Loop (when `autonomous_mode = true`)
 
 **Replaces the standard Phase 2 when `--autonomous` is active. All other phases (0, 0.5, 1, 3, 4) execute with autonomous gate bypasses — no user interaction. See argument parsing above for per-phase autonomous behavior.**
 
 **Goal**: Iteratively improve code quality through the same agent sub-steps, but with composite scoring, keep/discard gating, and automatic convergence detection. See `references/autonomous-algorithm.md` for the formal specification.
+
+**Spawn Phase 2 agents now** (deferred from Phase 0.3 to avoid idle agents during discovery and foundation):
+
+Spawn the following agents if they are in `active_agents` and have not already been spawned. Launch all in parallel:
+
+- **simplifier** — `subagent_type: "refactor:simplifier"`, prompt includes blackboard ID and task discovery protocol (see Phase 0.3 template pattern)
+- **test-planner** — `subagent_type: "refactor:test-planner"`, prompt includes blackboard ID, writes test plan to key `test_plan`
+- **test-writer** — `subagent_type: "refactor:test-writer"`, prompt includes blackboard ID, reads `test_plan` key
+- **test-rigor-reviewer** — `subagent_type: "refactor:test-rigor-reviewer"`, prompt includes blackboard ID, reads `test_plan` for cross-reference
+- **coverage-analyst** — `subagent_type: "refactor:coverage-analyst"`, prompt includes blackboard ID, writes coverage report to key `coverage_report`
+
+Use the same spawn template pattern as Phase 0.3 (Agent tool with `team_name: "refactor-team"`, scope, blackboard ID, and task discovery protocol).
 
 ### Step 2.0: Initialize Workspace
 
@@ -570,10 +566,25 @@ After Phase 1 parallel tasks complete, run sequential test-architect steps:
 
 For `i = 1` to `max_iterations`:
 
+Inform user: "Autonomous iteration {i}/{max_iterations}: Starting MODIFY phase — {contract priorities from iteration_{i}_contract if available, else 'baseline priorities'}."
+
+#### 2.1.A.0: Sprint Contract (Autonomous Only)
+
+Before each iteration, the architect and evaluator negotiate what "done" looks like:
+
+1. If "architect" in active_agents:
+   - **TaskCreate**: "Propose priorities for iteration {i}. Based on the current state of [{scope}] and {if i > 1: 'weaknesses from iteration ' + (i-1) else: 'the baseline assessment'}, propose the top 3 improvements to make. For each, define what 'done' looks like — specific, testable criteria."
+     - **TaskUpdate**: assign owner to "architect"
+     - **SendMessage** to "architect": "Task #{id} assigned: propose iteration {i} sprint contract. Start now."
+   - Wait for completion
+   - Write to blackboard: `blackboard_write(task_id="{blackboard_id}", key="iteration_{i}_contract", value=architect's contract proposal)`
+
 #### 2.1.A: MODIFY — Execute One Iteration
 
 Run the standard Phase 2 sub-steps (2.A through 2.G) with these constraints:
 - **Tests are FROZEN**: When assigning tasks to refactor-test, always include: "Run tests ONLY — do NOT create, modify, or delete any test files. Tests are frozen during autonomous mode."
+- **Evaluator pass** (Step 2.B.1) runs after implementation in each iteration — the separated evaluator is especially important in autonomous mode where there is no human to catch self-evaluation blindness
+- **Read prior weakness feedback**: If iteration > 1, read blackboard key `iteration_{i-1}_weaknesses` and include the `priority_for_next` items as explicit targets in the architect review and refactor-code tasks
 - All other sub-steps (architect review, implement optimizations, code review, simplify) execute normally
 - Track `changelog` = summary of changes made in this iteration (from agent reports)
 
@@ -592,6 +603,23 @@ After sub-steps complete:
    - Wait for completion
 4. Compute score: Run via Bash: `bash scripts/score.sh {workspace} {i} {score_weights.tests} {score_weights.quality} {score_weights.security}`
 5. Store result as `score_i`
+6. Inform user: "Autonomous iteration {i}/{max_iterations}: EVALUATE complete — score {score_i}. {if score_i > best.score: 'KEPT' else: 'DISCARDED'}."
+
+#### 2.1.B.1: Write Weakness Feedback
+
+Write structured feedback for the next iteration:
+
+```
+blackboard_write(task_id="{blackboard_id}", key="iteration_{i}_weaknesses", value=JSON.stringify({
+  iteration: i,
+  score: score_i,
+  low_scoring_areas: [extract from review-scores.json before workspace cleanup],
+  evaluator_feedback: [summary from evaluator pass],
+  priority_for_next: [top 3 areas to improve in next iteration]
+}))
+```
+
+This replaces vague "build on previous iteration" guidance with specific, actionable targets. The next iteration's MODIFY step reads this key to know exactly what to focus on.
 
 #### 2.1.C: KEEP or DISCARD
 
@@ -609,6 +637,33 @@ After sub-steps complete:
 #### 2.1.D: LOG
 
 Run via Bash: `bash scripts/results_log.sh append {workspace}/results.tsv {i} {score_i} {best.score} {action} "{changelog}"`
+
+Write checkpoint:
+```
+blackboard_write(task_id="{blackboard_id}", key="checkpoint", value=JSON.stringify({
+  checkpoint_phase: "Phase 2",
+  iteration: i,
+  best_score: best.score,
+  best_snapshot_branch: "autoresearch/v" + best.version,
+  files_modified_total: [...files_modified_total],
+  scope: scope,
+  active_agents: [...active_agents],
+  autonomous_mode: true
+}))
+```
+
+Write iteration summary to blackboard:
+```
+blackboard_write(task_id="{blackboard_id}", key="iteration_{i}_summary", value=JSON.stringify({
+  phase: "Phase 2: Iteration " + i,
+  agents_used: [agents that ran in this iteration],
+  score: score_i,
+  action: action,
+  changelog: changelog,
+  files_modified: [files changed this iteration]
+}))
+```
+**Context compaction**: Summarize this iteration's results into score, action (kept/reverted), and key changes. Discard verbose agent transcripts — the blackboard retains full details for any agent that needs them.
 
 #### 2.1.E: CONVERGENCE CHECK
 
@@ -677,11 +732,23 @@ Check conditions in order. First match stops the loop:
 
 **Goal**: Iteratively improve code quality through architect -> code -> test -> review -> simplify cycles.
 
+**Step 2.0.1: Spawn Phase 2 Agents** — Spawn the following agents if they are in `active_agents` and have not already been spawned. These were deferred from Phase 0.3 to avoid idle agents during discovery and foundation. Launch all in parallel:
+
+- **simplifier** — `subagent_type: "refactor:simplifier"`, prompt includes blackboard ID and task discovery protocol (see Phase 0.3 template pattern)
+- **test-planner** — `subagent_type: "refactor:test-planner"`, prompt includes blackboard ID, writes test plan to key `test_plan`
+- **test-writer** — `subagent_type: "refactor:test-writer"`, prompt includes blackboard ID, reads `test_plan` key
+- **test-rigor-reviewer** — `subagent_type: "refactor:test-rigor-reviewer"`, prompt includes blackboard ID, reads `test_plan` for cross-reference
+- **coverage-analyst** — `subagent_type: "refactor:coverage-analyst"`, prompt includes blackboard ID, writes coverage report to key `coverage_report`
+
+Use the same spawn template pattern as Phase 0.3 (Agent tool with `team_name: "refactor-team"`, scope, blackboard ID, and task discovery protocol).
+
 Repeat the following for `max_iterations` times:
 
 ### Step 2.A: Architecture Review
 
 **Skip if "architect" not in active_agents.** Also skip on iteration 1 if architect's Phase 1 review is still current. Otherwise:
+
+Inform user: "Iteration {iteration+1}/{max_iterations}: Starting architecture review..."
 
 1. **TaskCreate**: "Iteration {iteration+1}: Review code architecture for [{scope}]. Create prioritized optimization plan. Provide top 3 high-priority optimizations to implement. Focus on improvements not yet addressed in previous iterations.{if codebase_context: '\n\n## Codebase Context\n' + codebase_context}"
    - **TaskUpdate**: assign owner to "architect"
@@ -695,15 +762,36 @@ Repeat the following for `max_iterations` times:
 
 If not skipped:
 
+Inform user: "Iteration {iteration+1}/{max_iterations}: Implementing top 3 optimizations..."
+
 1. **TaskCreate**: "Implement the top 3 optimizations from the architect's plan: [paste architect's top 3]. Preserve all existing functionality. Apply clean code principles. Make incremental, safe changes. Report all files modified. Do NOT commit via git.{if codebase_context: '\n\n## Codebase Context\n' + codebase_context}"
    - **TaskUpdate**: assign owner to "refactor-code"
    - **SendMessage** to "refactor-code": "Task #{id} assigned: implement top 3 optimizations. Start now."
 2. Wait for completion
 3. Record implementation report (files changed, optimizations applied)
 
+### Step 2.B.1: Evaluator Pass
+
+**Skip if "code-reviewer" not in active_agents.**
+
+The code-reviewer acts as an independent evaluator — grading the implementation against the architect's priorities BEFORE tests run. This catches issues that self-evaluation misses (the article "Harness Design for Long-Running Apps" demonstrates that "decoupling the generator from the evaluator proves more tractable than making generators self-critical").
+
+1. **TaskCreate**: "EVALUATOR MODE: Grade the implementation changes from this iteration against the architect's top 3 priorities: [paste priorities]. For each priority, assess: (1) Was it addressed? (2) Is the implementation correct? (3) Are there issues the implementer missed? Report as PASS (all priorities adequately addressed) or FAIL (specific gaps found with remediation guidance)."
+   - **TaskUpdate**: assign owner to "code-reviewer"
+   - **SendMessage** to "code-reviewer": "Task #{id} assigned: evaluator pass on iteration {iteration+1} implementation. Start now."
+2. Wait for completion
+3. Inform user: "Iteration {iteration+1}/{max_iterations}: Evaluator pass complete. {PASS/FAIL}."
+4. If evaluator reports FAIL:
+   - **TaskCreate**: "Fix evaluator findings: [paste findings]. Address each gap while preserving existing improvements."
+     - **TaskUpdate**: assign owner to "refactor-code"
+     - **SendMessage** to "refactor-code": "Task #{id} assigned: fix evaluator findings. Start now."
+   - Wait for completion
+
 ### Step 2.C: Test Verification
 
 **Skip if Step 2.B was skipped** (no implementation changes to verify).
+
+Inform user: "Iteration {iteration+1}/{max_iterations}: Running test verification..."
 
 1. **TaskCreate**: "Run the complete test suite. Report pass/fail status. If failures: provide detailed failure report with causes and suggestions."
    - **TaskUpdate**: assign owner to "refactor-test"
@@ -788,7 +876,11 @@ If code-reviewer reported **FAIL** (Critical/High severity findings or high-conf
 
 1. Increment `refactoring_iteration += 1`
 2. Inform user: "Iteration {refactoring_iteration} of {max_iterations} complete."
-3. **If `config.postRefactor.commitStrategy` is `"per-iteration"`**:
+3. **Zero-change gate**: If refactor-code reported zero files modified in this iteration (nothing to implement), skip remaining iterations:
+   - Inform user: "No changes made in iteration {refactoring_iteration}. Code is stable — skipping remaining {max_iterations - refactoring_iteration} iteration(s)."
+   - Proceed directly to Phase 3.
+   This lightweight convergence check prevents wasting iterations when the code has reached a stable state, without requiring the full autonomous scoring infrastructure.
+4. **If `config.postRefactor.commitStrategy` is `"per-iteration"`**:
    - **Security check**: Before staging, identify and exclude any files matching secret patterns (`.env`, `.env.*`, `credentials.json`, `secrets.*`, `*.pem`, `*.key`, files containing API keys/tokens/passwords). Warn the user if confidential files are detected.
    - Stage all changed files using Bash: `git add -u` (never `git add -A` — it may stage untracked secrets or artifacts)
    - Check for staged changes: `git diff --cached --quiet` — if exit code 0, no changes to commit; skip and log "No changes to commit for this iteration"
@@ -800,8 +892,8 @@ If code-reviewer reported **FAIL** (Critical/High severity findings or high-conf
      )"
      ```
    - If commit fails (e.g., no git, pre-commit hook failure, no changes), log a warning to the user and continue
-4. If `refactoring_iteration < max_iterations`: continue to next iteration (Step 2.A)
-5. If `refactoring_iteration >= max_iterations`: proceed to Phase 3
+5. If `refactoring_iteration < max_iterations`: continue to next iteration (Step 2.A)
+6. If `refactoring_iteration >= max_iterations`: proceed to Phase 3
 
 ## Phase 3: Final Assessment (Parallel)
 

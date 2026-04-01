@@ -172,11 +172,21 @@ def _normalize_typescript_coverage(data: dict[str, Any]) -> CoverageData:
         covered_lines += file_covered
 
         if file_covered < file_total:
-            uncovered = [int(k) for k, v in stmt_hits.items() if v == 0]
+            # Map statement IDs to actual source line numbers via statementMap.
+            # In c8/Istanbul JSON, keys in `s` are statement IDs (e.g., "0", "1"),
+            # NOT line numbers. The statementMap entry for each ID contains
+            # {"start": {"line": N}, "end": {"line": M}}.
+            uncovered_lines: list[int] = []
+            for stmt_id, hit_count in stmt_hits.items():
+                if hit_count == 0:
+                    stmt_loc = stmt_map.get(stmt_id, {})
+                    start_line = stmt_loc.get("start", {}).get("line")
+                    if start_line is not None:
+                        uncovered_lines.append(start_line)
             uncovered_files.append(
                 {
                     "file": filename,
-                    "uncovered_lines": uncovered,
+                    "uncovered_lines": sorted(set(uncovered_lines)),
                 }
             )
 
