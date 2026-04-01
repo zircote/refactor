@@ -370,23 +370,70 @@ gh issue list --repo ${REPO} --state open \
 Items in the merge-ready list are processed **before** the main queue. For each:
 
 1. **Restore state from manifest**: Set `ISSUE_NUMBER = item.number`, `PR_NUMBER = item.pr_number`, `BRANCH = item.branch` (derive from PR if not stored: `gh pr view ${PR_NUMBER} --json headRefName -q '.headRefName'`).
+
 2. **Verify PR still exists and is open**:
    ```bash
    PR_STATE=$(gh pr view ${PR_NUMBER} --json state -q '.state')
    ```
-   If PR is closed or merged by another process: update manifest to `"merged"` or `"skipped"`, skip to next item.
-3. **Verify CI is still green** (branch may have gone stale):
+   - If `MERGED`: update manifest to `"merged"`, verify issue closed (step 5 below), skip to next item.
+   - If `CLOSED` (not merged): update manifest to `"skipped"` with reason `"PR was closed externally"`, skip to next item.
+   - If `OPEN`: continue.
+
+3. **Verify CI is still green** (branch may have gone stale since the original `--no-merge` run):
    ```bash
    gh pr checks ${PR_NUMBER}
    ```
-   If CI is failing or stale: rebase and re-push, then re-run CI gate (Phase 4.5 logic). If rebase conflicts or CI fails after retry: update manifest to `"skipped"` with reason, skip to next item.
-4. **Merge** (Phase 4.7 logic):
+   Parse output: all `pass`/`skipping` → green. Any `pending` → poll (see below). Any `fail` → stale (see below).
+
+   **If green**: proceed to step 4.
+
+   **If pending**: poll up to 10 attempts (30s apart):
+   ```bash
+   ATTEMPT=1
+   while [ $ATTEMPT -le 10 ]; do
+     sleep 30
+     gh pr checks ${PR_NUMBER}
+     # Parse: all pass → break; any fail → stale; pending → increment
+     ATTEMPT=$((ATTEMPT + 1))
+   done
+   ```
+   If still pending after 10 attempts: update manifest to `"skipped"` with reason `"CI pending timeout on merge-ready item"`, skip to next item.
+
+   **If failing/stale**: rebase onto the current default branch and re-push:
+   ```bash
+   git fetch origin
+   git checkout "${BRANCH}"
+   git rebase "origin/${DEFAULT_BRANCH}"
+   ```
+   If rebase conflicts: update manifest to `"skipped"` with reason `"Rebase conflicts on merge-ready item"`, clean up (`git rebase --abort`), skip to next item.
+
+   If rebase succeeds:
+   ```bash
+   git push --force-with-lease origin "${BRANCH}"
+   ```
+   Then poll CI again (up to 10 attempts, 30s apart, same pattern as above). If CI fails after rebase: attempt one empty-commit retry:
+   ```bash
+   git commit --allow-empty -m "ci: retry checks for PR #${PR_NUMBER}"
+   git push origin "${BRANCH}"
+   ```
+   Poll CI one more cycle (10 attempts). If still failing: update manifest to `"skipped"` with reason `"CI failed after rebase + retry on merge-ready item"`, skip to next item.
+
+4. **Merge**:
    ```bash
    gh pr merge ${PR_NUMBER} --${MERGE_METHOD} --delete-branch
    ```
-   If merge blocked: update manifest to `"skipped"` with reason, skip to next item.
-5. **Verify issue closed** (Phase 5.1 logic — merged items only).
-6. **Update manifest**: set state to `"merged"`, write to disk.
+   If merge is blocked: update manifest to `"skipped"` with reason `"Merge blocked: <error>"`, skip to next item.
+
+5. **Verify issue closed**:
+   ```bash
+   gh issue view ${ISSUE_NUMBER} --json state -q '.state'
+   ```
+   If still open:
+   ```bash
+   gh issue close ${ISSUE_NUMBER} --reason completed
+   ```
+
+6. **Update manifest**: set state to `"merged"`, `completed_at = now()`, `commit_sha` from merge. Write to disk.
 
 After all merge-ready items are processed, continue with the main queue (Phase 2).
 
