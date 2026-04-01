@@ -624,17 +624,31 @@ By default, wait for CI to complete after push. This is the default behavior —
 gh pr checks ${PR_NUMBER}
 ```
 
-**Otherwise (default)**, wait for CI completion. Use `gh pr checks --watch` if available, otherwise poll manually (up to 20 attempts, 30 seconds apart):
+**Otherwise (default)**, wait for CI completion. Try `gh pr checks --watch` first:
 
 ```bash
 gh pr checks ${PR_NUMBER} --watch 2>/dev/null || true
+```
+
+If `--watch` fails or is unsupported, use an explicit check-sleep-recheck loop:
+
+**Step A — Check:**
+```bash
+echo "CI poll attempt ${ATTEMPT}/20:"
 gh pr checks ${PR_NUMBER}
 ```
 
+**Step B — Evaluate:** If all lines show `pass`/`skipping`: done. If any show `pending`: go to Step C. If any show `fail`: done (CI failed, report it).
+
+**Step C — Wait and recheck:**
+```bash
+sleep 30
+```
+Then increment ATTEMPT and go back to Step A. **Step A must run a fresh `gh pr checks` call every iteration.** Up to 20 attempts (10 minutes).
+
 **IMPORTANT — known pitfalls:**
-- **Do NOT use `gh pr checks --json`** — this flag is not supported in all `gh` CLI versions and produces empty output that causes JSON parse errors. Always use the plain text output format.
-- Parse plain text output: each line shows `<check name>\t<status>\t<duration>\t<url>`. Look for `pass`, `fail`, or `pending`.
-- If `--watch` is not supported, fall back to discrete polling with `sleep 30` between each `gh pr checks` call.
+- **Do NOT use `gh pr checks --json`** — not supported in all `gh` CLI versions; produces empty output causing JSON parse errors. Always use plain text output.
+- Parse plain text: each line shows `<check name>\t<status>\t<duration>\t<url>`.
 
 Report CI status in the summary. **CI status is advisory — it does NOT block the workflow, prevent thread resolution, or cause the skill to fail.** The workflow completes successfully even if CI fails. CI failures are reported for awareness, not as blockers.
 

@@ -263,25 +263,32 @@ If the request returns 422 (validation error), the repo may not have Copilot rev
 
 ### Step 2.3: Wait for Copilot Completion
 
-Poll for Copilot review completion. **Do NOT use a single long-running bash command with sleep loops** — this will hit tool execution timeouts. Instead, poll in discrete steps:
+Poll for Copilot review completion using an explicit check-sleep-recheck loop.
 
-For each poll attempt (up to 20 attempts, 30 seconds apart):
+**CRITICAL — the poll loop must actually re-query GitHub on each iteration.** Do NOT just sleep and assume the review arrived. Each iteration must make a fresh API call to check for the review.
 
+Execute this loop exactly as written — each step is a separate Bash tool call:
+
+**Step A — Check:**
 ```bash
-gh pr view ${PR_NUMBER} --json reviews -q '[.reviews[] | select(.author.login == "copilot-pull-request-reviewer[bot]" or .author.login == "copilot[bot]")] | length'
+REVIEW_COUNT=$(gh pr view ${PR_NUMBER} --json reviews -q '[.reviews[] | select(.author.login == "copilot-pull-request-reviewer[bot]" or .author.login == "copilot[bot]")] | length')
+echo "Poll attempt ${ATTEMPT}/20: Copilot review count = $REVIEW_COUNT"
 ```
 
-Between poll attempts, use a short sleep:
+**Step B — Evaluate result:**
+- If `REVIEW_COUNT > 0`: Copilot review found. Proceed to Phase 3.
+- If `REVIEW_COUNT == 0` and `ATTEMPT < 20`: Go to Step C.
+- If `REVIEW_COUNT == 0` and `ATTEMPT >= 20`: **Skip PR** with reason `"Copilot review timed out after 10 minutes"`.
+
+**Step C — Wait and loop back:**
 ```bash
 sleep 30
 ```
+Then increment ATTEMPT and go back to Step A.
 
-Run each poll + sleep as a separate tool invocation to avoid tool execution timeouts. Track the attempt count manually.
+The key is that **Step A runs a fresh `gh pr view` call every iteration**. The sleep in Step C is just a delay between checks — it does not replace the check. A loop that only sleeps without re-querying will never detect the review.
 
-- If Copilot review count > 0: proceed to Phase 3.
-- If 20 attempts (10 minutes) elapse without a review: **skip PR** with reason `"Copilot review timed out after 10 minutes"`.
-
-The timeout exists because Copilot may not be enabled for the repo, or may be experiencing service issues. Waiting indefinitely would block the entire sweep.
+The timeout (20 attempts × 30 seconds = 10 minutes) exists because Copilot may not be enabled for the repo or may be experiencing service issues.
 
 ---
 
@@ -562,22 +569,31 @@ This is the critical differentiator from `/pr-fix`. CI is a **hard gate** — th
 
 ### Step 11.1: Wait for CI Completion
 
-Use `gh pr checks --watch` to wait for CI. If `--watch` is not supported by the installed `gh` version, poll manually:
+Try `gh pr checks --watch` first. If it works, it blocks until all checks finish:
 
 ```bash
 gh pr checks ${PR_NUMBER} --watch 2>/dev/null
 ```
 
-If `--watch` fails or hangs, fall back to discrete polling (up to 30 attempts, 30 seconds apart):
+If `--watch` fails, errors, or hangs, use an explicit check-sleep-recheck loop (same pattern as Phase 2.3):
 
+**Step A — Check:**
 ```bash
+echo "CI poll attempt ${ATTEMPT}/30:"
 gh pr checks ${PR_NUMBER}
 ```
 
-Parse the plain text output. Each line shows: `<check name>\t<status>\t<duration>\t<url>`. Look for:
-- `pass` — check passed
-- `fail` — check failed
-- `pending` or no status — still running
+**Step B — Evaluate output:**
+Parse the plain text output. Each line shows: `<check name>\t<status>\t<duration>\t<url>`.
+- If ALL lines show `pass` (or `skipping`): CI is green. Proceed to Step 11.2.
+- If ANY line shows `fail`: CI failed. Proceed to Step 11.3 (retry).
+- If ANY line shows `pending` or blank status: checks still running. Go to Step C.
+
+**Step C — Wait and loop back:**
+```bash
+sleep 30
+```
+Then increment ATTEMPT and go back to Step A. **Step A must run a fresh `gh pr checks` call every iteration** — the sleep does not replace the check. Up to 30 attempts (15 minutes).
 
 **Do NOT use `gh pr checks --json`** — this flag is not supported in all `gh` CLI versions and will produce empty output that causes JSON parse errors. Always use the plain text output format.
 
