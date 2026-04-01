@@ -300,7 +300,9 @@ TASK DISCOVERY PROTOCOL:
      6. NEVER commit code via git — only the team lead commits."
    ```
 
-**Agents 4-8 (simplifier, test-planner, test-writer, test-rigor-reviewer, coverage-analyst) are deferred to Phase 2** — see "Step 2.0.1: Spawn Phase 2 Agents" below. This avoids spawning agents that sit idle through discovery and foundation analysis.
+**Agents 4-8 are deferred to avoid idle agents during discovery:**
+- **simplifier**: Deferred to Phase 2 — see "Step 2.0.1: Spawn Phase 2 Agents" below.
+- **test-planner, test-writer, test-rigor-reviewer, coverage-analyst**: Deferred to **Step 0.9** if `testing` is in `active_agents` (they are needed in Phase 1.1/1.3). Otherwise deferred to Phase 2.
 
 4. **convergence-reporter** teammate (**If autonomous_mode is true** — spawned deferred, at finalization):
    ```
@@ -326,7 +328,9 @@ TASK DISCOVERY PROTOCOL:
 
 ### Step 0.9: Spawn Phase 1 Agents
 
-**Spawn architect and code-reviewer just before they are needed.** These agents are deferred from Phase 0.3 to avoid wasting resources if the run exits early (e.g., scope clarification failure, discovery finding nothing actionable).
+**Spawn agents needed for Phase 1 just before they are needed.** These agents are deferred from Phase 0.3 to avoid wasting resources if the run exits early (e.g., scope clarification failure, discovery finding nothing actionable).
+
+**Also spawn testing agents here if `testing` is in the focus areas** — test-planner, test-writer, test-rigor-reviewer, and coverage-analyst are used in Phase 1 Steps 1.1 and 1.3 for testing-focus runs. They must be spawned before Phase 1, not deferred to Phase 2. Use the same spawn templates as defined in Step 2.0.1 but launch them here. If testing is not in focus, they remain deferred to Phase 2.
 
 1. **architect** teammate (**If "architect" in active_agents**):
    ```
