@@ -112,7 +112,12 @@ class TestNormalizeCoverage:
 
         data = {
             "src/main.ts": {
-                "statementMap": {"0": {}, "1": {}, "2": {}, "3": {}},
+                "statementMap": {
+                    "0": {"start": {"line": 5}, "end": {"line": 5}},
+                    "1": {"start": {"line": 10}, "end": {"line": 10}},
+                    "2": {"start": {"line": 15}, "end": {"line": 15}},
+                    "3": {"start": {"line": 20}, "end": {"line": 20}},
+                },
                 "s": {"0": 1, "1": 1, "2": 0, "3": 1},
             }
         }
@@ -121,6 +126,32 @@ class TestNormalizeCoverage:
         assert result["covered_lines"] == 3
         assert result["coverage_pct"] == 75.0
         assert len(result["uncovered_files"]) == 1
+
+    def test_typescript_uncovered_lines_are_source_lines_not_statement_ids(self):
+        """Regression: uncovered_lines must contain source line numbers, not statement IDs.
+
+        In c8/Istanbul JSON, keys in `s` are statement IDs (0, 1, 2...),
+        NOT line numbers. statementMap maps IDs to {start: {line: N}}.
+        The old code returned statement IDs, producing [2] instead of [15].
+        """
+        from scripts.coverage_report import _normalize_typescript_coverage
+
+        data = {
+            "src/handler.ts": {
+                "statementMap": {
+                    "0": {"start": {"line": 5}, "end": {"line": 5}},
+                    "1": {"start": {"line": 10}, "end": {"line": 12}},
+                    "2": {"start": {"line": 42}, "end": {"line": 42}},
+                },
+                "s": {"0": 1, "1": 0, "2": 0},
+            }
+        }
+        result = _normalize_typescript_coverage(data)
+        uncovered = result["uncovered_files"][0]["uncovered_lines"]
+        # Must be real source lines [10, 42], NOT statement IDs [1, 2]
+        assert uncovered == [10, 42]
+        assert 1 not in uncovered
+        assert 2 not in uncovered
 
     def test_normalize_coverage_dispatches_correctly(self):
         from scripts.coverage_report import _normalize_coverage
