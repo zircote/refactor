@@ -215,13 +215,9 @@ You have:
 - Passed the mandatory quality gate (rigor score + coverage thresholds)
 - Navigated all six interactive approval gates in the workflow
 
-## /refactor vs /feature-dev: when to use which
+## Choosing between /refactor and /feature-dev
 
-| Use `/refactor` when... | Use `/feature-dev` when... |
-|---|---|
-| Improving existing code quality | Building something that does not exist yet |
-| Restructuring without changing behavior | Adding new functionality or capabilities |
-| Fixing code smells, security issues | Implementing a new endpoint, service, or module |
+Use `/refactor` when improving existing code without changing behavior. Use `/feature-dev` when building something new. For a detailed comparison, see the [Skills overview](../README.md).
 
 ## Next steps
 

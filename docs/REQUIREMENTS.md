@@ -1,3 +1,8 @@
+---
+diataxis_type: reference
+diataxis_describes: product requirements and acceptance criteria
+---
+
 # Requirements Specification
 
 ## Product Overview

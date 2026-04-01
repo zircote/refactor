@@ -73,9 +73,9 @@ Now run a focused refactor to see how `--focus` constrains the agents:
 /refactor --focus=security src/utils/
 ```
 
-This time, only three agents spawn: refactor-test (always), refactor-code (always), and code-reviewer (the focused discipline for security). The run defaults to 1 iteration instead of 3.
+This time, only three agents spawn: refactor-test (always present), refactor-code (always present), and code-reviewer (the focused discipline for security). The run defaults to 1 iteration instead of 3, and the final report includes only a Security Posture Score -- no Architecture or Clean Code scores are produced.
 
-You will see the same phase structure, but steps that require inactive agents are skipped. The final report includes only a Security Posture Score — no Architecture or Clean Code scores are produced.
+You will see the same phase structure, but steps that require inactive agents are skipped. For details on all focus areas and their agent mappings, see [How to Run Focused Refactoring](../guides/focus-refactoring.md) and the [Agent Reference](../reference/agents.md).
 
 To override the iteration default in focused mode:
 
