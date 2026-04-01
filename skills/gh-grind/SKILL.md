@@ -367,7 +367,11 @@ gh issue list --repo ${REPO} --state open \
 
 #### Readiness-Only Merge Path
 
-Items in the merge-ready list are processed **before** the main queue. For each:
+Items in the merge-ready list are processed **before** the main queue.
+
+**IMPORTANT**: Every exit from this path — success or failure — MUST write the manifest to `.claude/grind-progress.json` before moving to the next item. This ensures crash-safety: if the session is interrupted, the state of each processed item is persisted.
+
+For each item:
 
 1. **Restore state from manifest**: Set `ISSUE_NUMBER = item.number`, `PR_NUMBER = item.pr_number`, `BRANCH = item.branch` (derive from PR if not stored: `gh pr view ${PR_NUMBER} --json headRefName -q '.headRefName'`).
 
@@ -375,8 +379,8 @@ Items in the merge-ready list are processed **before** the main queue. For each:
    ```bash
    PR_STATE=$(gh pr view ${PR_NUMBER} --json state -q '.state')
    ```
-   - If `MERGED`: update manifest to `"merged"`, verify issue closed (step 5 below), skip to next item.
-   - If `CLOSED` (not merged): update manifest to `"skipped"` with reason `"PR was closed externally"`, skip to next item.
+   - If `MERGED`: set manifest item state to `"merged"`, `completed_at = now()`. Verify issue closed (step 5 below). **Write manifest to disk.** Skip to next item.
+   - If `CLOSED` (not merged): set manifest item state to `"skipped"`, `skip_reason = "PR was closed externally"`, `completed_at = now()`. **Write manifest to disk.** Skip to next item.
    - If `OPEN`: continue.
 
 3. **Verify CI is still green** (branch may have gone stale since the original `--no-merge` run):
@@ -397,7 +401,7 @@ Items in the merge-ready list are processed **before** the main queue. For each:
      ATTEMPT=$((ATTEMPT + 1))
    done
    ```
-   If still pending after 10 attempts: update manifest to `"skipped"` with reason `"CI pending timeout on merge-ready item"`, skip to next item.
+   If still pending after 10 attempts: set manifest item state to `"skipped"`, `skip_reason = "CI pending timeout on merge-ready item"`, `completed_at = now()`. **Write manifest to disk.** Skip to next item.
 
    **If failing/stale**: rebase onto the current default branch and re-push:
    ```bash
@@ -405,7 +409,7 @@ Items in the merge-ready list are processed **before** the main queue. For each:
    git checkout "${BRANCH}"
    git rebase "origin/${DEFAULT_BRANCH}"
    ```
-   If rebase conflicts: update manifest to `"skipped"` with reason `"Rebase conflicts on merge-ready item"`, clean up (`git rebase --abort`), skip to next item.
+   If rebase conflicts: set manifest item state to `"skipped"`, `skip_reason = "Rebase conflicts on merge-ready item"`, `completed_at = now()`. Clean up (`git rebase --abort`). **Write manifest to disk.** Skip to next item.
 
    If rebase succeeds:
    ```bash
@@ -416,13 +420,13 @@ Items in the merge-ready list are processed **before** the main queue. For each:
    git commit --allow-empty -m "ci: retry checks for PR #${PR_NUMBER}"
    git push origin "${BRANCH}"
    ```
-   Poll CI one more cycle (10 attempts). If still failing: update manifest to `"skipped"` with reason `"CI failed after rebase + retry on merge-ready item"`, skip to next item.
+   Poll CI one more cycle (10 attempts). If still failing: set manifest item state to `"skipped"`, `skip_reason = "CI failed after rebase + retry on merge-ready item"`, `completed_at = now()`. **Write manifest to disk.** Skip to next item.
 
 4. **Merge**:
    ```bash
    gh pr merge ${PR_NUMBER} --${MERGE_METHOD} --delete-branch
    ```
-   If merge is blocked: update manifest to `"skipped"` with reason `"Merge blocked: <error>"`, skip to next item.
+   If merge is blocked: set manifest item state to `"skipped"`, `skip_reason = "Merge blocked: <error>"`, `completed_at = now()`. **Write manifest to disk.** Skip to next item.
 
 5. **Verify issue closed**:
    ```bash
@@ -433,7 +437,7 @@ Items in the merge-ready list are processed **before** the main queue. For each:
    gh issue close ${ISSUE_NUMBER} --reason completed
    ```
 
-6. **Update manifest**: set state to `"merged"`, `completed_at = now()`, `commit_sha` from merge. Write to disk.
+6. **Update manifest**: set state to `"merged"`, `completed_at = now()`, `commit_sha` from merge. **Write manifest to disk.**
 
 After all merge-ready items are processed, continue with the main queue (Phase 2).
 
