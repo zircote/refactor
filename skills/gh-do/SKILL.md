@@ -61,19 +61,21 @@ Layer 1: Auto-label (on: issues.opened, pr.opened)
   Stamps "needs-triage" on every new item.
        │
 Layer 2: THIS COMMAND (gh-do)
-  Sweep/swarm queue discovery uses "needs-triage"
-  as the primary filter, with unlabeled/unassigned
-  items as fallback.
+  Single-item mode: triages one item (applies labels,
+  removes "needs-triage"). Sweep/swarm mode: works
+  POST-TRIAGE items — already labeled, prioritized,
+  and ready for implementation. Skips "needs-triage"
+  items (let Layer 1/single-item handle those first).
        │
 Layer 3: Daily triage (cron, catch-all)
 ```
 
 ### Preflight Check (sweep and swarm only)
 
-Before assembling the queue, verify the pipeline:
+Before assembling the queue, verify the triage pipeline is set up. The `needs-triage` label is used by Layer 1 (auto-label on open) and single-item triage mode. Sweep mode does NOT filter by this label — it works post-triage items — but the label must exist for the pipeline to function.
 
 ```bash
-# Check needs-triage label exists in target repos
+# Ensure needs-triage label exists (used by Layer 1, not by sweep filter)
 for repo in $REPOS; do
   if ! gh label list --repo "$repo" \
     --json name --jq '.[].name' \
@@ -472,14 +474,26 @@ fi
 
 For each repo, gather candidates:
 
-1. **Issues needing triage** (highest priority):
+1. **Post-triage issues** (already labeled and ready for work):
    ```bash
+   # Fetch all open issues with labels (post-triage)
    gh issue list --repo REPO --state open \
-     --label "status/triage,needs-triage" \
-     --json number,title,labels,createdAt \
-     --limit 50
+     --json number,title,labels,createdAt,assignees \
+     --limit 50 \
+     | jq '[.[] | select(
+       (.labels | length > 0) and
+       (.labels | map(.name) | any(. == "needs-triage" or . == "status/triage") | not)
+     )]'
    ```
-   Also unlabeled issues:
+   This fetches issues that HAVE labels but are NOT still in triage.
+   Items labeled `needs-triage` or `status/triage` are excluded —
+   those belong to Layer 1 (auto-triage on open) or single-item
+   triage mode. The sweep works post-triage: items that have been
+   classified, prioritized, and are ready for implementation.
+
+   **Fallback — unlabeled issues** (these may have been missed by
+   the triage pipeline; include them at lowest priority so they
+   get noticed, but prefer triaged items):
    ```bash
    gh issue list --repo REPO --state open \
      --json number,title,labels,createdAt \
@@ -551,16 +565,17 @@ For each repo, gather candidates:
 
 ### Sweep Priority Order
 
-Process items in this order:
+Process items in this order (all post-triage — `needs-triage` items are excluded from the queue):
+
 1. `priority/critical` issues (any repo)
 2. `priority/high` issues
 3. PRs with changes requested (stale first)
 4. PRs with failing CI
-5. Issues labeled `status/triage` or `needs-triage`
-6. Unlabeled issues
-7. Unanswered discussions (Q&A)
-8. Feature discussions without linked issues
-9. `priority/medium` and `priority/low` issues
+5. `priority/medium` issues
+6. Unanswered discussions (Q&A)
+7. Feature discussions without linked issues
+8. `priority/low` issues
+9. Unlabeled issues (triage pipeline may have missed these)
 10. Draft PRs
 
 ### Sweep Auto-Escalation

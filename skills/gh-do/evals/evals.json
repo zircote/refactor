@@ -37,8 +37,8 @@
       "deterministic_checks": [],
       "expectations": [
         "The skill runs the preflight check to verify the 'needs-triage' label exists in zircote/swagger-php, creating it if missing",
-        "The skill queries issues with 'needs-triage' or 'status/triage' labels, unlabeled issues, PRs with changes requested, PRs with failing checks, and discussions — gathering all candidate items",
-        "The skill orders the queue by the defined priority: critical issues first, then high issues, then PRs with changes requested, then PRs with failing CI, then triage-labeled issues, then unlabeled issues, then discussions, then medium/low issues, then draft PRs",
+        "The skill queries post-triage issues (labeled but NOT needs-triage/status-triage), unlabeled issues as fallback, PRs with changes requested, PRs with failing checks, and discussions — gathering all candidate items that are ready for implementation",
+        "The skill orders the queue by the defined priority: critical issues first, then high, then PRs with changes requested, then PRs with failing CI, then medium issues, then discussions, then low issues, then unlabeled issues, then draft PRs",
         "Because --dry-run is set, the skill reports planned labels and actions for each item WITHOUT executing any mutations (no gh issue edit, no gh pr create, no branch creation)",
         "The output is limited to at most 5 items due to --limit 5"
       ]
@@ -50,7 +50,7 @@
       "files": [],
       "deterministic_checks": [],
       "expectations": [
-        "The skill assembles the prioritized queue from zircote/swagger-php using the same discovery logic as sweep (issues with triage labels, unlabeled issues, PRs needing attention, discussions)",
+        "The skill assembles the prioritized queue from zircote/swagger-php using the same discovery logic as sweep (post-triage labeled issues, unlabeled issues as fallback, PRs needing attention, discussions)",
         "When the queue contains more than 1 item, the skill reports 'escalating to swarm mode' and does NOT process items sequentially",
         "The skill calls TeamCreate with team_name 'gh-do-swarm' to create the parallel processing team",
         "The skill creates ALL tasks upfront from the queue using TaskCreate (one task per item, up to 8 items from --limit), each with item details including type, repo, number, title, priority, and URL",
