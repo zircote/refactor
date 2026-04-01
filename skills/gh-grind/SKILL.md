@@ -291,12 +291,13 @@ Store as `manifest`. Write to `.claude/grind-progress.json`.
 
 ### Item States
 
-| State | Meaning |
-|-------|---------|
-| `queued` | Discovered, not yet started |
-| `in-progress` | Currently being processed |
-| `merged` | PR merged, issue closed |
-| `skipped` | Failed at some gate, with `skip_reason` |
+| State | Meaning | Issue State |
+|-------|---------|-------------|
+| `queued` | Discovered, not yet started | Open |
+| `in-progress` | Currently being processed | Open |
+| `merged` | PR merged, issue closed | **Closed** |
+| `skipped` | Failed at some gate, with `skip_reason` | **Open** (available for retry) |
+| `readiness-only` | PR at merge-readiness (`--no-merge`) | **Open** (PR stays open) |
 
 ---
 
@@ -356,8 +357,10 @@ gh issue list --repo ${REPO} --state open \
 ```
 
 **Manifest-aware**: For each discovered issue, check if it already exists in `manifest.items`:
-- If `state == "merged"` or `state == "skipped"`: skip (already processed).
-- If `state == "in-progress"`: resume from where it left off.
+- If `state == "merged"`: skip (already completed and issue closed).
+- If `state == "skipped"`: include in queue (available for retry — issue is still open).
+- If `state == "readiness-only"`: skip to Phase 3 for this item if `--no-merge` is NOT set (PR exists, ready to merge). If `--no-merge` is still set, skip entirely.
+- If `state == "in-progress"`: resume from where it left off (check for existing PR → Phase 3 if found, otherwise restart from Phase 2.4).
 - If `state == "queued"`: include in queue.
 - If not in manifest: add with `state: "queued"`.
 
@@ -937,9 +940,13 @@ If merge is blocked: **skip issue** with reason `"Merge blocked: <error>"`. Upda
 
 ## Phase 5: Verification + Checkpoint
 
-### Step 5.1: Verify Issue Closed
+This phase runs for ALL items — merged, skipped, and readiness-only. Steps are conditional on the item's outcome.
 
-After merge, verify the linked issue closed:
+### Step 5.1: Verify Issue Closed (MERGED items only)
+
+**Skip this step if the item was skipped or readiness-only.** Skipped and readiness-only items must leave the issue OPEN for future processing.
+
+**Only for merged items**: verify the linked issue closed:
 
 ```bash
 gh issue view ${ISSUE_NUMBER} --json state -q '.state'
@@ -952,11 +959,15 @@ gh issue close ${ISSUE_NUMBER} --reason completed
 
 ### Step 5.2: Update Manifest
 
-Update the manifest item:
-- `state`: `"merged"` or `"skipped"` (with `skip_reason`)
+Update the manifest item based on outcome:
+- **Merged**: `state: "merged"`, `completed_at`, `commit_sha`, `review_layers`
+- **Skipped**: `state: "skipped"`, `completed_at`, `skip_reason` (issue remains open)
+- **Readiness-only** (`--no-merge`): `state: "readiness-only"`, `completed_at`, `pr_number` (issue remains open, PR stays open)
+
+Fields:
 - `completed_at`: current timestamp
-- `commit_sha`: merge commit SHA (if merged)
-- `review_layers`: per-layer statistics from the review pipeline:
+- `commit_sha`: merge commit SHA (only if merged, null otherwise)
+- `review_layers`: per-layer statistics from the review pipeline (if review ran):
   ```json
   {
     "copilot": {"status": "approved|timeout|skipped", "findings": N},
@@ -978,13 +989,15 @@ blackboard_write(scope="{blackboard_id}", key="grind:checkpoint", value={
 }, author="team-lead")
 ```
 
-### Step 5.4: Epic Completion Check
+### Step 5.4: Epic Completion Check (MERGED items only)
 
-For epics: after all sub-issues are merged, check if the epic should be closed. If all sub-issues are closed, close the epic.
+**Skip this step if the item was skipped or readiness-only.**
 
-Update `manifest.epics` state: `"complete"` if all sub-issues done, `"partial"` otherwise.
+For epics: after all sub-issues are merged, check if the epic should be closed. Only close the epic if ALL sub-issues have state `"merged"` in the manifest. If any sub-issue is `"skipped"` or `"readiness-only"`, the epic remains open.
 
-Log the result: `MERGED`, `SKIPPED` (with reason), or `READINESS-ONLY`.
+Update `manifest.epics` state: `"complete"` if all sub-issues merged, `"partial"` otherwise.
+
+Log the item result: `MERGED`, `SKIPPED` (with reason), or `READINESS-ONLY`.
 
 ---
 
