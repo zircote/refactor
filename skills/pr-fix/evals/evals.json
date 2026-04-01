@@ -4,27 +4,28 @@
     {
       "id": 1,
       "prompt": "sarah left 4 comments on PR #287, mostly about the error handling in the webhook handler. can you go through them, fix what makes sense, and reply to each one? skip the rebase, I already did that",
-      "expected_output": "Fetches comments on PR #287, triages by confidence, applies fixes for accepted comments, skips rebase phase, commits with conventional format, replies to reviewers, resolves threads, and pushes",
+      "expected_output": "Fetches comments on PR #287, triages by confidence, applies fixes for accepted comments, skips rebase phase, commits with conventional format, replies to ALL reviewers, resolves ALL threads, and pushes",
       "files": [],
       "expectations": [
         "triggers pr-fix skill and fetches review comments for PR #287",
         "skips Phase 5 (rebase) because --skip-rebase intent is expressed",
         "applies code fixes to the webhook handler error handling based on accepted feedback",
         "commits changes using conventional commit format (e.g., 'fix: address PR review feedback')",
-        "posts reply comments to each addressed comment and resolves their threads via GraphQL"
+        "posts reply comments to EVERY comment — fixed, rejected, or acknowledged — achieving 100% reply rate",
+        "resolves ALL threads via GraphQL after push — including threads for rejected/explained comments"
       ]
     },
     {
       "id": 2,
       "prompt": "/pr-fix --auto --confidence=90",
-      "expected_output": "Runs the full 10-phase remediation workflow in auto mode, accepting fixes scoring 90+ and skipping those below, then rebases, commits, replies, resolves threads, and pushes",
+      "expected_output": "Discovers ALL open PRs, runs the full remediation workflow on each in auto mode, accepting fixes scoring 90+ and replying to ALL comments including those skipped, then rebases, commits, replies, resolves threads, pushes, and waits for CI",
       "files": [],
       "expectations": [
+        "discovers all open PRs via gh pr list since no PR numbers are specified",
         "operates in non-interactive auto mode without prompting the user",
         "uses 90 as the confidence threshold instead of the default 95",
-        "auto-accepts fixes scoring >= 90 and skips those below with a log entry",
-        "executes the full 10-phase workflow: fetch, analyze, rebase, apply, test, commit, push, reply, resolve, report",
-        "pushes with --force-with-lease after rebase rewrites history"
+        "replies to 100% of comments — auto-fixed, skipped, questions, and approvals all get replies",
+        "waits for CI by default after each PR push and reports status (advisory, not blocking)"
       ]
     },
     {
@@ -43,14 +44,14 @@
     {
       "id": 4,
       "prompt": "fix all the review comments on my PR end to end — the full pipeline, rebase, commit, push, everything",
-      "expected_output": "Executes the complete 10-phase workflow: fetch comments, triage by confidence, apply fixes, rebase onto base branch, commit, reply to reviewers, resolve threads, and push",
+      "expected_output": "Executes the complete workflow: fetch comments, triage by confidence, apply fixes, rebase onto base branch, commit, reply to ALL reviewers, resolve ALL threads, and push",
       "files": [],
       "expectations": [
         "executes phases in order: init, fetch, triage, remediate, rebase, commit, reply, resolve, push, summary",
         "rebase onto base branch happens BEFORE applying commits",
         "commits use conventional commit format with fix:/refactor:/style: prefix",
-        "thread resolution via GraphQL happens AFTER pushing changes",
-        "generates a completion report showing comments processed, fixes applied/skipped/rejected, threads resolved"
+        "every comment gets a reply — 100% reply rate shown in summary",
+        "every thread is resolved after push — summary shows threads resolved count matching total unresolved threads"
       ]
     },
     {
@@ -69,53 +70,53 @@
     {
       "id": 6,
       "prompt": "the PR has 2 blocking comments from jake about a null pointer bug and a race condition. fix those ASAP, skip the style nits from other reviewers",
-      "expected_output": "Prioritizes P0 blocking comments, applies fixes for the null pointer and race condition issues, skips lower-priority suggestions, commits and pushes",
+      "expected_output": "Prioritizes P0 blocking comments, applies fixes for the null pointer and race condition issues, replies to ALL comments including the skipped nits with explanations, commits and pushes",
       "files": [],
       "expectations": [
         "categorizes blocking comments as P0 priority and processes them first",
         "applies fixes for the null pointer bug and race condition as high-priority remediations",
-        "skips or deprioritizes P2 style/nit suggestions per user intent",
+        "still replies to the P2 style/nit suggestions with rejection explanations — no comment left unanswered",
         "reads the referenced source files before applying fixes to verify code context",
-        "replies to fixed comments with 'Fixed in <commit-sha-short>' template"
+        "resolves ALL threads after push — both the fixed P0 threads and the explained P2 threads"
       ]
     },
     {
       "id": 7,
       "prompt": "there are like 8 comments on PR #55 from the review. some are legit bugs, some are just opinions. fix the real issues, explain why I'm not changing the opinionated ones, and push it all up",
-      "expected_output": "Triages all 8 comments by confidence, fixes high-confidence bug reports, posts rejection explanations for opinion-based comments, resolves fixed threads, and pushes",
+      "expected_output": "Triages all 8 comments by confidence, fixes high-confidence bug reports, posts rejection explanations for opinion-based comments, resolves ALL threads, and pushes",
       "files": [],
       "expectations": [
         "uses confidence scoring to distinguish legitimate bugs (high Technical Accuracy) from opinion-based comments (lower scores)",
         "applies code fixes only for comments that pass the confidence threshold",
-        "posts rejection replies with technical reasoning for comments not applied",
-        "resolves threads only for comments that were actually fixed — leaves rejected threads open",
-        "generates the final summary report with disposition counts per priority category"
+        "posts rejection replies with technical reasoning for comments not applied — achieving 100% reply rate",
+        "resolves ALL threads after push — both fixed threads AND rejected-with-explanation threads",
+        "generates the final summary report with disposition counts and 100% reply rate verification"
       ]
     },
     {
       "id": 8,
       "prompt": "/pr-fix --auto",
-      "expected_output": "Runs full remediation in auto mode with default 95% confidence threshold, auto-fixing high-confidence items and logging skipped ones",
+      "expected_output": "Discovers ALL open PRs, runs full remediation on each in auto mode with default 95% confidence threshold, auto-fixing high-confidence items, replying to ALL comments, resolving ALL threads, and waiting for CI",
       "files": [],
       "expectations": [
+        "discovers all open PRs via gh pr list since no PR numbers are specified",
         "uses the default confidence threshold of 95% in auto mode",
         "auto-accepts fixes scoring >= 95 without prompting the user",
-        "skips all fixes below 95% with a log entry — does not prompt",
-        "verifies each fix after applying (syntax check, linter if available) and reverts if broken",
-        "never adds AI attribution lines to commits — no Co-Authored-By or Generated-with signatures"
+        "posts 'Below confidence threshold' replies for all skipped comments — never leaves a comment unanswered",
+        "waits for CI by default after each PR push — CI is advisory, not blocking"
       ]
     },
     {
       "id": 9,
       "prompt": "PR #200 got 12 comments across 6 files. address everything, but I want to see a confidence breakdown before you start fixing anything. also don't rebase, and use force push when done",
-      "expected_output": "Shows confidence breakdown for all 12 comments first, then applies accepted fixes interactively, skips rebase, commits, and force-pushes with --force-with-lease",
+      "expected_output": "Shows confidence breakdown for all 12 comments first, then applies accepted fixes interactively, skips rebase, commits, replies to ALL comments, resolves ALL threads, and force-pushes with --force-with-lease",
       "files": [],
       "expectations": [
         "presents confidence breakdown with per-comment scores before applying any fixes",
         "operates in interactive mode — prompts for sub-threshold comments with the breakdown visible",
         "skips rebase phase as requested",
         "pushes with git push --force-with-lease origin <branch> — NOT bare --force",
-        "fetches both inline code review comments and top-level PR conversation comments"
+        "replies to all 12 comments (100% reply rate) and resolves all threads after push"
       ]
     },
     {
@@ -128,7 +129,137 @@
         "posts direct answer replies to each question using the Question Response template",
         "evaluates the rename suggestion with confidence scoring before applying",
         "if rename is accepted, applies the change minimally without refactoring surrounding code",
-        "commits with appropriate conventional commit type (fix: or refactor: depending on changes)"
+        "resolves all 4 threads after push — answered questions AND the suggestion thread"
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "/pr-fix 10 22 35",
+      "expected_output": "Processes PRs #10, #22, and #35 sequentially — each gets the full remediation pipeline, then a batch summary is generated",
+      "files": [],
+      "expectations": [
+        "expands arguments to PR list [10, 22, 35] and validates each exists",
+        "processes each PR through the full Phase 1-10 pipeline sequentially",
+        "checks out each PR's branch before processing via gh pr checkout",
+        "generates per-PR summaries with 100% reply rate AND a batch summary at the end",
+        "continues to the next PR if one fails — does not abort the entire batch"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "/pr-fix 10..15 --auto --skip-ci",
+      "expected_output": "Expands range to PRs #10-15, processes all 6 autonomously in auto mode, skips CI checks, generates batch summary",
+      "files": [],
+      "expectations": [
+        "expands range syntax 10..15 to PR list [10, 11, 12, 13, 14, 15]",
+        "operates in auto mode — no interactive prompts for any PR",
+        "skips CI status checking entirely due to --skip-ci flag",
+        "replies to 100% of comments across all PRs and resolves all threads",
+        "generates a batch summary with per-PR results after all PRs are processed"
+      ]
+    },
+    {
+      "id": 13,
+      "prompt": "fix PRs 42 and 55 — auto mode, don't wait for CI, just get them done",
+      "expected_output": "Processes PRs #42 and #55 autonomously, fixes review comments, replies to all comments, resolves all threads, skips CI waiting",
+      "files": [],
+      "expectations": [
+        "identifies two PR numbers from natural language and processes both",
+        "operates in auto mode with default 95% confidence threshold",
+        "uses --no-wait-ci intent — does not wait for CI after push",
+        "each PR gets 100% reply coverage — every comment answered or explained",
+        "batch summary at the end shows per-PR disposition breakdown"
+      ]
+    },
+    {
+      "id": 14,
+      "prompt": "/pr-fix 42",
+      "expected_output": "Fixes PR #42 comments, pushes, then waits for CI by default and reports status — CI does not block the workflow",
+      "files": [],
+      "expectations": [
+        "processes PR #42 through the full remediation pipeline",
+        "waits for CI by default after push — this is the default behavior, no flag needed",
+        "reports CI pass/fail status in the summary — CI is advisory, not blocking",
+        "thread resolution happens regardless of CI status",
+        "100% reply rate on all comments — replies are posted before CI polling"
+      ]
+    },
+    {
+      "id": 15,
+      "prompt": "the reviewer left 5 comments — 2 I agree with, 3 I don't. fix the 2 good ones, explain why I'm not changing the other 3, resolve everything, and push",
+      "expected_output": "Fixes 2 accepted comments, posts rejection explanations for 3 declined comments, resolves ALL 5 threads after push, and generates summary showing 100% reply rate",
+      "files": [],
+      "expectations": [
+        "applies fixes for the 2 accepted comments with 'Fixed in <sha>' replies",
+        "posts rejection replies with explanations for all 3 declined comments",
+        "resolves ALL 5 threads after push — both fixed and rejected threads are resolved",
+        "summary shows 5/5 comments replied (100%) and 5/5 threads resolved",
+        "does not leave rejected comment threads unresolved — the explanation is sufficient to close them"
+      ]
+    },
+    {
+      "id": 16,
+      "prompt": "/pr-fix",
+      "expected_output": "Discovers ALL open PRs in the repo, processes each sequentially through the full pipeline, waits for CI after each push, generates batch summary",
+      "files": [],
+      "expectations": [
+        "discovers all open PRs via gh pr list --state open since no PR numbers are specified",
+        "displays discovered PR list before processing begins",
+        "processes each open PR through the full Phase 1-10 pipeline sequentially",
+        "waits for CI by default after each PR push (default behavior, no flag needed)",
+        "generates per-PR summaries and a batch summary at the end"
+      ]
+    },
+    {
+      "id": 17,
+      "prompt": "fix all my PRs — the full sweep, everything open",
+      "expected_output": "Discovers all open PRs, processes each end-to-end, replies to every comment, resolves every thread, waits for CI",
+      "files": [],
+      "expectations": [
+        "discovers all open PRs via gh pr list since no specific PRs are named",
+        "processes each PR through the full remediation pipeline",
+        "replies to 100% of comments on each PR — humans and Copilot alike",
+        "resolves all threads on each PR after push",
+        "waits for CI after each push — default behavior — and reports results in summary"
+      ]
+    },
+    {
+      "id": 18,
+      "prompt": "copilot left 3 code quality comments on PR #88. fix what makes sense and reply to all of them",
+      "expected_output": "Treats Copilot comments identically to human comments — triages by confidence, applies fixes, replies to all 3, resolves all threads",
+      "files": [],
+      "expectations": [
+        "identifies copilot[bot] comments and treats them as first-class review comments",
+        "applies the same priority categorization (P0-P3) and confidence scoring to Copilot comments",
+        "applies fixes for accepted Copilot suggestions just like human suggestions",
+        "posts replies to all 3 Copilot comments — fixed, rejected with explanation, or acknowledged",
+        "resolves all 3 Copilot threads after push"
+      ]
+    },
+    {
+      "id": 19,
+      "prompt": "/pr-fix 42 --no-wait-ci",
+      "expected_output": "Fixes PR #42, pushes, does NOT wait for CI — just checks current status and reports it",
+      "files": [],
+      "expectations": [
+        "processes PR #42 through the full remediation pipeline",
+        "after push, does NOT wait for CI completion due to --no-wait-ci flag",
+        "checks current CI status snapshot without polling",
+        "thread resolution and reply posting are unaffected by CI status",
+        "summary reports CI status as a snapshot, not a waited-for result"
+      ]
+    },
+    {
+      "id": 20,
+      "prompt": "PR #33 has feedback from both jake and copilot. jake flagged a security issue, copilot suggested better error handling. fix both",
+      "expected_output": "Triages both human (jake) and Copilot comments, applies fixes for both, replies to all, resolves all threads",
+      "files": [],
+      "expectations": [
+        "processes jake's security comment with P1 (Bug/Issue) or P0 (Blocking) priority",
+        "processes Copilot's error handling suggestion with equal triage treatment — not filtered as bot noise",
+        "applies fixes for both comments based on confidence scoring",
+        "posts replies to both jake and Copilot comments",
+        "resolves both threads after push — human and Copilot threads get equal resolution treatment"
       ]
     }
   ]

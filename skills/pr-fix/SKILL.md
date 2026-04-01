@@ -1,26 +1,49 @@
 ---
 name: pr-fix
-description: "Complete PR remediation workflow — fetch all review comments, triage by confidence, rebase, fix findings, commit, reply to reviewers, push, and resolve threads. Use this skill when the user wants to address PR feedback, fix review comments, remediate PR findings, resolve PR threads, or act on reviewer suggestions. Triggers on: 'fix PR comments', 'address PR feedback', 'fix review findings', 'pr-fix', 'remediate PR', 'resolve PR comments', 'fix the PR', 'address reviewer comments', 'fix what reviewers said', 'handle PR feedback'. Anti-triggers (do NOT match): 'create a PR' (use /pr), 'review this PR' (use /review-comments), 'commit and push' without PR context (use /cp), 'just push' (use /cp), 'rebase only' (use /fr), 'read PR comments' without fix intent (use /review-comments)."
-argument-hint: "[pr-number] [--auto] [--confidence=N] [--skip-rebase] [--dry-run] [--force]"
+description: "Complete PR remediation workflow — fetch all review comments, triage by confidence, rebase, fix findings, commit, reply to reviewers, push, and resolve threads. Supports processing 1..N PRs autonomously in batch. Use this skill when the user wants to address PR feedback, fix review comments, remediate PR findings, resolve PR threads, or act on reviewer suggestions. Triggers on: 'fix PR comments', 'address PR feedback', 'fix review findings', 'pr-fix', 'remediate PR', 'resolve PR comments', 'fix the PR', 'address reviewer comments', 'fix what reviewers said', 'handle PR feedback', 'fix all my PRs', 'fix PRs 1 2 3', 'fix PRs 10..15'. Anti-triggers (do NOT match): 'create a PR' (use /pr), 'review this PR' (use /review-comments), 'commit and push' without PR context (use /cp), 'just push' (use /cp), 'rebase only' (use /fr), 'read PR comments' without fix intent (use /review-comments)."
+argument-hint: "[pr-number...] [--auto] [--confidence=N] [--skip-rebase] [--skip-ci] [--no-wait-ci] [--dry-run] [--force]"
 ---
 
 # PR Fix Skill — Complete PR Remediation Workflow
 
-You are a PR remediation agent. Your job is to fetch all review feedback on a pull request, triage it by confidence, rebase onto the base branch, apply fixes, commit, reply to reviewers, push, and resolve threads — all using the `gh` and `git` CLIs.
+You are a PR remediation agent. Your job is to fetch all review feedback on one or more pull requests, triage by confidence, rebase onto the base branch, apply fixes, commit, reply to **every** reviewer comment, push, and resolve **all** threads — all using the `gh` and `git` CLIs.
+
+**Core guarantees:**
+1. **Every comment gets a reply** — no comment is left unanswered. Fixed, explained, or acknowledged. This includes human reviewers AND automated reviewers (GitHub Copilot, bots with actionable feedback).
+2. **Every thread gets resolved** — threads for fixed code AND for explained rejections are resolved after push.
+3. **CI is advisory, not blocking** — CI status is waited on by default and reported, but does not gate the workflow.
+4. **Copilot comments are first-class** — GitHub Copilot review comments receive the same triage, confidence scoring, remediation, and reply treatment as human reviewer comments. They are NOT skipped as bot noise.
 
 ## Arguments
 
-**$ARGUMENTS**: Optional PR number and flags.
+**$ARGUMENTS**: Optional PR number(s) and flags.
 
 Parse `$ARGUMENTS` for the following **before** any other processing:
 
 - If `$ARGUMENTS` contains `--help`, `-h`, or `help`: display the man-page style help below and stop.
-- **PR number**: First positional numeric argument. If omitted, infer from the current branch via `gh pr view --json number -q .number`.
+- **PR numbers**: One or more positional numeric arguments, space-separated. Supports range syntax `N..M` (e.g., `10..15` expands to PRs 10, 11, 12, 13, 14, 15). **If omitted, discover ALL open PRs** in the current repository via `gh pr list --state open --json number -q '.[].number'` and process them all.
 - `--auto` — Non-interactive mode. Accept all fixes at or above the confidence threshold without prompting.
 - `--confidence=N` — Confidence threshold 0-100 (default: 95). Fixes scoring at or above this threshold are auto-accepted.
 - `--skip-rebase` — Skip the rebase phase entirely.
+- `--skip-ci` — Skip CI status checking entirely. No CI commands are run.
+- `--no-wait-ci` — Do not wait for CI after push. By default, the skill waits for CI to complete and reports results (advisory, not blocking).
 - `--dry-run` — Show the remediation plan without executing any changes.
 - `--force` — Push with `--force-with-lease` instead of normal push.
+
+### Natural Language Flag Inference
+
+When `$ARGUMENTS` are expressed as natural language rather than explicit flags, map intent to the closest flag:
+
+| Natural Language | Maps To |
+|-----------------|---------|
+| "don't wait for CI", "skip CI waiting", "no CI wait" | `--no-wait-ci` |
+| "skip CI", "no CI", "ignore CI entirely" | `--skip-ci` |
+| "auto mode", "autonomously", "non-interactive" | `--auto` |
+| "don't rebase", "skip rebase", "already rebased" | `--skip-rebase` |
+| "force push", "force-push" | `--force` |
+| "just show me", "preview", "what would change" | `--dry-run` |
+
+When ambiguous between `--skip-ci` and `--no-wait-ci`, prefer `--no-wait-ci` — the user typically wants to proceed without blocking, not to suppress CI status entirely.
 
 ## Help Output
 
@@ -33,21 +56,36 @@ NAME
     pr-fix — complete PR remediation: fetch, triage, fix, rebase, push
 
 SYNOPSIS
-    /pr-fix [pr-number] [--auto] [--confidence=N] [--skip-rebase]
-            [--dry-run] [--force]
+    /pr-fix [pr-number...] [--auto] [--confidence=N] [--skip-rebase]
+            [--skip-ci] [--no-wait-ci] [--dry-run] [--force]
 
 DESCRIPTION
-    Fetches all review comments from a pull request, triages them by
-    confidence score, applies fixes, rebases onto the base branch,
-    commits with conventional commit format, replies to reviewers,
-    resolves comment threads, and pushes updates.
+    Fetches all review comments from one or more pull requests, triages
+    them by confidence score, applies fixes, rebases onto the base branch,
+    commits with conventional commit format, replies to ALL reviewers
+    (including GitHub Copilot), resolves ALL comment threads, and pushes.
 
-    Operates on the PR associated with the current branch by default.
+    When no PR numbers are given, discovers and processes ALL open PRs
+    in the current repository. When multiple PR numbers are given,
+    processes each PR end-to-end autonomously before moving to the next.
+
+    CI workflow status is waited on by default after push and reported
+    in the summary. CI is advisory — it never blocks the workflow.
+    Use --no-wait-ci to skip waiting, or --skip-ci to skip CI entirely.
+
+    GitHub Copilot review comments are treated identically to human
+    reviewer comments — same triage, confidence scoring, remediation,
+    reply, and thread resolution treatment.
+
+    Every comment receives a reply (fixed, rejected with explanation,
+    or answered). Every thread is resolved after push — including
+    threads where the fix was rejected with an explanation.
 
 OPTIONS
-    pr-number
-        PR number to operate on. If omitted, inferred from the current
-        branch via gh pr view.
+    pr-number...
+        One or more PR numbers to operate on, space-separated. Supports
+        range syntax N..M (e.g., 10..15). If omitted, ALL open PRs in
+        the repo are discovered and processed.
 
     --auto
         Non-interactive mode. Accept all fixes at or above the confidence
@@ -62,6 +100,13 @@ OPTIONS
         Skip the rebase phase. Useful when the branch is already up to
         date or rebase is handled separately.
 
+    --skip-ci
+        Skip CI status reporting entirely.
+
+    --no-wait-ci
+        Do not wait for CI after push. By default, the skill waits for
+        CI to complete and reports results (advisory, not blocking).
+
     --dry-run
         Show the remediation plan (categorized comments, proposed fixes,
         confidence scores) without executing any changes.
@@ -72,16 +117,25 @@ OPTIONS
 
 EXAMPLES
     /pr-fix
-        Fix comments on the PR for the current branch.
+        Fix comments on ALL open PRs in the repo.
 
     /pr-fix 42
         Fix comments on PR #42.
 
+    /pr-fix 10 22 35
+        Fix comments on PRs #10, #22, and #35 sequentially.
+
+    /pr-fix 10..15
+        Fix comments on PRs #10 through #15.
+
     /pr-fix --auto --confidence=90
-        Auto-fix all comments scoring >= 90% confidence.
+        Auto-fix all open PRs, scoring >= 90% confidence.
 
     /pr-fix --skip-rebase --dry-run
         Preview the remediation plan without rebase or changes.
+
+    /pr-fix 42 55 --auto --skip-ci
+        Autonomously fix PRs #42 and #55, skip CI status checks.
 
 SEE ALSO
     /pr                 Create or manage pull requests
@@ -89,6 +143,61 @@ SEE ALSO
     /cp                 Commit and push changes
     /fr                 Fetch and rebase
 ```
+
+---
+
+## Phase 0: Multi-PR Orchestration
+
+This phase activates when multiple PR numbers are provided, or when NO PR numbers are provided (which means "all open PRs").
+
+### Step 0.1: Expand PR List
+
+1. Parse `$ARGUMENTS` for all positional numeric values and range expressions.
+   - Range syntax: `10..15` expands to `[10, 11, 12, 13, 14, 15]`.
+   - Mixed: `10 22..25 30` expands to `[10, 22, 23, 24, 25, 30]`.
+   - **No PR numbers provided**: Discover ALL open PRs in the current repository:
+     ```bash
+     gh pr list --state open --json number,headRefName,reviewDecision,title -q '.[] | "\(.number)\t\(.headRefName)\t\(.reviewDecision)\t\(.title)"'
+     ```
+     Include all open PRs regardless of review status. Display the discovered list to the user before processing.
+2. Validate each PR exists and is open:
+   ```bash
+   gh pr view ${PR_NUMBER} --json number,state -q '.number' 2>/dev/null
+   ```
+   Skip PRs that are already closed/merged with a warning.
+3. Store the original branch name to return to after batch processing:
+   ```bash
+   git branch --show-current
+   ```
+
+### Step 0.2: Sequential Processing
+
+Process each PR through Phases 1–10 **sequentially**. After completing all phases for one PR:
+1. Stash or commit any remaining state.
+2. Checkout the next PR's branch via `gh pr checkout ${NEXT_PR}`.
+3. Begin Phase 1 for the next PR.
+
+If a PR fails during processing (e.g., unresolvable rebase conflict), log the failure and continue to the next PR. Do not abort the entire batch.
+
+### Step 0.3: Batch Summary
+
+After all PRs are processed, generate a batch summary:
+
+```
+Batch Remediation Summary
+=========================
+PRs processed:  <total>
+PRs succeeded:  <count>
+PRs failed:     <count> (list PR numbers and failure reasons)
+PRs skipped:    <count> (not found, closed, or merged)
+
+Per-PR Results:
+  PR #<N>: <count> fixes, <count> rejected, <count> answered, <count> ack'd — <count>/<total> threads resolved — CI: <pass/fail/skipped> — <status>
+  PR #<M>: <count> fixes, <count> rejected, <count> answered, <count> ack'd — <count>/<total> threads resolved — CI: <pass/fail/skipped> — <status>
+  ...
+```
+
+If exactly one PR number is explicitly provided (e.g., `/pr-fix 42`), skip Phase 0 and proceed directly to Phase 1 with that PR. In all other cases — no args (all open PRs), multiple PR numbers, or range syntax — Phase 0 orchestrates the batch.
 
 ---
 
@@ -109,11 +218,8 @@ SEE ALSO
 
 ### Step 1.2: Determine PR Number
 
-1. If a PR number was provided in `$ARGUMENTS`, use it.
-2. Otherwise, infer from the current branch:
-   ```bash
-   gh pr view --json number -q .number
-   ```
+1. If a PR number was provided in `$ARGUMENTS` (or passed from Phase 0), use it.
+2. If no PR numbers were provided at all, Phase 0 handles discovery of all open PRs. This step only runs when Phase 0 passes a specific PR number.
 3. If no PR is found, stop and inform the user.
 
 ### Step 1.3: Fetch PR Metadata
@@ -128,11 +234,14 @@ Store the base branch name (`baseRefName`) and head branch name (`headRefName`) 
 
 ### Step 1.4: Sync Local Branch
 
-1. Confirm the current local branch matches the PR head branch. If not, ask the user whether to checkout the PR branch:
+1. Confirm the current local branch matches the PR head branch. If not, checkout the PR branch:
    ```bash
    gh pr checkout ${PR_NUMBER}
    ```
-2. Check for uncommitted changes via `git status --porcelain`. If dirty, warn the user and ask whether to stash first.
+   In batch mode (`--auto` or multi-PR), checkout automatically without prompting.
+2. Check for uncommitted changes via `git status --porcelain`. If dirty:
+   - In batch/auto mode: stash changes automatically with `git stash push -m "pr-fix-auto-stash-PR${PR_NUMBER}"`.
+   - In interactive mode: warn the user and ask whether to stash first.
 
 ---
 
@@ -178,8 +287,13 @@ Assign each comment a priority category:
 
 Skip comments that are:
 - Already resolved threads
-- Bot-generated comments (CI status, linting reports)
-- Pure approval comments with no actionable content
+- Pure CI/linting status bot comments (e.g., codecov reports, lint-action summaries) that contain no actionable suggestion
+
+**Do NOT skip:**
+- **GitHub Copilot review comments** — Copilot comments are first-class. They receive the same priority categorization, confidence scoring, remediation, reply, and thread resolution as human reviewer comments. Copilot often flags real bugs, security issues, and code quality problems. Treat comments from `copilot-pull-request-reviewer[bot]`, `copilot[bot]`, or `github-actions[bot]` with actionable suggestions identically to human comments. The primary Copilot PR reviewer bot is `copilot-pull-request-reviewer[bot]` — check for this name first.
+- **Approval comments** — they must be acknowledged with a reply (disposition: Acknowledged).
+
+Every comment from a human or Copilot reviewer gets a response.
 
 ---
 
@@ -350,33 +464,34 @@ Confirm the commit(s) succeeded.
 
 ---
 
-## Phase 7: Reply to Comments
+## Phase 7: Reply to ALL Comments
 
-For each comment that was addressed, post a reply using the appropriate template.
+**CRITICAL: Every single comment MUST receive a reply.** No comment is left unanswered. This is not optional — it is the core contract of this skill. After this phase, every review comment and top-level comment has a reply posted.
 
-### Reply Templates
+### Comment Disposition Matrix
 
-**Fixed** (comment was addressed exactly as requested):
-```
-Fixed in <commit-sha-short>.
-```
+Every comment falls into exactly one disposition. Each disposition has a required reply template:
 
-**Fixed with Modification** (comment was addressed with a variation):
-```
-Addressed in <commit-sha-short>. <brief explanation of the modification and why>.
-```
+| Disposition | When | Reply Template |
+|-------------|------|---------------|
+| **Fixed** | Comment was addressed exactly as requested | `Fixed in <commit-sha-short>.` |
+| **Fixed with Modification** | Comment was addressed with a variation | `Addressed in <commit-sha-short>. <brief explanation of the modification and why>.` |
+| **Rejected** | Comment was reviewed but intentionally not applied | `Reviewed — not applying this change because <reason>. <optional: link to relevant docs or prior discussion>.` |
+| **Question Response** | Answering a reviewer's question | `<direct answer to the question>. <optional: reference to relevant code or docs>.` |
+| **Acknowledged** | Approval, LGTM, positive feedback — no action needed | `Thanks for the review!` (or contextually appropriate acknowledgment) |
+| **Skipped (Auto)** | Below confidence threshold in `--auto` mode | `Below confidence threshold (scored <N>%) — flagging for manual review.` |
+| **Deferred** | Valid feedback but out of scope for this PR | `Valid point — tracking as a follow-up in <issue-link or "a separate change">.` |
 
-**Rejected** (comment was reviewed but intentionally not applied):
-```
-Reviewed — not applying this change because <reason>. <optional: link to relevant docs or prior discussion>.
-```
+### Step 7.1: Reply Completeness Check
 
-**Question Response** (answering a reviewer's question):
-```
-<direct answer to the question>. <optional: reference to relevant code or docs>.
-```
+Before posting any replies, verify that **every** comment from Phase 2 has an assigned disposition. If any comment lacks a disposition, assign one now:
+- If the comment was processed in Phase 4, it's Fixed/Rejected/Fixed with Modification.
+- If it's a question, it's a Question Response.
+- If it's approval/LGTM, it's Acknowledged.
+- If it was skipped due to confidence threshold, it's Skipped (Auto).
+- Everything else is Deferred.
 
-### Posting Replies
+### Step 7.2: Post Replies
 
 For inline code review comments, reply via the API:
 
@@ -392,15 +507,34 @@ For top-level issue comments, reply via:
 gh pr comment ${PR_NUMBER} --body "<reply text>"
 ```
 
+### Step 7.3: Verify All Comments Replied
+
+After posting, verify no comments were missed:
+
+```bash
+gh api repos/{owner}/{repo}/pulls/${PR_NUMBER}/comments --paginate -q '.[].id' | wc -l
+```
+
+Compare against the total count from Phase 2. If any were missed, post replies for the remaining comments before proceeding.
+
 ---
 
-## Phase 8: Resolve Threads
+## Phase 8: Resolve ALL Threads
 
-Resolve threads in two stages: first prepare (fetch thread IDs), then execute (after push in Phase 9). The actual GraphQL resolution mutations execute after pushing because reviewers need to see the fix in the PR diff before the thread is marked resolved.
+Resolve threads in two stages: first prepare (fetch thread IDs), then execute (after push in Phase 9). The actual GraphQL resolution mutations execute after pushing because reviewers need to see the fix/explanation in the PR before the thread is marked resolved.
+
+**CRITICAL: Resolve threads for ALL addressed comments** — this includes:
+- Comments that were **fixed** (code was changed)
+- Comments that were **rejected with explanation** (reply explains why not)
+- Comments that were **answered** (questions received responses)
+- Comments that were **acknowledged** (approvals/LGTM)
+- Comments that were **deferred** (reply explains follow-up plan)
+
+The only threads that remain unresolved are those where the reply explicitly asks for further discussion or where the commenter needs to verify the response.
 
 ### Step 8.1: Get Thread IDs
 
-Retrieve the thread IDs for resolved comments using GraphQL:
+Retrieve ALL thread IDs using GraphQL:
 
 ```bash
 gh api graphql -f query='
@@ -425,7 +559,7 @@ query {
 }'
 ```
 
-Match threads to the comments that were fixed in Phase 4 using the comment `databaseId`. Store the thread IDs for resolution after push.
+Match threads to the comments processed in Phases 4 and 7 using the comment `databaseId`. Store ALL unresolved thread IDs for resolution after push — not just the fixed ones.
 
 ---
 
@@ -461,7 +595,7 @@ Confirm the push succeeded and the PR reflects the new commits.
 
 ### Step 9.3: Execute Thread Resolution
 
-Now that changes are pushed and visible in the PR, resolve the threads identified in Phase 8. Thread resolution via GraphQL happens AFTER pushing changes.
+Now that changes are pushed and replies are visible in the PR, resolve ALL threads identified in Phase 8.
 
 For each matched, unresolved thread, resolve it via GraphQL mutation:
 
@@ -476,36 +610,74 @@ mutation {
 }'
 ```
 
-Only resolve threads for comments that were actually fixed. Do not resolve threads for rejected comments or questions.
+**Resolve threads for ALL dispositions** — fixed, rejected-with-explanation, answered, acknowledged, and deferred. The reply in Phase 7 provides the context; the resolution marks the conversation as complete. The reviewer can always unresolve if they disagree.
+
+### Step 9.4: CI Status Check (Advisory, Default: Wait)
+
+**Skip this step entirely if `--skip-ci` is set.**
+
+By default, wait for CI to complete after push. This is the default behavior — use `--no-wait-ci` to skip waiting.
+
+**If `--no-wait-ci` is set**, just check current status without waiting:
+
+```bash
+gh pr checks ${PR_NUMBER}
+```
+
+**Otherwise (default)**, wait for CI completion. Use `gh pr checks --watch` if available, otherwise poll manually (up to 20 attempts, 30 seconds apart):
+
+```bash
+gh pr checks ${PR_NUMBER} --watch 2>/dev/null || true
+gh pr checks ${PR_NUMBER}
+```
+
+**IMPORTANT — known pitfalls:**
+- **Do NOT use `gh pr checks --json`** — this flag is not supported in all `gh` CLI versions and produces empty output that causes JSON parse errors. Always use the plain text output format.
+- Parse plain text output: each line shows `<check name>\t<status>\t<duration>\t<url>`. Look for `pass`, `fail`, or `pending`.
+- If `--watch` is not supported, fall back to discrete polling with `sleep 30` between each `gh pr checks` call.
+
+Report CI status in the summary. **CI status is advisory — it does NOT block the workflow, prevent thread resolution, or cause the skill to fail.** The workflow completes successfully even if CI fails. CI failures are reported for awareness, not as blockers.
 
 ---
 
 ## Phase 10: Summary
 
-Generate a completion report:
+Generate a completion report for each PR:
 
 ```
 PR #${PR_NUMBER} Remediation Summary
 =====================================
 Comments processed: <total>
-  - P0 (Blocking):   <count> fixed, <count> skipped
-  - P1 (Bug/Issue):  <count> fixed, <count> skipped
-  - P2 (Suggestion): <count> fixed, <count> skipped
-  - P3 (Question):   <count> answered, <count> skipped
+  - P0 (Blocking):   <count> fixed, <count> rejected
+  - P1 (Bug/Issue):  <count> fixed, <count> rejected
+  - P2 (Suggestion): <count> fixed, <count> rejected
+  - P3 (Question):   <count> answered
   - Info (Approval):  <count> acknowledged
 
-Fixes applied:     <count>
-Fixes skipped:     <count> (below confidence threshold)
-Fixes rejected:    <count> (user declined)
-Threads resolved:  <count>
+Disposition breakdown:
+  Fixed:               <count>
+  Fixed w/modification:<count>
+  Rejected (explained):<count>
+  Answered:            <count>
+  Acknowledged:        <count>
+  Skipped (auto):      <count>
+  Deferred:            <count>
+
+Comments replied:  <count>/<total> (must be 100%)
+Threads resolved:  <count>/<total unresolved>
 Commits created:   <count>
 Rebase:            <performed/skipped>
 Push:              <normal/force-with-lease>
+CI status:         <pass/fail/pending/skipped>
 
 PR URL: <url>
 ```
 
+**Reply completeness**: If `Comments replied` is not 100%, this is a **failure** — go back to Phase 7 and reply to the missing comments before reporting.
+
 If `--dry-run` was active, label the report as "DRY RUN — no changes were made" and omit commit/push statistics.
+
+If processing multiple PRs (Phase 0), append the batch summary after all individual PR summaries.
 
 ---
 

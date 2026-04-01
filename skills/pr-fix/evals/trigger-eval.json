@@ -33,6 +33,44 @@
     "should_trigger": true
   },
   { "query": "/pr-fix 42 --skip-rebase --dry-run", "should_trigger": true },
+  { "query": "/pr-fix 10 22 35", "should_trigger": true },
+  { "query": "/pr-fix 10..15 --auto", "should_trigger": true },
+  {
+    "query": "fix all my open PRs — 42, 55, and 67",
+    "should_trigger": true
+  },
+  {
+    "query": "fix PRs 10 through 15 autonomously",
+    "should_trigger": true
+  },
+  {
+    "query": "/pr-fix 42 --wait-ci",
+    "should_trigger": true
+  },
+  {
+    "query": "/pr-fix --skip-ci --auto",
+    "should_trigger": true
+  },
+  {
+    "query": "/pr-fix",
+    "should_trigger": true
+  },
+  {
+    "query": "fix all my open PRs",
+    "should_trigger": true
+  },
+  {
+    "query": "copilot left comments on PR #88, fix them",
+    "should_trigger": true
+  },
+  {
+    "query": "/pr-fix 42 --no-wait-ci",
+    "should_trigger": true
+  },
+  {
+    "query": "fix everything copilot and jake flagged on PR #33",
+    "should_trigger": true
+  },
   { "query": "create a PR for my feature branch", "should_trigger": false },
   {
     "query": "review comments without fixing anything — just score them",
