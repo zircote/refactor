@@ -1,37 +1,43 @@
 ---
 name: gh-grind
-description: "Continuous background work-clearing engine — picks post-triage issues, implements fixes/features, creates PRs, drives them through Copilot review + CI gates, and auto-merges. Grinds through the entire queue sequentially until empty, then polls for new work. Use this skill when the user wants to grind through issues, clear the backlog, process all open issues end-to-end, implement and merge everything, run a background work loop, or continuously clear work. Triggers on: 'grind through my issues', 'clear the backlog', 'process all issues and merge', 'gh-grind', 'grind', 'work through everything', 'implement all open issues', 'background work loop', 'keep grinding until done'. Anti-triggers (do NOT match): 'triage this issue' (use /gh-do), 'sweep existing PRs' without implementation (use /pr-sweep), 'create a PR' (use /pr), 'fix PR comments' (use /pr-fix), 'implement this one feature' (use /feature-dev)."
-argument-hint: "[issue-number...] [--interactive] [--confidence=N] [--once] [--poll=N] [--limit=N] [--no-merge] [--merge-method=METHOD] [--dry-run] [--force]"
+description: "Continuous background work-clearing engine — picks post-triage issues, implements fixes/features, creates PRs, drives them through triple-layer review (Copilot + Sonnet + Codex adversarial) + CI gates, and auto-merges. Uses swarm orchestration for complex items and blackboard-based checkpoint/resume for cross-session continuity. Grinds through the entire queue sequentially until empty, then polls for new work. Use this skill when the user wants to grind through issues, clear the backlog, process all open issues end-to-end, implement and merge everything, run a background work loop, or continuously clear work. Triggers on: 'grind through my issues', 'clear the backlog', 'process all issues and merge', 'gh-grind', 'grind', 'work through everything', 'implement all open issues', 'background work loop', 'keep grinding until done'. Anti-triggers (do NOT match): 'triage this issue' (use /gh-do), 'sweep existing PRs' without implementation (use /pr-sweep), 'create a PR' (use /pr), 'fix PR comments' (use /pr-fix), 'implement this one feature' (use /feature-dev)."
+argument-hint: "[issue-number...] [--interactive] [--confidence=N] [--once] [--poll=N] [--limit=N] [--no-merge] [--merge-method=METHOD] [--skip-rebase] [--dry-run] [--force]"
 ---
 
 # GH-GRIND — Continuous Background Work Engine
 
-You are a background work-clearing engine. Your job is to grind through a repo's post-triage issue queue end-to-end: pick an issue, implement it, create a PR, drive it through Copilot review and CI gates, merge it, and move to the next. Sequential. Reliable. Zero-touch.
+You are a background work-clearing engine with swarm orchestration, blackboard-based checkpoint/resume, and triple-layer review. Your job is to grind through a repo's post-triage issue queue end-to-end: pick an issue, implement it, create a PR, drive it through review and CI gates, merge it, and move to the next. Sequential. Reliable. Zero-touch.
 
 This skill unifies the full lifecycle that currently requires chaining `/gh-do` → `/pr` → `/pr-sweep`:
 
 | Aspect | /gh-do | /pr-sweep | /gh-grind |
 |--------|--------|-----------|-----------|
-| Scope | Triage + implement one item | Sweep existing PRs | Full lifecycle: issue → implement → PR → sweep → merge |
+| Scope | Triage + implement one item | Sweep existing PRs | Full lifecycle: issue → implement → PR → review → merge |
 | Creates PRs | Yes (draft) | No | Yes (**ready**, not draft) |
 | Merges | No | Yes | Yes |
 | Continuous | No | No | **Yes** (polls for new work) |
 | Implementation | Yes | No | Yes (inline + feature-dev routing) |
 | CI gate | No | Hard gate | Hard gate |
-| Copilot review | No | Requests + waits | Requests + waits |
+| Review | No | Copilot only | **Triple-layer**: Copilot + Sonnet + Codex adversarial |
+| Checkpoint | No | No | **Yes** (blackboard + manifest) |
+| Swarm | No | No | **Yes** (for COMPLEX items) |
 
 The core loop:
 
 ```
+INIT:
+  0. SWARM    — Create team, blackboard, load manifest, check checkpoint
+  1. QUEUE    — Discover post-triage issues, sort by priority
+
 LOOP:
-  1. PICK   — Next post-triage issue from priority queue
-  2. PLAN   — Read issue, detect complexity, choose impl engine
-  3. BRANCH — Create gh-do/issue-N-slug from HEAD of default branch
-  4. IMPL   — Implement (inline or feature-dev swarm by complexity)
-  5. PR     — Create READY PR with "Resolves owner/repo#N"
-  6. SWEEP  — Copilot review → remediate → rebase → CI green → merge
-  7. VERIFY — Confirm issue closed, log result
-  8. POLL   — If queue empty, sleep and re-query. Otherwise, loop.
+  2. SELECT   — Next item from queue (skip completed via manifest)
+  3. REVIEW   — Triple-layer: Copilot + Sonnet + Codex adversarial (parallel)
+  4. GATE     — Remediate → commit → CI green → merge
+  5. VERIFY   — Confirm issue closed, update manifest, checkpoint
+  6. CONTROL  — If queue empty, poll or exit. Otherwise, loop.
+
+REPORT:
+  7. REPORT   — Session statistics + per-layer review stats
 ```
 
 ---
@@ -45,7 +51,7 @@ Parse `$ARGUMENTS` **before** any other processing:
 - If `$ARGUMENTS` contains `--help`, `-h`, or `help`: display help and stop.
 - **Issue numbers**: Positional numeric arguments, space-separated. Range syntax `N..M` supported. **If omitted, discover ALL post-triage open issues.**
 - `--interactive` — Interactive mode. Prompt for sub-threshold fixes. By default, the skill runs in **auto mode** (non-interactive).
-- `--confidence=N` — Confidence threshold 0-100 (default: 95).
+- `--confidence=N` — Confidence threshold 0-100 (default: 95). Applied uniformly to all review layers.
 - `--once` — Run-to-empty then exit. No continuous polling.
 - `--poll=N` — Poll interval in minutes when queue is empty (default: 10).
 - `--limit=N` — Max items to process per session.
@@ -78,7 +84,7 @@ When help is requested, display this and stop:
 GH-GRIND(1)                  GPM Skills Manual                  GH-GRIND(1)
 
 NAME
-    gh-grind — continuous work engine: issue → implement → PR → merge
+    gh-grind — continuous work engine: issue → implement → PR → review → merge
 
 SYNOPSIS
     /gh-grind [issue-number...] [--interactive] [--confidence=N] [--once]
@@ -88,12 +94,17 @@ SYNOPSIS
 DESCRIPTION
     Grinds through a repo's post-triage issue queue end-to-end.
     For each issue: creates a branch, implements the fix/feature,
-    creates a ready PR, requests Copilot review, remediates all
-    comments, waits for CI green, and merges. Sequential processing
-    prevents merge conflict cascading.
+    creates a ready PR, runs triple-layer review (Copilot + Sonnet
+    code-reviewer + Codex adversarial), remediates findings, waits
+    for CI green, and merges. Sequential processing prevents merge
+    conflict cascading.
 
     Routes by complexity: simple items (bugs, chores) get inline
     implementation. Complex features get the feature-dev swarm.
+
+    Uses blackboard-based checkpoint/resume and a persistent progress
+    manifest for cross-session continuity. Subsequent sessions skip
+    already-completed items automatically.
 
     When the queue empties, polls every N minutes for new work.
     Use --once for single-pass mode (no polling).
@@ -106,6 +117,7 @@ OPTIONS
     --interactive   Interactive mode. Prompt for sub-threshold fixes.
                     Default is auto (non-interactive).
     --confidence=N  Confidence threshold 0-100 (default: 95).
+                    Applied uniformly to all review layers.
     --once          Run to empty then exit. No polling.
     --poll=N        Poll interval in minutes (default: 10).
     --limit=N       Max items per session.
@@ -141,9 +153,173 @@ SEE ALSO
 
 ---
 
-## Phase 0: Queue Assembly
+## Phase 0.0: Configuration Check
 
-### Step 0.1: Prerequisites
+### Step 0.0.1: Load Configuration
+
+1. Attempt to read `.claude/refactor.config.json` from the project root.
+2. **If file exists**: Parse the JSON silently. Store as `config`. Proceed.
+3. **If file does NOT exist**: Proceed with defaults — gh-grind does not require config to operate. The config is optional and only used for consistency with the refactor plugin ecosystem.
+
+---
+
+## Phase 0.1: Create Team + Blackboard
+
+**MANDATORY SWARM ORCHESTRATION — DO NOT USE PLAIN AGENT SPAWNS**
+
+You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with team_name → SendMessage. The swarm pattern enables persistent teammates that coordinate via shared task lists and messaging.
+
+**If `--dry-run`**: Skip swarm init entirely. Proceed directly to Phase 1.
+
+### Step 0.1.1: Create Team
+
+```
+TeamCreate with team_name: "grind-team"
+```
+
+If TeamCreate fails, retry once. If it fails again, report the error and stop.
+
+### Step 0.1.2: Create Blackboard
+
+Derive `session-slug` from repo name and timestamp:
+
+```
+blackboard_create with scope: "grind-{repo-slug}-{YYYYMMDD}" and TTL: 28800 (8 hours)
+```
+
+Store the returned blackboard ID as `blackboard_id`.
+
+### Step 0.1.3: Create Phase Tasks
+
+Use **TaskCreate** to create high-level tracking tasks:
+- "Phase 1: Queue Assembly"
+- "Phase 2-5: Item Processing Loop" (single task — items are tracked in the manifest)
+- "Phase 7: Session Report + Cleanup"
+
+---
+
+## Phase 0.2: Task Discovery Protocol Template
+
+All teammates spawned during grind receive this protocol in their spawn prompt:
+
+```
+BLACKBOARD: {blackboard_id}
+Use blackboard_read(scope="{blackboard_id}", key="...") to read shared context.
+Use blackboard_write(scope="{blackboard_id}", key="...", value="...", author="your-name") to share findings.
+
+TASK DISCOVERY PROTOCOL:
+1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you (owner = your name).
+2. Call TaskGet on your assigned task to read the full description.
+3. Work on the task.
+4. When done: (a) mark it completed via TaskUpdate, (b) send your results to the team lead via SendMessage, (c) call TaskList again to check for more assigned work.
+5. If no tasks are assigned to you, wait for the next message from the team lead.
+6. NEVER commit code via git — only the team lead commits.
+```
+
+**All agents are spawned on-demand** — not upfront:
+- **Sonnet code-reviewer**: Spawned in Phase 3 when review pipeline begins.
+- **Feature-dev agents**: Spawned in Phase 2 only when a COMPLEX item is routed.
+
+**Every Agent spawn MUST include `team_name: "grind-team"`**.
+
+---
+
+## Phase 0.3: Manifest Lifecycle
+
+### Step 0.3.1: Load or Create Manifest
+
+Attempt to read `.claude/grind-progress.json`:
+
+```bash
+cat .claude/grind-progress.json 2>/dev/null
+```
+
+**If file exists**: Parse JSON. Validate against schema. Prune completed items older than 30 days:
+```
+items = items.filter(i => i.state != "merged" && i.state != "skipped" || age(i.completed_at) < 30d)
+```
+Update `session_count += 1` and `updated_at = now()`. Store as `manifest`.
+
+**If file does NOT exist**: Initialize empty manifest:
+```json
+{
+  "version": "1.0",
+  "repo": "${REPO}",
+  "created_at": "<ISO-8601>",
+  "updated_at": "<ISO-8601>",
+  "session_count": 1,
+  "items": [],
+  "epics": []
+}
+```
+
+Store as `manifest`. Write to `.claude/grind-progress.json`.
+
+### Manifest Schema
+
+```json
+{
+  "version": "1.0",
+  "repo": "owner/repo",
+  "created_at": "ISO-8601",
+  "updated_at": "ISO-8601",
+  "session_count": 1,
+  "items": [
+    {
+      "number": 42,
+      "title": "Fix null pointer in auth handler",
+      "labels": ["priority/critical", "type/bug"],
+      "routing": "SIMPLE",
+      "state": "merged",
+      "pr_number": 101,
+      "commit_sha": "abc1234",
+      "review_layers": {
+        "copilot": {"status": "approved", "findings": 0},
+        "sonnet": {"status": "approved", "findings": 2, "remediated": 2},
+        "adversarial": {"status": "approved", "findings": 1, "remediated": 1}
+      },
+      "skip_reason": null,
+      "started_at": "ISO-8601",
+      "completed_at": "ISO-8601"
+    }
+  ],
+  "epics": [
+    {"number": 55, "sub_issues": [56, 57, 58], "state": "partial"}
+  ]
+}
+```
+
+### Item States
+
+| State | Meaning |
+|-------|---------|
+| `queued` | Discovered, not yet started |
+| `in-progress` | Currently being processed |
+| `merged` | PR merged, issue closed |
+| `skipped` | Failed at some gate, with `skip_reason` |
+
+---
+
+## Phase 0.4: Checkpoint/Resume
+
+### Step 0.4.1: Check for Existing Checkpoint
+
+```
+blackboard_read(scope="{blackboard_id}", key="grind:checkpoint")
+```
+
+**If checkpoint exists and is valid** (non-null, parseable JSON):
+- Display: "Found checkpoint from prior session: {checkpoint.items_completed} items completed, last item #{checkpoint.last_item_number}."
+- Restore state: skip items already in `merged` or `skipped` state in the manifest.
+- Continue from the next `queued` item.
+
+**If checkpoint does not exist or is empty**: Proceed normally (fresh session).
+
+---
+
+## Phase 1: Queue Assembly
+
+### Step 1.1: Prerequisites
 
 ```bash
 gh auth status
@@ -158,7 +334,7 @@ REPO_NAME=$(echo "$REPO" | cut -d/ -f2)
 DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef -q '.defaultBranchRef.name')
 ```
 
-### Step 0.2: Discover Post-Triage Issues
+### Step 1.2: Discover Post-Triage Issues
 
 If specific issue numbers were provided, use those. Otherwise discover all post-triage issues — items that have labels but are NOT still in triage:
 
@@ -179,7 +355,13 @@ gh issue list --repo ${REPO} --state open \
   | jq '[.[] | select(.labels | length == 0)]'
 ```
 
-### Step 0.3: Epic Detection
+**Manifest-aware**: For each discovered issue, check if it already exists in `manifest.items`:
+- If `state == "merged"` or `state == "skipped"`: skip (already processed).
+- If `state == "in-progress"`: resume from where it left off.
+- If `state == "queued"`: include in queue.
+- If not in manifest: add with `state: "queued"`.
+
+### Step 1.3: Epic Detection
 
 For each issue, check for sub-issues:
 
@@ -193,7 +375,9 @@ An issue is an **epic** if:
 
 For epics: extract all sub-issue numbers, add them to the queue ahead of the epic (ordered by creation date, oldest first). The epic itself processes last — after all its sub-issues are merged, verify the epic can be closed.
 
-### Step 0.4: Priority Order
+Update `manifest.epics` with epic tracking data.
+
+### Step 1.4: Priority Sort
 
 Sort the queue:
 1. `priority/critical` issues
@@ -204,7 +388,7 @@ Sort the queue:
 
 Within the same priority, order by creation date (oldest first).
 
-### Step 0.5: Display Queue
+### Step 1.5: Display Queue
 
 Before processing, display the assembled queue:
 
@@ -219,34 +403,41 @@ Grind Queue (${REPO})
   #67: [priority/medium]   [type/chore]   — Update dependencies to latest
 
 Items: <total> | Epics: <count> | Estimated: <total> items to process
+Session: <session_count> | Previously completed: <count from manifest>
 ```
 
-**If `--dry-run`**: Display the queue and stop. Do not proceed to Phase 1.
+### Step 1.6: Dry-Run Exit Gate
+
+**If `--dry-run`**: Display the queue and stop. Do not proceed to Phase 2.
+
+Write manifest with discovered items (all `queued` state) so dry-run results persist.
 
 ---
 
-## Phase 1: Item Selection
+## Phase 2: Item Processing Loop
 
-### Step 1.1: Take Next Item
+### Step 2.1: Select Next Item
 
-Pop the next item from the priority queue. Read full details:
+Pop the next `queued` item from the priority queue. Read full details:
 
 ```bash
 gh issue view ${ISSUE_NUMBER} --json number,title,body,labels,comments,assignees,state
 ```
 
-### Step 1.2: Check for Existing PR
+Update manifest item state to `in-progress`, set `started_at`. Write manifest to disk.
 
-Check if this issue already has an open PR (someone or a previous grind session may have started it):
+### Step 2.2: Check for Existing PR
+
+Check if this issue already has an open PR:
 
 ```bash
 gh pr list --state open --json number,title,headRefName,body \
   | jq '[.[] | select(.body | test("Resolves.*#'${ISSUE_NUMBER}'") or .headRefName | test("issue-'${ISSUE_NUMBER}'-"))]'
 ```
 
-If a matching PR exists: skip directly to Phase 5 (sweep the existing PR). No need to branch or implement.
+If a matching PR exists: capture PR number and branch, skip to Phase 3 (review the existing PR).
 
-### Step 1.3: Detect Complexity
+### Step 2.3: Detect Complexity + Route
 
 Route by complexity:
 
@@ -260,11 +451,9 @@ Route by complexity:
 
 Log the routing decision: `"Issue #N: routing to SIMPLE/COMPLEX implementation"`
 
----
+Update manifest item `routing` field.
 
-## Phase 2: Branch Creation
-
-### Step 2.1: Create Branch
+### Step 2.4: Branch Creation
 
 ```bash
 SLUG=$(echo "${ISSUE_TITLE}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | head -c 40)
@@ -281,11 +470,9 @@ git rebase "origin/${DEFAULT_BRANCH}"
 
 If rebase conflicts on an existing branch: delete the branch and recreate from scratch. The previous attempt's work is abandoned — a clean start is safer than resolving stale conflicts.
 
----
+### Step 2.5: Implementation
 
-## Phase 3: Implementation
-
-### Route A: SIMPLE (Inline)
+#### Route A: SIMPLE (Inline)
 
 1. **Read context**: Issue body, all comments, repo structure, test patterns, CLAUDE.md conventions.
 2. **Implement**: Follow existing code patterns. Make the smallest change that addresses the issue.
@@ -301,36 +488,52 @@ If rebase conflicts on an existing branch: delete the branch and recreate from s
    Resolves ${REPO}#${ISSUE_NUMBER}"
    ```
 
-If implementation fails (syntax errors that can't be resolved, tests that can't be made to pass after reasonable effort): **skip issue** with reason `"Implementation failed: <details>"`. Run `git checkout ${DEFAULT_BRANCH}` and `git branch -D ${BRANCH}` to clean up.
+If implementation fails (syntax errors that can't be resolved, tests that can't be made to pass after reasonable effort): **skip issue** with reason `"Implementation failed: <details>"`. Run `git checkout ${DEFAULT_BRANCH}` and `git branch -D ${BRANCH}` to clean up. Update manifest item state to `skipped`. Jump to Phase 5 (checkpoint) then Phase 6 (loop control).
 
-### Route B: COMPLEX (Feature-Dev Swarm)
+#### Route B: COMPLEX (Feature-Dev Swarm)
 
-1. Invoke feature-dev logic with the issue body as the specification.
-2. Feature-dev runs its multi-agent pipeline: codebase exploration → architecture design → implementation → quality review.
+Spawn feature-dev agents as teammates on the grind team using **deferred spawning**:
+
+```
+Agent tool with:
+  subagent_type: "refactor:code-explorer"
+  team_name: "grind-team"
+  name: "feature-explorer"
+  prompt: "You are a code explorer on a grind team, exploring codebase for issue #${ISSUE_NUMBER}.
+  {TASK DISCOVERY PROTOCOL from Phase 0.2}"
+
+Agent tool with:
+  subagent_type: "refactor:feature-code"
+  team_name: "grind-team"
+  name: "feature-impl"
+  prompt: "You are the feature implementation agent on a grind team, implementing issue #${ISSUE_NUMBER}.
+  {TASK DISCOVERY PROTOCOL from Phase 0.2}"
+```
+
+1. Create exploration task, assign to feature-explorer, wait for completion.
+2. Create implementation task with issue body + exploration findings, assign to feature-impl, wait for completion.
 3. After feature-dev completes, verify the commit includes `Resolves ${REPO}#${ISSUE_NUMBER}`. If not, amend to add it.
 
-If feature-dev fails or produces no commits: **skip issue** with reason `"Feature-dev implementation failed"`. Clean up the branch.
+If feature-dev fails or produces no commits: **skip issue** with reason `"Feature-dev implementation failed"`. Clean up the branch. Update manifest. Jump to Phase 5 then Phase 6.
 
-### Both Routes — Safety Rules
+#### Both Routes — Safety Rules
 
 - Never `git add -A` or `git add .` — explicit per-file staging only
 - Never add AI attribution (no `Co-Authored-By`, no `Generated with`)
 - Conventional commit format (`fix:`, `feat:`, `refactor:`, `chore:`, `docs:`, `test:`)
 - One commit per issue (unless changes span distinct categories)
 
----
+### Step 2.6: PR Creation
 
-## Phase 4: PR Creation
-
-### Step 4.1: Push
+#### Push
 
 ```bash
 git push -u origin ${BRANCH}
 ```
 
-### Step 4.2: Create Ready PR
+#### Create Ready PR
 
-Create the PR as **ready** (not draft) — this eliminates the draft-to-ready gap that exists in the gh-do → pr-sweep pipeline:
+Create the PR as **ready** (not draft):
 
 ```bash
 gh pr create \
@@ -355,9 +558,9 @@ PRBODY
 )"
 ```
 
-Capture the PR number from the output.
+Capture the PR number. Update manifest item `pr_number`.
 
-### Step 4.3: Request Copilot Review
+#### Request Copilot Review
 
 ```bash
 gh api repos/${OWNER}/${REPO_NAME}/pulls/${PR_NUMBER}/requested_reviewers \
@@ -366,15 +569,99 @@ gh api repos/${OWNER}/${REPO_NAME}/pulls/${PR_NUMBER}/requested_reviewers \
 EOF
 ```
 
-If the request returns 422: Copilot reviews may not be enabled. Log a warning and continue — the sweep phase will handle this gracefully (timeout → skip or proceed without Copilot).
+If the request returns 422: Copilot reviews may not be enabled. Log a warning and continue.
+
+### Step 2.7: Write Checkpoint
+
+Write checkpoint to blackboard after PR creation:
+
+```
+blackboard_write(scope="{blackboard_id}", key="grind:checkpoint", value={
+  "last_item_number": ISSUE_NUMBER,
+  "items_completed": <count>,
+  "current_phase": "review",
+  "pr_number": PR_NUMBER,
+  "branch": BRANCH,
+  "timestamp": "<ISO-8601>"
+}, author="team-lead")
+```
 
 ---
 
-## Phase 5: Sweep
+## Phase 3: Review Pipeline
 
-This phase drives the PR through quality gates to merge-readiness. It reuses pr-sweep's proven patterns.
+**Goal**: Drive the PR through triple-layer review. All three layers run concurrently for maximum throughput.
 
-### Step 5.1: Copilot Review Gate
+### Step 3.1: Launch All Review Layers in Parallel
+
+Launch all three review layers in the **same tool-call message** for true parallel execution:
+
+#### Layer 1: Copilot (already requested in Step 2.6)
+
+Copilot is async — review was already requested. Polling begins in Step 3.2.
+
+#### Layer 2: Sonnet Code-Reviewer
+
+**Check availability first**: Attempt to spawn the code-reviewer agent. If spawn fails, warn and skip Layer 2.
+
+```
+Agent tool with:
+  subagent_type: "refactor:code-reviewer"
+  team_name: "grind-team"
+  name: "sonnet-reviewer"
+  model: "sonnet"
+  prompt: "You are the Sonnet code reviewer on a grind team.
+
+  BLACKBOARD: {blackboard_id}
+  Write findings to key: grind:review_sonnet_{ISSUE_NUMBER}
+
+  Review PR #${PR_NUMBER} on branch ${BRANCH}.
+  Focus: quality (bugs, logic, conventions) and security (regressions, secrets, OWASP).
+  Use Mode 2 — Iteration Review.
+  Return confidence-scored findings in structured JSON format:
+  {
+    \"findings\": [
+      {
+        \"severity\": \"P0|P1|P2|P3|Info\",
+        \"confidence\": 0-100,
+        \"file\": \"path/to/file\",
+        \"line\": 42,
+        \"description\": \"what's wrong\",
+        \"fix\": \"how to fix it\"
+      }
+    ],
+    \"verdict\": \"PASS|FAIL\",
+    \"summary\": \"brief assessment\"
+  }
+
+  {TASK DISCOVERY PROTOCOL}"
+```
+
+Create task: "Review PR #${PR_NUMBER} for quality and security. Write structured findings to blackboard."
+Assign to "sonnet-reviewer". Send message.
+
+#### Layer 3: Codex Adversarial Review
+
+**Check availability first**:
+```bash
+CODEX_AVAILABLE=$(test -f "${CLAUDE_PLUGIN_ROOT}/scripts/codex-companion.mjs" && echo "yes" || echo "no")
+```
+
+If not available: warn `"Codex plugin unavailable — skipping adversarial review (Layer 3)"`. Set `adversarial_skipped = true`.
+
+If available:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/codex-companion.mjs" \
+  adversarial-review --wait --scope branch
+```
+
+Parse the JSON output and write to blackboard:
+```
+blackboard_write(scope="{blackboard_id}", key="grind:review_adversarial_{ISSUE_NUMBER}",
+  value=<parsed adversarial findings>, author="team-lead")
+```
+
+### Step 3.2: Poll Copilot Review
 
 Check for existing Copilot review:
 ```bash
@@ -392,17 +679,19 @@ echo "Poll attempt ${ATTEMPT}/20: Copilot review count = $REVIEW_COUNT"
 **Step B — Evaluate:**
 - `REVIEW_COUNT > 0`: Copilot review found. Proceed.
 - `REVIEW_COUNT == 0` and `ATTEMPT < 20`: Go to Step C.
-- `REVIEW_COUNT == 0` and `ATTEMPT >= 20`: **Skip issue** with reason `"Copilot review timed out"`.
+- `REVIEW_COUNT == 0` and `ATTEMPT >= 20`: Copilot timed out. Log warning and proceed without Copilot findings (soft gate).
 
 **Step C — Wait and loop back:**
 ```bash
 sleep 30
 ```
-Increment ATTEMPT, go back to Step A. Each iteration must make a fresh API call — the sleep does not replace the check.
+Increment ATTEMPT, go back to Step A.
 
-### Step 5.2: Fetch All Feedback
+### Step 3.3: Collect All Findings
 
-Inline code review comments:
+Gather findings from all completed layers:
+
+**Copilot findings** — Fetch inline code review comments:
 ```bash
 gh api repos/${OWNER}/${REPO_NAME}/pulls/${PR_NUMBER}/comments --paginate
 ```
@@ -412,19 +701,81 @@ Top-level comments:
 gh pr view ${PR_NUMBER} --json comments --jq '.comments[]'
 ```
 
-Categorize each comment:
+Write to blackboard:
+```
+blackboard_write(scope="{blackboard_id}", key="grind:review_copilot_{ISSUE_NUMBER}",
+  value=<copilot findings>, author="team-lead")
+```
 
-| Priority | Category | Criteria |
-|----------|----------|----------|
-| **P0** | Blocking | "must", "required", "blocking", "critical" |
-| **P1** | Bug/Issue | Bug report, logic error, security issue |
-| **P2** | Suggestion | "consider", "maybe", "nit", "suggestion" |
-| **P3** | Question | "why", "what does this", "can you explain" |
-| **Info** | Approval | "LGTM", "looks good", positive feedback |
+**Sonnet findings** — Read from blackboard:
+```
+blackboard_read(scope="{blackboard_id}", key="grind:review_sonnet_{ISSUE_NUMBER}")
+```
 
-Copilot comments (`copilot-pull-request-reviewer[bot]`) are first-class — same treatment as human reviewers.
+**Adversarial findings** — Read from blackboard (if not skipped):
+```
+blackboard_read(scope="{blackboard_id}", key="grind:review_adversarial_{ISSUE_NUMBER}")
+```
 
-### Step 5.3: Confidence-Based Triage
+### Step 3.4: Merge + Deduplicate Findings
+
+Normalize all findings to a common format:
+
+```
+all_findings = []
+
+# Copilot findings
+all_findings += copilot_comments.map(c => {
+  source: "copilot",
+  priority: classify(c),       # P0/P1/P2/P3/Info
+  confidence: infer(c),        # Inferred from language strength
+  file: c.path,
+  line: c.line,
+  body: c.body
+})
+
+# Sonnet findings (structured JSON from code-reviewer agent)
+all_findings += sonnet_findings.map(f => {
+  source: "sonnet",
+  priority: f.severity,
+  confidence: f.confidence,    # Direct 0-100
+  file: f.file,
+  line: f.line,
+  body: f.description
+})
+
+# Codex adversarial findings (if available)
+all_findings += adversarial_findings.map(f => {
+  source: "codex-adversarial",
+  priority: map_confidence(f.confidence),  # 0-1 → P0/P1/P2
+  confidence: f.confidence * 100,          # Normalize to 0-100
+  file: f.file,
+  line: f.line_start,
+  body: f.body
+})
+```
+
+#### Deduplication Rules
+
+| Condition | Action |
+|-----------|--------|
+| Same file, overlapping lines (±5), similar description | Keep higher-confidence finding |
+| Same file, overlapping lines, different concern | Keep both (different review dimensions) |
+| Different files | No dedup possible |
+
+```
+deduplicated = deduplicate(all_findings, by=[file, line_range, semantic_similarity])
+```
+
+Write merged findings to blackboard:
+```
+blackboard_write(scope="{blackboard_id}", key="grind:merged_findings_{ISSUE_NUMBER}",
+  value=deduplicated, author="team-lead")
+```
+
+### Step 3.5: Confidence-Based Triage
+
+Apply `--confidence` threshold uniformly across all layers:
 
 Score each actionable comment:
 
@@ -436,13 +787,22 @@ Score each actionable comment:
 | Scope Impact | 15% |
 
 - `>= threshold` (default 95%): auto-accept.
-- Below threshold in auto mode (default): skip with "Below confidence threshold" reply. Use `--interactive` to prompt instead.
+- Below threshold in auto mode (default): skip with "Below confidence threshold" reply.
+- Below threshold with `--interactive`: prompt user for each finding.
 
-### Step 5.4: Remediation
+### Step 3.6: Remediation
 
 Read before edit. Minimal fixes. Verify each fix (syntax, lint). If a fix breaks something, revert and flag.
 
-### Step 5.5: Commit Fixes
+For adversarial findings that are design-level and cannot be auto-fixed: **skip item** with reason `"Adversarial finding requires manual review: <summary>"` if the finding is blocking (P0/P1). Non-blocking adversarial findings are logged but do not block.
+
+---
+
+## Phase 4: Gates + Merge
+
+### Step 4.1: Commit Fixes
+
+If remediation produced changes:
 
 ```bash
 git add <fixed-files>
@@ -454,9 +814,9 @@ git commit -m "fix: address review feedback for PR #${PR_NUMBER}
 Resolves review comments on PR #${PR_NUMBER}"
 ```
 
-### Step 5.6: Reply to ALL Comments
+### Step 4.2: Reply to ALL Comments
 
-Every comment gets a reply. The disposition matrix:
+Every comment from every layer gets a reply. The disposition matrix:
 
 | Disposition | Reply Template |
 |-------------|---------------|
@@ -468,11 +828,13 @@ Every comment gets a reply. The disposition matrix:
 | **Skipped (Auto)** | `Below confidence threshold (<N>%) — flagging for manual review.` |
 | **Deferred** | `Valid point — tracking as follow-up.` |
 
-Post replies via API, then verify 100% reply rate.
+Post replies via API. **Reply to Copilot comments via GitHub API** (these are PR review comments). **Reply to Sonnet/Codex findings in the PR body or as a summary comment** (these are internal findings, not GitHub review comments).
 
-### Step 5.7: Resolve ALL Threads
+Verify 100% reply rate for Copilot comments.
 
-Fetch thread IDs via GraphQL, then resolve after push:
+### Step 4.3: Resolve ALL Threads
+
+Fetch thread IDs via GraphQL, then resolve:
 
 ```bash
 gh api graphql -f query='
@@ -485,11 +847,11 @@ mutation {
 
 Resolve for ALL dispositions — fixed, rejected, answered, acknowledged, deferred.
 
-### Step 5.8: Push + Execute Thread Resolution
+### Step 4.4: Push
 
-Push changes (use `--force-with-lease` if rebase was performed or `--force` flag is set). Then execute the GraphQL thread resolution mutations.
+Push changes (use `--force-with-lease` if rebase was performed or `--force` flag is set). Then execute thread resolution mutations.
 
-### Step 5.9: CI Gate (HARD)
+### Step 4.5: CI Gate (HARD)
 
 Try `gh pr checks --watch` first:
 ```bash
@@ -522,17 +884,17 @@ git push origin ${BRANCH}
 
 If CI fails after retry: **skip issue** with reason `"CI failed after retry: <check names>"`.
 
-### Step 5.10: Final Verification
+### Step 4.6: Final Verification
 
 Verify all gates hold before merge:
-- 100% comment reply rate
+- 100% Copilot comment reply rate
 - All threads resolved
 - CI all green
 - Branch up-to-date with base
 
 If any verification fails: **skip issue** with reason.
 
-### Step 5.11: Merge
+### Step 4.7: Merge
 
 Skip if `--no-merge` is set (report as READINESS-ONLY).
 
@@ -550,7 +912,9 @@ If merge is blocked: **skip issue** with reason `"Merge blocked: <error>"`.
 
 ---
 
-## Phase 6: Verification
+## Phase 5: Verification + Checkpoint
+
+### Step 5.1: Verify Issue Closed
 
 After merge, verify the linked issue closed:
 
@@ -563,29 +927,63 @@ If the issue is still open (closing keyword may have failed):
 gh issue close ${ISSUE_NUMBER} --reason completed
 ```
 
+### Step 5.2: Update Manifest
+
+Update the manifest item:
+- `state`: `"merged"` or `"skipped"` (with `skip_reason`)
+- `completed_at`: current timestamp
+- `commit_sha`: merge commit SHA (if merged)
+- `review_layers`: per-layer statistics from the review pipeline:
+  ```json
+  {
+    "copilot": {"status": "approved|timeout|skipped", "findings": N},
+    "sonnet": {"status": "approved|skipped|unavailable", "findings": N, "remediated": M},
+    "adversarial": {"status": "approved|skipped|unavailable", "findings": N, "remediated": M}
+  }
+  ```
+
+Write updated manifest to `.claude/grind-progress.json`.
+
+### Step 5.3: Write Checkpoint
+
+```
+blackboard_write(scope="{blackboard_id}", key="grind:checkpoint", value={
+  "last_item_number": ISSUE_NUMBER,
+  "items_completed": <count>,
+  "current_phase": "loop_control",
+  "timestamp": "<ISO-8601>"
+}, author="team-lead")
+```
+
+### Step 5.4: Epic Completion Check
+
 For epics: after all sub-issues are merged, check if the epic should be closed. If all sub-issues are closed, close the epic.
+
+Update `manifest.epics` state: `"complete"` if all sub-issues done, `"partial"` otherwise.
 
 Log the result: `MERGED`, `SKIPPED` (with reason), or `READINESS-ONLY`.
 
 ---
 
-## Phase 7: Loop Control
+## Phase 6: Loop Control
 
 After completing an item:
 
-1. If `--limit=N` reached: generate report (Phase 8) and exit.
-2. If queue has more items: return to Phase 1.
-3. If queue is empty AND `--once` is set: generate report and exit.
+1. If `--limit=N` reached: proceed to Phase 7 (report).
+2. If queue has more items: return to Phase 2 (next item).
+3. If queue is empty AND `--once` is set: proceed to Phase 7.
 4. If queue is empty AND `--once` is NOT set:
    - Log: `"Queue empty. Polling in ${POLL_INTERVAL} minutes..."`
    - Sleep for `--poll` minutes (default: 10).
-   - Re-assemble queue (Phase 0.2-0.4).
-   - If new items found: return to Phase 1.
+   - Re-assemble queue (Phase 1.2-1.4, manifest-aware).
+   - If new items found: return to Phase 2.
    - If still empty: sleep and poll again.
 
 ---
 
-## Phase 8: Grind Report
+## Phase 7: Session Report + Cleanup
+
+### Step 7.1: Grind Report
 
 Generate after session completes, limit is reached, or loop is interrupted:
 
@@ -593,6 +991,7 @@ Generate after session completes, limit is reached, or loop is interrupted:
 GH-GRIND Session Report
 ========================
 Repo:                ${REPO}
+Session:             #${SESSION_COUNT}
 Session duration:    <HH:MM:SS>
 Items processed:     <total>
 Items merged:        <count>
@@ -613,13 +1012,72 @@ Skip Reasons:
   Merge conflict:              <count>
   Implementation failed:       <count>
   Merge blocked:               <count>
+  Adversarial finding:         <count>
 
 Epics:
   #<E>: CLOSED  — 3/3 sub-issues merged
   #<F>: PARTIAL — 2/4 sub-issues merged, 2 skipped
 ```
 
+### Step 7.2: Review Layer Statistics
+
+```
+Review Layer Statistics:
+  Copilot:     <total findings> found, <remediated> fixed, <skipped> skipped
+  Sonnet:      <total findings> found, <remediated> fixed, <skipped> skipped
+  Adversarial: <total findings> found, <remediated> fixed, <skipped> skipped
+
+  Cross-layer duplicates removed: <count>
+  Unique findings per layer:
+    Copilot-only:     <count>  (surface issues)
+    Sonnet-only:      <count>  (quality/security)
+    Adversarial-only: <count>  (design challenges)
+
+  Adversarial review verdicts:
+    approve:          <count>
+    needs-attention:  <count>
+    skipped (timeout):<count>
+    unavailable:      <count>
+```
+
 If `--dry-run` was active, label the report "DRY RUN — no changes were made".
+
+### Step 7.3: Shutdown Team + Cleanup
+
+**This step MUST execute regardless of success or failure in prior phases.** If any phase fails or the user interrupts, skip directly here. This is a **finally block**.
+
+1. Send **shutdown_request** to all spawned teammates via SendMessage.
+2. Wait up to **30 seconds** for shutdown confirmations. If any teammate does not respond within 30 seconds, proceed anyway.
+3. Use **TeamDelete** to clean up the team. This forcefully terminates any remaining agents.
+4. If TeamDelete fails, log the error and inform the user: "Team cleanup failed — run `TeamDelete` manually for team `grind-team`".
+
+---
+
+## Blackboard Keys
+
+| Key Pattern | Writer | Reader | Phase |
+|-------------|--------|--------|-------|
+| `grind:queue` | team lead | all agents | 1 |
+| `grind:current_item` | team lead | implementation agents | 2 |
+| `grind:checkpoint` | team lead | team lead (on resume) | 0.4, 2.7, 5.3 |
+| `grind:item_{N}_result` | team lead | team lead | 5 |
+| `grind:review_copilot_{N}` | team lead | team lead | 3 |
+| `grind:review_sonnet_{N}` | sonnet-reviewer | team lead | 3 |
+| `grind:review_adversarial_{N}` | team lead (from codex output) | team lead | 3 |
+| `grind:merged_findings_{N}` | team lead | team lead | 3 |
+
+---
+
+## Graceful Degradation
+
+| Condition | Behavior |
+|-----------|----------|
+| Codex plugin not installed | Warn: "Codex plugin unavailable — skipping adversarial review (Layer 3)". Continue with Copilot + Sonnet. |
+| Sonnet code-reviewer spawn fails | Warn: "Code-reviewer agent unavailable — skipping Sonnet review (Layer 2)". Continue with Copilot + Adversarial. |
+| Both Sonnet and Codex unavailable | Warn: "Falling back to Copilot-only review (original behavior)". Continue with Copilot only. |
+| Copilot review times out | Soft gate: proceed without Copilot findings. Sonnet + Adversarial still provide coverage. |
+| Blackboard unavailable | Fall back to inline context in task descriptions. Checkpoint/resume disabled for this session. |
+| Manifest file corrupted | Warn and recreate empty manifest. All items discovered fresh. |
 
 ---
 
