@@ -1,7 +1,7 @@
 ---
 name: pr-sweep
 description: "Strict gated sequential PR sweep — requests Copilot review, remediates all comments, enforces CI green, resolves conflicts, and auto-merges every eligible PR. Use this skill when the user wants to sweep PRs, merge all ready PRs, clean up open PRs, process all PRs end-to-end, drive PRs to merge, or do a full PR sweep. Triggers on: 'sweep my PRs', 'sweep all PRs', 'merge all ready PRs', 'pr-sweep', 'process all open PRs', 'clean up my PRs and merge them', 'sweep PRs 10..15', 'merge everything that passes'. Anti-triggers (do NOT match): 'fix PR comments' without merge intent (use /pr-fix), 'create a PR' (use /pr), 'review this PR' (use /pr-review), 'just push' (use /cp), 'rebase only' (use /fr), 'read PR comments' (use /review-comments)."
-argument-hint: "[pr-number...] [--auto] [--confidence=N] [--no-merge] [--merge-method=METHOD] [--skip-rebase] [--dry-run] [--force]"
+argument-hint: "[pr-number...] [--interactive] [--confidence=N] [--no-merge] [--merge-method=METHOD] [--skip-rebase] [--dry-run] [--force]"
 ---
 
 # PR Sweep — Strict Gated Sequential PR Processing
@@ -37,8 +37,8 @@ Parse `$ARGUMENTS` for the following **before** any other processing:
 
 - If `$ARGUMENTS` contains `--help`, `-h`, or `help`: display the man-page style help below and stop.
 - **PR numbers**: One or more positional numeric arguments, space-separated. Supports range syntax `N..M` (e.g., `10..15` expands to PRs 10, 11, 12, 13, 14, 15). **If omitted, discover ALL open PRs** via `gh pr list --state open --json number -q '.[].number'` and process them all.
-- `--auto` — Non-interactive mode. Accept all fixes at or above the confidence threshold without prompting.
-- `--confidence=N` — Confidence threshold 0-100 (default: 95). Fixes scoring at or above this threshold are auto-accepted.
+- `--interactive` — Interactive mode. Prompt for sub-threshold fixes instead of skipping them. By default, the skill runs in **auto mode** (non-interactive).
+- `--confidence=N` — Confidence threshold 0-100 (default: 95). Fixes scoring at or above this threshold are auto-accepted. In auto mode (default), sub-threshold fixes are skipped with a logged reply.
 - `--no-merge` — Drive PRs to merge-readiness but skip the merge step. Produces a readiness report instead.
 - `--merge-method=METHOD` — Merge strategy: `squash` (default), `merge`, or `rebase`.
 - `--skip-rebase` — Skip the rebase phase entirely.
@@ -52,7 +52,7 @@ When `$ARGUMENTS` are natural language rather than explicit flags, map intent to
 | Natural Language | Maps To |
 |-----------------|---------|
 | "don't merge", "readiness only", "just fix" | `--no-merge` |
-| "auto mode", "autonomously", "non-interactive" | `--auto` |
+| "interactive mode", "ask me first", "prompt me" | `--interactive` |
 | "don't rebase", "skip rebase", "already rebased" | `--skip-rebase` |
 | "force push", "force-push" | `--force` |
 | "just show me", "preview", "what would change" | `--dry-run` |
@@ -71,7 +71,7 @@ NAME
     pr-sweep — strict gated PR sweep: review, fix, rebase, CI, merge
 
 SYNOPSIS
-    /pr-sweep [pr-number...] [--auto] [--confidence=N] [--no-merge]
+    /pr-sweep [pr-number...] [--interactive] [--confidence=N] [--no-merge]
               [--merge-method=METHOD] [--skip-rebase] [--dry-run] [--force]
 
 DESCRIPTION
@@ -93,9 +93,9 @@ OPTIONS
         One or more PR numbers, space-separated. Range syntax N..M
         supported. If omitted, ALL open PRs are discovered and processed.
 
-    --auto
-        Non-interactive mode. Auto-accept fixes at or above confidence
-        threshold. Skip sub-threshold fixes with logged reason.
+    --interactive
+        Interactive mode. Prompt for sub-threshold fixes instead of
+        skipping them. Default is auto (non-interactive).
 
     --confidence=N
         Confidence threshold 0-100 (default: 95).
@@ -122,8 +122,8 @@ EXAMPLES
     /pr-sweep 42
         Sweep only PR #42.
 
-    /pr-sweep 10..15 --auto
-        Sweep PRs #10-15 autonomously.
+    /pr-sweep 10..15
+        Sweep PRs #10-15 (auto mode is default).
 
     /pr-sweep --no-merge --dry-run
         Preview sweep plan for all PRs without merging or mutating.
@@ -354,11 +354,11 @@ For each actionable comment (P0-P3), compute a confidence score:
 Default confidence threshold: **95%** (override with `--confidence=N`).
 
 - **>= threshold**: Auto-accept.
-- **70% to threshold-1%**: Prompt the user (unless `--auto`).
-- **50-69%**: Detailed prompt with uncertainty noted (unless `--auto`).
-- **< 50%**: Skeptical prompt, recommend manual review (unless `--auto`).
+- **70% to threshold-1%**: Prompt the user (only in `--interactive` mode).
+- **50-69%**: Detailed prompt with uncertainty noted (only in `--interactive` mode).
+- **< 50%**: Skeptical prompt, recommend manual review (only in `--interactive` mode).
 
-When `--auto` is set, only fixes at or above the threshold are applied. Others are skipped with a "Below confidence threshold" reply.
+By default (auto mode), only fixes at or above the threshold are applied. Sub-threshold fixes are skipped with a "Below confidence threshold" reply. Use `--interactive` to prompt for each sub-threshold fix instead.
 
 ### Step 4.1: Display Triage Summary
 
@@ -415,7 +415,7 @@ If rebase encounters conflicts:
 1. Attempt auto-resolution for trivial conflicts (whitespace, import ordering).
 2. If conflicts are non-trivial:
    - In interactive mode: show conflicting files, offer resolution options (resolve, abort, skip).
-   - In `--auto` mode: **skip PR** with reason `"Unresolvable merge conflict in <files>"`. Run `git rebase --abort`.
+   - In auto mode (default): **skip PR** with reason `"Unresolvable merge conflict in <files>"`. Run `git rebase --abort`.
 
 Unresolvable conflicts are a hard skip — the sweep continues to the next PR rather than blocking.
 
@@ -473,7 +473,7 @@ Rules:
 | **Rejected** | Reviewed, intentionally not applied | `Reviewed — not applying because <reason>.` |
 | **Question Response** | Answering a question | `<answer>. <optional ref>.` |
 | **Acknowledged** | Approval/LGTM | `Thanks for the review!` |
-| **Skipped (Auto)** | Below threshold in `--auto` | `Below confidence threshold (<N>%) — flagging for manual review.` |
+| **Skipped (Auto)** | Below threshold in auto mode (default) | `Below confidence threshold (<N>%) — flagging for manual review.` |
 | **Deferred** | Valid but out of scope | `Valid point — tracking as follow-up.` |
 
 ### Step 8.1: Completeness Check

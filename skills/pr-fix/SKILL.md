@@ -1,7 +1,7 @@
 ---
 name: pr-fix
 description: "Complete PR remediation workflow — fetch all review comments, triage by confidence, rebase, fix findings, commit, reply to reviewers, push, and resolve threads. Supports processing 1..N PRs autonomously in batch. Use this skill when the user wants to address PR feedback, fix review comments, remediate PR findings, resolve PR threads, or act on reviewer suggestions. Triggers on: 'fix PR comments', 'address PR feedback', 'fix review findings', 'pr-fix', 'remediate PR', 'resolve PR comments', 'fix the PR', 'address reviewer comments', 'fix what reviewers said', 'handle PR feedback', 'fix all my PRs', 'fix PRs 1 2 3', 'fix PRs 10..15'. Anti-triggers (do NOT match): 'create a PR' (use /pr), 'review this PR' (use /review-comments), 'commit and push' without PR context (use /cp), 'just push' (use /cp), 'rebase only' (use /fr), 'read PR comments' without fix intent (use /review-comments)."
-argument-hint: "[pr-number...] [--auto] [--confidence=N] [--skip-rebase] [--skip-ci] [--no-wait-ci] [--dry-run] [--force]"
+argument-hint: "[pr-number...] [--interactive] [--confidence=N] [--skip-rebase] [--skip-ci] [--no-wait-ci] [--dry-run] [--force]"
 ---
 
 # PR Fix Skill — Complete PR Remediation Workflow
@@ -22,7 +22,7 @@ Parse `$ARGUMENTS` for the following **before** any other processing:
 
 - If `$ARGUMENTS` contains `--help`, `-h`, or `help`: display the man-page style help below and stop.
 - **PR numbers**: One or more positional numeric arguments, space-separated. Supports range syntax `N..M` (e.g., `10..15` expands to PRs 10, 11, 12, 13, 14, 15). **If omitted, discover ALL open PRs** in the current repository via `gh pr list --state open --json number -q '.[].number'` and process them all.
-- `--auto` — Non-interactive mode. Accept all fixes at or above the confidence threshold without prompting.
+- `--interactive` — Interactive mode. Prompt for sub-threshold fixes instead of skipping them. By default, the skill runs in **auto mode** (non-interactive).
 - `--confidence=N` — Confidence threshold 0-100 (default: 95). Fixes scoring at or above this threshold are auto-accepted.
 - `--skip-rebase` — Skip the rebase phase entirely.
 - `--skip-ci` — Skip CI status checking entirely. No CI commands are run.
@@ -38,7 +38,7 @@ When `$ARGUMENTS` are expressed as natural language rather than explicit flags, 
 |-----------------|---------|
 | "don't wait for CI", "skip CI waiting", "no CI wait" | `--no-wait-ci` |
 | "skip CI", "no CI", "ignore CI entirely" | `--skip-ci` |
-| "auto mode", "autonomously", "non-interactive" | `--auto` |
+| "interactive mode", "ask me first", "prompt me" | `--interactive` |
 | "don't rebase", "skip rebase", "already rebased" | `--skip-rebase` |
 | "force push", "force-push" | `--force` |
 | "just show me", "preview", "what would change" | `--dry-run` |
@@ -56,7 +56,7 @@ NAME
     pr-fix — complete PR remediation: fetch, triage, fix, rebase, push
 
 SYNOPSIS
-    /pr-fix [pr-number...] [--auto] [--confidence=N] [--skip-rebase]
+    /pr-fix [pr-number...] [--interactive] [--confidence=N] [--skip-rebase]
             [--skip-ci] [--no-wait-ci] [--dry-run] [--force]
 
 DESCRIPTION
@@ -87,14 +87,14 @@ OPTIONS
         range syntax N..M (e.g., 10..15). If omitted, ALL open PRs in
         the repo are discovered and processed.
 
-    --auto
-        Non-interactive mode. Accept all fixes at or above the confidence
-        threshold without prompting the user.
+    --interactive
+        Interactive mode. Prompt for sub-threshold fixes instead of
+        skipping them. Default is auto (non-interactive).
 
     --confidence=N
         Confidence threshold (0-100, default: 95). Fixes scoring at or
-        above this value are auto-accepted. Below threshold, the user
-        is prompted for approval.
+        above this value are auto-accepted. In auto mode (default),
+        sub-threshold fixes are skipped with a logged reply.
 
     --skip-rebase
         Skip the rebase phase. Useful when the branch is already up to
@@ -128,14 +128,14 @@ EXAMPLES
     /pr-fix 10..15
         Fix comments on PRs #10 through #15.
 
-    /pr-fix --auto --confidence=90
-        Auto-fix all open PRs, scoring >= 90% confidence.
+    /pr-fix --confidence=90
+        Fix all open PRs, auto-accepting fixes scoring >= 90%.
 
     /pr-fix --skip-rebase --dry-run
         Preview the remediation plan without rebase or changes.
 
-    /pr-fix 42 55 --auto --skip-ci
-        Autonomously fix PRs #42 and #55, skip CI status checks.
+    /pr-fix 42 55 --skip-ci
+        Fix PRs #42 and #55, skip CI status checks.
 
 SEE ALSO
     /pr                 Create or manage pull requests
@@ -238,7 +238,7 @@ Store the base branch name (`baseRefName`) and head branch name (`headRefName`) 
    ```bash
    gh pr checkout ${PR_NUMBER}
    ```
-   In batch mode (`--auto` or multi-PR), checkout automatically without prompting.
+   In auto mode (default) or multi-PR batch, checkout automatically without prompting.
 2. Check for uncommitted changes via `git status --porcelain`. If dirty:
    - In batch/auto mode: stash changes automatically with `git stash push -m "pr-fix-auto-stash-PR${PR_NUMBER}"`.
    - In interactive mode: warn the user and ask whether to stash first.
@@ -319,9 +319,9 @@ The default confidence threshold is **95%** (override with `--confidence=N`).
 - **50-69%**: Detailed prompt. Show the comment, the proposed fix, alternatives considered, and the confidence breakdown. Highlight uncertainty. Ask for explicit approval.
 - **< 50%**: Skeptical prompt. Present the comment with a note that the fix has low confidence. Show what would be changed and why confidence is low. Recommend the user review manually. Ask whether to attempt the fix, skip it, or mark for manual review.
 
-When `--auto` is set, only fixes at or above the threshold are applied. All others are skipped with a log entry.
+By default (auto mode), only fixes at or above the threshold are applied. All others are skipped with a logged reply.
 
-When not in `--auto` mode, use the user's interactive decision for each sub-threshold comment.
+When `--interactive` is set, prompt the user for each sub-threshold comment instead of skipping.
 
 ### Step 3.1: Display Triage Summary
 
@@ -479,7 +479,7 @@ Every comment falls into exactly one disposition. Each disposition has a require
 | **Rejected** | Comment was reviewed but intentionally not applied | `Reviewed — not applying this change because <reason>. <optional: link to relevant docs or prior discussion>.` |
 | **Question Response** | Answering a reviewer's question | `<direct answer to the question>. <optional: reference to relevant code or docs>.` |
 | **Acknowledged** | Approval, LGTM, positive feedback — no action needed | `Thanks for the review!` (or contextually appropriate acknowledgment) |
-| **Skipped (Auto)** | Below confidence threshold in `--auto` mode | `Below confidence threshold (scored <N>%) — flagging for manual review.` |
+| **Skipped (Auto)** | Below confidence threshold in auto mode (default) | `Below confidence threshold (scored <N>%) — flagging for manual review.` |
 | **Deferred** | Valid feedback but out of scope for this PR | `Valid point — tracking as a follow-up in <issue-link or "a separate change">.` |
 
 ### Step 7.1: Reply Completeness Check

@@ -1,7 +1,7 @@
 ---
 name: gh-grind
 description: "Continuous background work-clearing engine — picks post-triage issues, implements fixes/features, creates PRs, drives them through Copilot review + CI gates, and auto-merges. Grinds through the entire queue sequentially until empty, then polls for new work. Use this skill when the user wants to grind through issues, clear the backlog, process all open issues end-to-end, implement and merge everything, run a background work loop, or continuously clear work. Triggers on: 'grind through my issues', 'clear the backlog', 'process all issues and merge', 'gh-grind', 'grind', 'work through everything', 'implement all open issues', 'background work loop', 'keep grinding until done'. Anti-triggers (do NOT match): 'triage this issue' (use /gh-do), 'sweep existing PRs' without implementation (use /pr-sweep), 'create a PR' (use /pr), 'fix PR comments' (use /pr-fix), 'implement this one feature' (use /feature-dev)."
-argument-hint: "[issue-number...] [--auto] [--confidence=N] [--once] [--poll=N] [--limit=N] [--no-merge] [--merge-method=METHOD] [--dry-run] [--force]"
+argument-hint: "[issue-number...] [--interactive] [--confidence=N] [--once] [--poll=N] [--limit=N] [--no-merge] [--merge-method=METHOD] [--dry-run] [--force]"
 ---
 
 # GH-GRIND — Continuous Background Work Engine
@@ -44,7 +44,7 @@ Parse `$ARGUMENTS` **before** any other processing:
 
 - If `$ARGUMENTS` contains `--help`, `-h`, or `help`: display help and stop.
 - **Issue numbers**: Positional numeric arguments, space-separated. Range syntax `N..M` supported. **If omitted, discover ALL post-triage open issues.**
-- `--auto` — Non-interactive mode. Default for background operation.
+- `--interactive` — Interactive mode. Prompt for sub-threshold fixes. By default, the skill runs in **auto mode** (non-interactive).
 - `--confidence=N` — Confidence threshold 0-100 (default: 95).
 - `--once` — Run-to-empty then exit. No continuous polling.
 - `--poll=N` — Poll interval in minutes when queue is empty (default: 10).
@@ -61,7 +61,7 @@ Parse `$ARGUMENTS` **before** any other processing:
 |-----------------|---------|
 | "just do one pass", "run once", "don't keep polling" | `--once` |
 | "don't merge", "readiness only", "just fix" | `--no-merge` |
-| "auto mode", "autonomously", "non-interactive" | `--auto` |
+| "interactive mode", "ask me first", "prompt me" | `--interactive` |
 | "don't rebase", "skip rebase" | `--skip-rebase` |
 | "force push" | `--force` |
 | "just show me", "preview", "what would change" | `--dry-run` |
@@ -81,7 +81,7 @@ NAME
     gh-grind — continuous work engine: issue → implement → PR → merge
 
 SYNOPSIS
-    /gh-grind [issue-number...] [--auto] [--confidence=N] [--once]
+    /gh-grind [issue-number...] [--interactive] [--confidence=N] [--once]
               [--poll=N] [--limit=N] [--no-merge] [--merge-method=METHOD]
               [--skip-rebase] [--dry-run] [--force]
 
@@ -103,7 +103,8 @@ OPTIONS
         Specific issues to process. Range syntax N..M supported.
         If omitted, all post-triage open issues are discovered.
 
-    --auto          Non-interactive mode (default).
+    --interactive   Interactive mode. Prompt for sub-threshold fixes.
+                    Default is auto (non-interactive).
     --confidence=N  Confidence threshold 0-100 (default: 95).
     --once          Run to empty then exit. No polling.
     --poll=N        Poll interval in minutes (default: 10).
@@ -124,8 +125,8 @@ EXAMPLES
     /gh-grind 42 55 67
         Grind specific issues #42, #55, #67.
 
-    /gh-grind 10..20 --auto
-        Grind issues #10-20 autonomously.
+    /gh-grind 10..20
+        Grind issues #10-20 (auto mode is default).
 
     /gh-grind --dry-run
         Preview the queue and planned actions.
@@ -435,7 +436,7 @@ Score each actionable comment:
 | Scope Impact | 15% |
 
 - `>= threshold` (default 95%): auto-accept.
-- Below threshold in `--auto` mode: skip with "Below confidence threshold" reply.
+- Below threshold in auto mode (default): skip with "Below confidence threshold" reply. Use `--interactive` to prompt instead.
 
 ### Step 5.4: Remediation
 
