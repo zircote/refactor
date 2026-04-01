@@ -379,7 +379,7 @@ For each item:
    ```bash
    PR_STATE=$(gh pr view ${PR_NUMBER} --json state -q '.state')
    ```
-   - If `MERGED`: set manifest item state to `"merged"`, `completed_at = now()`. Verify issue closed (step 5 below). **Write manifest to disk.** Skip to next item.
+   - If `MERGED`: set manifest item state to `"merged"`, `completed_at = now()`. **Write manifest to disk.** Then verify issue closed (step 5 below). Skip to next item.
    - If `CLOSED` (not merged): set manifest item state to `"skipped"`, `skip_reason = "PR was closed externally"`, `completed_at = now()`. **Write manifest to disk.** Skip to next item.
    - If `OPEN`: continue.
 
