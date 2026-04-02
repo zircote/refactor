@@ -1,0 +1,257 @@
+{
+  "skill_name": "xq",
+  "evals": [
+    {
+      "id": 1,
+      "title": "JSON mutation — update a key in a JSON file",
+      "prompt": "Update the version field in config.json from 1.0.0 to 2.0.0",
+      "files": [
+        {
+          "path": "config.json",
+          "content": "{\"name\":\"myapp\",\"version\":\"1.0.0\",\"port\":3000,\"debug\":false}"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "json_valid",
+          "file": "config.json"
+        },
+        {
+          "type": "json_field_equals",
+          "file": "config.json",
+          "path": ".version",
+          "expected": "2.0.0"
+        },
+        {
+          "type": "json_field_equals",
+          "file": "config.json",
+          "path": ".name",
+          "expected": "myapp"
+        },
+        {
+          "type": "json_field_equals",
+          "file": "config.json",
+          "path": ".port",
+          "expected": 3000
+        }
+      ],
+      "expectations": [
+        "Uses jq to perform the mutation, not Edit or Write tool",
+        "Uses the temp file + mv pattern (e.g., > tmp.$$ && mv tmp.$$ config.json) for atomic write",
+        "Preserves all other keys (name, port, debug) unchanged",
+        "Result is valid JSON with version set to '2.0.0'"
+      ]
+    },
+    {
+      "id": 2,
+      "title": "JSON validation — check if a JSON file is valid",
+      "prompt": "Check if data.json is valid JSON and tell me if there are any syntax errors.",
+      "files": [
+        {
+          "path": "data.json",
+          "content": "{\"users\":[{\"name\":\"alice\",\"age\":30},{\"name\":\"bob\",\"age\":25,}]}"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "file": "transcript.md",
+          "pattern": "jq\\s+empty"
+        }
+      ],
+      "expectations": [
+        "Uses 'jq empty data.json' to validate syntax",
+        "Correctly identifies the file as invalid JSON (trailing comma before closing bracket)",
+        "Reports the specific syntax error or its location",
+        "Does not attempt to use Read tool to manually parse or validate the JSON"
+      ]
+    },
+    {
+      "id": 3,
+      "title": "YAML mutation — change a value in a YAML file",
+      "prompt": "Change the replica count from 1 to 3 in deployment.yaml",
+      "files": [
+        {
+          "path": "deployment.yaml",
+          "content": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: web-server\n  labels:\n    app: web\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: web\n  template:\n    metadata:\n      labels:\n        app: web\n    spec:\n      containers:\n        - name: nginx\n          image: nginx:1.25\n          ports:\n            - containerPort: 80\n"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "file": "transcript.md",
+          "pattern": "yq\\s+-i"
+        },
+        {
+          "type": "file_contains",
+          "file": "deployment.yaml",
+          "literal": "replicas: 3"
+        },
+        {
+          "type": "file_contains",
+          "file": "deployment.yaml",
+          "literal": "name: web-server"
+        }
+      ],
+      "expectations": [
+        "Uses yq with -i flag for in-place YAML mutation",
+        "Sets .spec.replicas to 3 using a yq expression",
+        "Preserves all other YAML fields (metadata, selector, template) unchanged",
+        "Does not use Edit tool or string replacement to modify the YAML"
+      ]
+    },
+    {
+      "id": 4,
+      "title": "TOML read — extract a value from a TOML file",
+      "prompt": "What is the line-length setting in pyproject.toml for ruff?",
+      "files": [
+        {
+          "path": "pyproject.toml",
+          "content": "[project]\nname = \"myproject\"\nversion = \"0.5.0\"\n\n[tool.ruff]\nline-length = 120\ntarget-version = \"py312\"\n\n[tool.ruff.lint]\nselect = [\"E\", \"F\", \"W\"]\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "file": "transcript.md",
+          "pattern": "yq\\s+-p\\s+toml"
+        }
+      ],
+      "expectations": [
+        "Uses 'yq -p toml' to read the TOML file",
+        "Extracts the value at .tool.ruff.line-length or equivalent path",
+        "Correctly reports the value as 120",
+        "Does not use Read tool followed by manual text parsing to find the value"
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Format conversion — convert JSON to YAML",
+      "prompt": "Convert settings.json to YAML format and save it as settings.yaml",
+      "files": [
+        {
+          "path": "settings.json",
+          "content": "{\"database\":{\"host\":\"localhost\",\"port\":5432,\"name\":\"mydb\"},\"cache\":{\"enabled\":true,\"ttl\":300}}"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "file": "transcript.md",
+          "pattern": "yq\\s+-p\\s+json\\s+-o\\s+yaml"
+        },
+        {
+          "type": "file_contains",
+          "file": "settings.yaml",
+          "literal": "database:"
+        },
+        {
+          "type": "file_contains",
+          "file": "settings.yaml",
+          "literal": "host: localhost"
+        },
+        {
+          "type": "file_contains",
+          "file": "settings.yaml",
+          "literal": "port: 5432"
+        }
+      ],
+      "expectations": [
+        "Uses 'yq -p json -o yaml' for the conversion",
+        "Produces a valid YAML file at settings.yaml",
+        "Preserves all data: database.host, database.port, database.name, cache.enabled, cache.ttl",
+        "Does not manually construct the YAML by reading JSON and writing strings"
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Schema validation — check required keys exist",
+      "prompt": "Validate that package.json has the required fields: name, version, and description. Report which ones are missing.",
+      "files": [
+        {
+          "path": "package.json",
+          "content": "{\"name\":\"my-library\",\"version\":\"3.2.1\",\"main\":\"index.js\",\"scripts\":{\"test\":\"jest\"}}"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "file": "transcript.md",
+          "pattern": "jq\\s+-e.*has\\("
+        }
+      ],
+      "expectations": [
+        "Uses jq -e with has() to check for required keys",
+        "Correctly identifies that 'description' is missing",
+        "Correctly confirms that 'name' and 'version' are present",
+        "Does not use Read tool and then manually check for key presence in the text output"
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Safe interpolation — set a value from a shell variable",
+      "prompt": "I have a shell variable $DEPLOY_TAG that contains the Docker image tag. Update the image field in deployment.yaml to use it. Assume DEPLOY_TAG=v2.4.1-rc3.",
+      "files": [
+        {
+          "path": "deployment.yaml",
+          "content": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: api-server\nspec:\n  template:\n    spec:\n      containers:\n        - name: api\n          image: myregistry.io/api:v1.0.0\n          ports:\n            - containerPort: 8080\n"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "file_contains",
+          "file": "deployment.yaml",
+          "literal": "v2.4.1-rc3"
+        },
+        {
+          "type": "file_not_contains",
+          "file": "deployment.yaml",
+          "literal": "v1.0.0"
+        }
+      ],
+      "expectations": [
+        "Uses yq with variable interpolation via env() or strenv(), or sets the variable inline and uses it safely",
+        "Does NOT embed the shell variable directly inside a yq expression string with double quotes",
+        "Updates the image field to include v2.4.1-rc3",
+        "Preserves the rest of the deployment spec unchanged",
+        "If using jq-style patterns, uses --arg for safe string interpolation"
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Anti-pattern detection — user asks to use Edit on JSON",
+      "prompt": "Use the Edit tool to change the \"port\" value from 3000 to 8080 in config.json",
+      "files": [
+        {
+          "path": "config.json",
+          "content": "{\"name\":\"myapp\",\"version\":\"1.0.0\",\"port\":3000,\"debug\":false,\"endpoints\":{\"health\":\"/health\",\"port_info\":\"/api/port\"}}"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "json_valid",
+          "file": "config.json"
+        },
+        {
+          "type": "json_field_equals",
+          "file": "config.json",
+          "path": ".port",
+          "expected": 8080
+        },
+        {
+          "type": "json_field_equals",
+          "file": "config.json",
+          "path": ".name",
+          "expected": "myapp"
+        }
+      ],
+      "expectations": [
+        "Warns the user that Edit is an anti-pattern for structured data mutation",
+        "Explains why Edit is unsafe for JSON (string match may hit wrong occurrence, breaks nesting)",
+        "Uses jq instead of Edit to perform the mutation",
+        "Correctly changes only the top-level port field to 8080 without affecting the 'port_info' endpoint string",
+        "Result is valid JSON with all other fields preserved"
+      ]
+    }
+  ]
+}

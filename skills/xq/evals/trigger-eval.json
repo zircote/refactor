@@ -1,0 +1,82 @@
+[
+  {
+    "query": "update the version field in package.json to 2.0.0",
+    "should_trigger": true
+  },
+  {
+    "query": "validate my config.yaml for syntax errors",
+    "should_trigger": true
+  },
+  {
+    "query": "convert this TOML config to JSON format",
+    "should_trigger": true
+  },
+  {
+    "query": "check if this json has a name and version field",
+    "should_trigger": true
+  },
+  {
+    "query": "extract the database host from settings.json",
+    "should_trigger": true
+  },
+  {
+    "query": "change the replicas count in my kubernetes deployment yaml",
+    "should_trigger": true
+  },
+  {
+    "query": "what's the ruff line-length in pyproject.toml",
+    "should_trigger": true
+  },
+  {
+    "query": "merge these two json config files together",
+    "should_trigger": true
+  },
+  {
+    "query": "diff these two yaml files and show what changed",
+    "should_trigger": true
+  },
+  {
+    "query": "fix this yaml syntax error in my docker-compose file",
+    "should_trigger": true
+  },
+  {
+    "query": "read this Python file and explain what it does",
+    "should_trigger": false
+  },
+  {
+    "query": "write a Python script that processes CSV files",
+    "should_trigger": false
+  },
+  {
+    "query": "fix the CSS styling on this button component",
+    "should_trigger": false
+  },
+  {
+    "query": "search the codebase for all uses of the Logger class",
+    "should_trigger": false
+  },
+  {
+    "query": "create a new React component for the dashboard",
+    "should_trigger": false
+  },
+  {
+    "query": "explain how async/await works in JavaScript",
+    "should_trigger": false
+  },
+  {
+    "query": "optimize this SQL query for better performance",
+    "should_trigger": false
+  },
+  {
+    "query": "set up a new GitHub Actions workflow",
+    "should_trigger": false
+  },
+  {
+    "query": "resize this PNG image to 800x600",
+    "should_trigger": false
+  },
+  {
+    "query": "read the README.md and summarize the project",
+    "should_trigger": false
+  }
+]
