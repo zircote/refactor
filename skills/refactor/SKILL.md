@@ -190,7 +190,7 @@ You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with te
 
 **Step 0.2.3**: Check for existing checkpoint from a prior interrupted run:
    ```
-   blackboard_read(task_id="{blackboard_id}", key="checkpoint")
+   blackboard_read(scope="{blackboard_id}", key="checkpoint")
    ```
 
    If checkpoint exists and is valid (non-null, parseable JSON):
@@ -198,7 +198,7 @@ You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with te
    - **In interactive mode** (`autonomous_mode = false`): Ask user "Resume from checkpoint or restart fresh?" via AskUserQuestion
    - **In autonomous mode** (`autonomous_mode = true`): Resume automatically.
    - **If resume**: restore state variables from checkpoint (`refactoring_iteration`, `best`, `scope`, `active_agents`, `autonomous_mode`), skip completed phases by jumping to the phase indicated in `checkpoint.checkpoint_phase`
-   - **If restart**: clear checkpoint via `blackboard_write(task_id="{blackboard_id}", key="checkpoint", value="")` and proceed normally
+   - **If restart**: clear checkpoint via `blackboard_write(scope="{blackboard_id}", author="team-lead", key="checkpoint", value="")` and proceed normally
 
    If checkpoint does not exist or is empty: proceed normally.
 
@@ -226,8 +226,8 @@ Each teammate receives the same task-discovery protocol and blackboard ID in the
 
 ```
 BLACKBOARD: {blackboard_id}
-Use blackboard_read(task_id="{blackboard_id}", key="...") to read shared context written by other agents.
-Use blackboard_write(task_id="{blackboard_id}", key="...", value="...") to share your findings.
+Use blackboard_read(scope="{blackboard_id}", key="...") to read shared context written by other agents.
+Use blackboard_write(scope="{blackboard_id}", author="your-name", key="...", value="...") to share your findings.
 
 TASK DISCOVERY PROTOCOL:
 1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you (owner = your name).
@@ -247,7 +247,8 @@ TASK DISCOVERY PROTOCOL:
      prompt: "You are the code explorer agent on a refactoring swarm team. The scope is: {scope}.
 
      BLACKBOARD: {blackboard_id}
-     Use blackboard_read/blackboard_write with task_id='{blackboard_id}' to share context with other agents.
+     Use blackboard_read(scope='{blackboard_id}', key='...') to read shared context.
+     Use blackboard_write(scope='{blackboard_id}', author='your-name', key='...', value='...') to share findings.
      After discovery, write your codebase map to the blackboard with key 'codebase_context'.
 
      TASK DISCOVERY PROTOCOL:
@@ -268,7 +269,7 @@ TASK DISCOVERY PROTOCOL:
      prompt: "You are the test agent on a refactoring swarm team. The scope is: {scope}.
 
      BLACKBOARD: {blackboard_id}
-     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
+     Use blackboard_read(scope='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
 
      TASK DISCOVERY PROTOCOL:
      1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
@@ -288,8 +289,8 @@ TASK DISCOVERY PROTOCOL:
      prompt: "You are the code agent on a refactoring swarm team. The scope is: {scope}.
 
      BLACKBOARD: {blackboard_id}
-     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map.
-     Use blackboard_read(task_id='{blackboard_id}', key='architect_plan') to read the optimization plan.
+     Use blackboard_read(scope='{blackboard_id}', key='codebase_context') to read the codebase map.
+     Use blackboard_read(scope='{blackboard_id}', key='architect_plan') to read the optimization plan.
 
      TASK DISCOVERY PROTOCOL:
      1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
@@ -341,8 +342,8 @@ TASK DISCOVERY PROTOCOL:
      prompt: "You are the architect agent on a refactoring swarm team. The scope is: {scope}.
 
      BLACKBOARD: {blackboard_id}
-     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
-     Use blackboard_write to share your optimization plans with key 'architect_plan'.
+     Use blackboard_read(scope='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
+     Use blackboard_write(scope='{blackboard_id}', author='your-name', key='architect_plan', value='...') to share your optimization plans.
 
      TASK DISCOVERY PROTOCOL:
      1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
@@ -363,8 +364,8 @@ TASK DISCOVERY PROTOCOL:
      You handle BOTH quality review (bugs, logic, conventions with confidence scoring) AND security review (regressions, secrets, OWASP with severity classification).
 
      BLACKBOARD: {blackboard_id}
-     Use blackboard_read(task_id='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
-     Use blackboard_write to share your baseline with key 'reviewer_baseline'.
+     Use blackboard_read(scope='{blackboard_id}', key='codebase_context') to read the codebase map from discovery.
+     Use blackboard_write(scope='{blackboard_id}', author='your-name', key='reviewer_baseline', value='...') to share your baseline.
 
      TASK DISCOVERY PROTOCOL:
      1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you.
@@ -397,12 +398,12 @@ TASK DISCOVERY PROTOCOL:
 
 Write `codebase_context` to the shared blackboard for cross-agent access:
 
-1. **Write to blackboard**: Call `blackboard_write(task_id="{blackboard_id}", key="codebase_context", value=codebase_context)`. All teammates already have `blackboard_id` from their spawn prompts and can read via `blackboard_read`.
+1. **Write to blackboard**: Call `blackboard_write(scope="{blackboard_id}", author="team-lead", key="codebase_context", value=codebase_context)`. All teammates already have `blackboard_id` from their spawn prompts and can read via `blackboard_read`.
 2. **Fallback** (if blackboard write fails): Include `codebase_context` directly in every downstream task description under a `## Codebase Context` section.
 
 **Validation**: After writing critical keys (`codebase_context`, `architect_plan`, `reviewer_baseline`, `checkpoint`), immediately read back the key to verify:
   ```
-  result = blackboard_read(task_id="{blackboard_id}", key="codebase_context")
+  result = blackboard_read(scope="{blackboard_id}", key="codebase_context")
   ```
 If result is null or empty: retry the write once. If still failing, use the inline fallback.
 
@@ -411,7 +412,7 @@ If result is null or empty: retry the write once. If still failing, use the inli
 - Inform user: "Phase 0.5 complete. Codebase discovery finished. {summary of key findings — entry points, layers, patterns}. Starting foundation analysis."
 - Write checkpoint:
   ```
-  blackboard_write(task_id="{blackboard_id}", key="checkpoint", value=JSON.stringify({
+  blackboard_write(scope="{blackboard_id}", author="team-lead", key="checkpoint", value=JSON.stringify({
     checkpoint_phase: "Phase 0.5",
     iteration: 0,
     best_score: null,
@@ -424,7 +425,7 @@ If result is null or empty: retry the write once. If still failing, use the inli
   ```
 - Write phase summary to blackboard:
   ```
-  blackboard_write(task_id="{blackboard_id}", key="phase_0_5_summary", value=JSON.stringify({
+  blackboard_write(scope="{blackboard_id}", author="team-lead", key="phase_0_5_summary", value=JSON.stringify({
     phase: "Phase 0.5: Discovery",
     agents_used: ["code-explorer"],
     key_outputs: ["codebase_context written to blackboard"],
@@ -492,7 +493,7 @@ After Phase 1 parallel tasks complete, run sequential test-architect steps:
 
 - Write checkpoint:
   ```
-  blackboard_write(task_id="{blackboard_id}", key="checkpoint", value=JSON.stringify({
+  blackboard_write(scope="{blackboard_id}", author="team-lead", key="checkpoint", value=JSON.stringify({
     checkpoint_phase: "Phase 1",
     iteration: 0,
     best_score: null,
@@ -508,7 +509,7 @@ After Phase 1 parallel tasks complete, run sequential test-architect steps:
   - Focused run: "Phase 1 complete. Test coverage established.{' Architecture reviewed.' if architect active}{' Quality + security baseline recorded.' if code-reviewer active}{' Test plan generated.' if test-planner active}{' Test code generated (TDD red phase).' if test-writer active}{' Test rigor score: X/1.0.' if test-rigor-reviewer active}{' Coverage: Y%.' if coverage-analyst active} Starting iteration loop ({max_iterations} iteration{s})."
 - Write phase summary to blackboard:
   ```
-  blackboard_write(task_id="{blackboard_id}", key="phase_1_summary", value=JSON.stringify({
+  blackboard_write(scope="{blackboard_id}", author="team-lead", key="phase_1_summary", value=JSON.stringify({
     phase: "Phase 1: Foundation",
     agents_used: [list of agents that ran in Phase 1],
     key_outputs: ["test baseline established", "architect plan written", "reviewer baseline recorded"],
@@ -577,7 +578,7 @@ Before each iteration, the architect and evaluator negotiate what "done" looks l
      - **TaskUpdate**: assign owner to "architect"
      - **SendMessage** to "architect": "Task #{id} assigned: propose iteration {i} sprint contract. Start now."
    - Wait for completion
-   - Write to blackboard: `blackboard_write(task_id="{blackboard_id}", key="iteration_{i}_contract", value=architect's contract proposal)`
+   - Write to blackboard: `blackboard_write(scope="{blackboard_id}", author="team-lead", key="iteration_{i}_contract", value=architect's contract proposal)`
 
 #### 2.1.A: MODIFY — Execute One Iteration
 
@@ -610,7 +611,7 @@ After sub-steps complete:
 Write structured feedback for the next iteration:
 
 ```
-blackboard_write(task_id="{blackboard_id}", key="iteration_{i}_weaknesses", value=JSON.stringify({
+blackboard_write(scope="{blackboard_id}", author="team-lead", key="iteration_{i}_weaknesses", value=JSON.stringify({
   iteration: i,
   score: score_i,
   low_scoring_areas: [extract from review-scores.json before workspace cleanup],
@@ -640,7 +641,7 @@ Run via Bash: `bash scripts/results_log.sh append {workspace}/results.tsv {i} {s
 
 Write checkpoint:
 ```
-blackboard_write(task_id="{blackboard_id}", key="checkpoint", value=JSON.stringify({
+blackboard_write(scope="{blackboard_id}", author="team-lead", key="checkpoint", value=JSON.stringify({
   checkpoint_phase: "Phase 2",
   iteration: i,
   best_score: best.score,
@@ -654,7 +655,7 @@ blackboard_write(task_id="{blackboard_id}", key="checkpoint", value=JSON.stringi
 
 Write iteration summary to blackboard:
 ```
-blackboard_write(task_id="{blackboard_id}", key="iteration_{i}_summary", value=JSON.stringify({
+blackboard_write(scope="{blackboard_id}", author="team-lead", key="iteration_{i}_summary", value=JSON.stringify({
   phase: "Phase 2: Iteration " + i,
   agents_used: [agents that ran in this iteration],
   score: score_i,
@@ -698,7 +699,7 @@ Check conditions in order. First match stops the loop:
 
 2. Write convergence data to blackboard:
    ```
-   blackboard_write(task_id="{blackboard_id}", key="convergence_data", value=JSON.stringify({
+   blackboard_write(scope="{blackboard_id}", author="team-lead", key="convergence_data", value=JSON.stringify({
      workspace: workspace,
      best_version: best.version,
      best_score: best.score,
@@ -1115,7 +1116,7 @@ Quality Scores:
 
 ### Context Distribution
 - **Blackboard creation**: The team lead creates the blackboard in Phase 0.2 (at team creation time) and passes the `blackboard_id` to all teammates in their spawn prompts.
-- **Blackboard usage**: Agents use `blackboard_read(task_id=blackboard_id, key="...")` / `blackboard_write(task_id=blackboard_id, key="...", value="...")` to share context. Standard keys: `codebase_context`, `architect_plan`, `reviewer_baseline`.
+- **Blackboard usage**: Agents use `blackboard_read(scope=blackboard_id, key="...")` / `blackboard_write(scope=blackboard_id, author=agent_name, key="...", value="...")` to share context. Standard keys: `codebase_context`, `architect_plan`, `reviewer_baseline`.
 - **Write once, read many**: code-explorer writes `codebase_context` after Phase 0.5. All downstream agents read it as needed without the team lead re-distributing it.
 - **Inline fallback**: If blackboard is unavailable, embed `codebase_context` directly in task descriptions under a `## Codebase Context` heading.
 

@@ -147,7 +147,7 @@ You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with te
 
 Check blackboard for existing checkpoint from a prior interrupted run:
 
-  blackboard_read(task_id="{blackboard_id}", key="checkpoint")
+  blackboard_read(scope="{blackboard_id}", key="checkpoint")
 
 If checkpoint exists and is valid (non-null, has checkpoint_phase field):
   - Display: "Found checkpoint from prior run: {checkpoint_phase}, Feature: {feature_summary}."
@@ -157,7 +157,7 @@ If checkpoint exists and is valid (non-null, has checkpoint_phase field):
   - If restart: clear checkpoint via blackboard_write with empty value
 
 After each major phase completes, write checkpoint to blackboard:
-  blackboard_write(task_id="{blackboard_id}", key="checkpoint", value=JSON.stringify({
+  blackboard_write(scope="{blackboard_id}", author="team-lead", key="checkpoint", value=JSON.stringify({
     checkpoint_phase: "Phase N",
     iteration: current_iteration (if autonomous),
     best_score: best.score (if autonomous),
@@ -175,8 +175,8 @@ All teammates receive this protocol in their spawn prompt. When spawning agents,
 
 ```
 BLACKBOARD: {blackboard_id}
-Use blackboard_read(task_id="{blackboard_id}", key="...") to read shared context written by other agents.
-Use blackboard_write(task_id="{blackboard_id}", key="...", value="...") to share your findings.
+Use blackboard_read(scope="{blackboard_id}", key="...") to read shared context written by other agents.
+Use blackboard_write(scope="{blackboard_id}", author="your-name", key="...", value="...") to share your findings.
 
 TASK DISCOVERY PROTOCOL:
 1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you (owner = your name).
@@ -233,7 +233,7 @@ TASK DISCOVERY PROTOCOL:
 
 7. Write confirmed feature spec to blackboard:
    ```
-   blackboard_write(task_id="{blackboard_id}", key="feature_spec", value="{structured feature specification}")
+   blackboard_write(scope="{blackboard_id}", author="team-lead", key="feature_spec", value="{structured feature specification}")
    ```
 
 8. Only proceed to Phase 2 when confidence >= 95% OR user explicitly says "proceed".
@@ -294,12 +294,12 @@ SendMessage to "code-explorer-{i}": "Task #{id} assigned: codebase exploration. 
 4. Consolidate findings into a unified codebase context.
 5. Write consolidated context to blackboard:
    ```
-   blackboard_write(task_id="{blackboard_id}", key="codebase_context", value="{consolidated context}")
+   blackboard_write(scope="{blackboard_id}", author="team-lead", key="codebase_context", value="{consolidated context}")
    ```
 6. Present comprehensive summary of findings and patterns to the user.
 
 **Context compaction**: Write phase summary to blackboard:
-  blackboard_write(task_id="{blackboard_id}", key="phase_2_summary", value=JSON.stringify({
+  blackboard_write(scope="{blackboard_id}", author="team-lead", key="phase_2_summary", value=JSON.stringify({
     phase: "Phase 2: Codebase Exploration",
     agents_used: ["code-explorer-1", ..., "code-explorer-N"],
     key_findings: [list of essential files, patterns, integration points],
@@ -331,7 +331,7 @@ Summarize explorer findings into a compact record of key facts. Discard the raw 
    - If the user says "whatever you think is best", provide your recommendation and get explicit confirmation.
 6. Write clarifications to blackboard:
    ```
-   blackboard_write(task_id="{blackboard_id}", key="clarifications", value="{user answers or 'No additional clarifications needed'}")
+   blackboard_write(scope="{blackboard_id}", author="team-lead", key="clarifications", value="{user answers or 'No additional clarifications needed'}")
    ```
 
 ## Phase 4: Architecture Design
@@ -388,11 +388,11 @@ SendMessage to "architect-{i}": "Task #{id} assigned: architecture design. Start
 5. **Ask user which approach they prefer** (interactive mode only).
 6. Write chosen architecture to blackboard:
    ```
-   blackboard_write(task_id="{blackboard_id}", key="chosen_architecture", value="{selected blueprint}")
+   blackboard_write(scope="{blackboard_id}", author="team-lead", key="chosen_architecture", value="{selected blueprint}")
    ```
 
 **Context compaction**: Write phase summary to blackboard:
-  blackboard_write(task_id="{blackboard_id}", key="phase_4_summary", value=JSON.stringify({
+  blackboard_write(scope="{blackboard_id}", author="team-lead", key="phase_4_summary", value=JSON.stringify({
     phase: "Phase 4: Architecture Design",
     agents_used: ["architect-1", ..., "architect-N"],
     architectures_proposed: [brief name/description for each],
@@ -535,7 +535,7 @@ The code-reviewer acts as an independent evaluator — grading the iteration aga
 
 #### Write Weakness Feedback
 
-blackboard_write(task_id="{blackboard_id}", key="iteration_{i}_weaknesses", value=JSON.stringify({
+blackboard_write(scope="{blackboard_id}", author="team-lead", key="iteration_{i}_weaknesses", value=JSON.stringify({
   iteration: i,
   score: score_i,
   low_scoring_areas: [from review-scores.json],
@@ -564,7 +564,7 @@ Inform user: "Autonomous iteration {i}/{max_iterations}: EVALUATE complete — s
 `bash scripts/results_log.sh append {workspace}/results.tsv {i} {score_i} {best.score} {action} "{changelog}"`
 
 **Checkpoint**: Write checkpoint to blackboard after each iteration:
-  blackboard_write(task_id="{blackboard_id}", key="checkpoint", value=JSON.stringify({
+  blackboard_write(scope="{blackboard_id}", author="team-lead", key="checkpoint", value=JSON.stringify({
     checkpoint_phase: "Phase 5-auto",
     iteration: i,
     best_score: best.score,
@@ -839,7 +839,7 @@ SendMessage to "code-reviewer-{i}": "Task #{id} assigned: feature review. Start 
    - Proceed to Phase 7
 
 **Context compaction**: Write phase summary to blackboard:
-  blackboard_write(task_id="{blackboard_id}", key="phase_6_summary", value=JSON.stringify({
+  blackboard_write(scope="{blackboard_id}", author="team-lead", key="phase_6_summary", value=JSON.stringify({
     phase: "Phase 6: Quality Review",
     agents_used: ["code-reviewer-1", ..., "code-reviewer-N", "test-rigor-reviewer", "coverage-analyst"],
     rigor_score: rigor_score,
@@ -999,7 +999,7 @@ Suggested next steps:
 - **Write once, read many**: Feature spec written in Phase 1, codebase context in Phase 2 — all downstream agents read as needed
 - **Inline fallback**: If blackboard is unavailable, embed context directly in task descriptions
 - **Validation**: After writing critical keys (`feature_spec`, `codebase_context`, `chosen_architecture`, `test_plan`, `checkpoint`), immediately read back:
-  result = blackboard_read(task_id="{blackboard_id}", key="<key>")
+  result = blackboard_read(scope="{blackboard_id}", key="<key>")
 If result is null or empty: retry the write once. If still failing, use the inline fallback and log a warning.
 
 ### Interactive Gates

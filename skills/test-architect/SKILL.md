@@ -118,8 +118,8 @@ Each teammate receives the task-discovery protocol and blackboard ID:
 
 ```
 BLACKBOARD: {blackboard_id}
-Use blackboard_read(task_id="{blackboard_id}", key="...") to read shared context.
-Use blackboard_write(task_id="{blackboard_id}", key="...", value="...") to share your findings.
+Use blackboard_read(scope="{blackboard_id}", key="...") to read shared context.
+Use blackboard_write(scope="{blackboard_id}", author="your-name", key="...", value="...") to share your findings.
 
 TASK DISCOVERY PROTOCOL:
 1. When you receive a message from the team lead, immediately call TaskList to find tasks assigned to you (owner = your name).
@@ -200,7 +200,7 @@ Agent spawn templates:
 - Monitor TaskList until test-planner task shows status: completed
 - Read the JSON test plan from test-planner's message
 - Store as `test_plan`
-- Write to blackboard: `blackboard_write(task_id="{blackboard_id}", key="test_plan", value=test_plan)`
+- Write to blackboard: `blackboard_write(scope="{blackboard_id}", author="team-lead", key="test_plan", value=test_plan)`
 
 ### Step 1.3: Checkpoint
 
