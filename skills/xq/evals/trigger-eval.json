@@ -40,6 +40,18 @@
     "should_trigger": true
   },
   {
+    "query": "filter this jsonl log file for error entries",
+    "should_trigger": true
+  },
+  {
+    "query": "parse this csv and find rows where age is over 30",
+    "should_trigger": true
+  },
+  {
+    "query": "extract the database host from config.xml",
+    "should_trigger": true
+  },
+  {
     "query": "read this Python file and explain what it does",
     "should_trigger": false
   },

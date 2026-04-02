@@ -252,6 +252,93 @@
         "Correctly changes only the top-level port field to 8080 without affecting the 'port_info' endpoint string",
         "Result is valid JSON with all other fields preserved"
       ]
+    },
+    {
+      "id": 9,
+      "title": "JSONL filter — extract error lines from log",
+      "prompt": "Filter events.jsonl to show only error-level entries. Save the result as errors.jsonl.",
+      "files": [
+        {
+          "path": "events.jsonl",
+          "content": "{\"level\":\"info\",\"msg\":\"server started\",\"ts\":1}\n{\"level\":\"error\",\"msg\":\"connection refused\",\"ts\":2}\n{\"level\":\"info\",\"msg\":\"request handled\",\"ts\":3}\n{\"level\":\"error\",\"msg\":\"timeout\",\"ts\":4}\n{\"level\":\"info\",\"msg\":\"shutdown\",\"ts\":5}\n"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "file": "transcript.md",
+          "pattern": "jq.*select.*error"
+        },
+        {
+          "type": "file_contains",
+          "file": "errors.jsonl",
+          "literal": "connection refused"
+        },
+        {
+          "type": "file_contains",
+          "file": "errors.jsonl",
+          "literal": "timeout"
+        },
+        {
+          "type": "file_not_contains",
+          "file": "errors.jsonl",
+          "literal": "server started"
+        }
+      ],
+      "expectations": [
+        "Uses jq with select(.level == \"error\") to filter JSONL lines",
+        "Uses -c flag for compact (one JSON object per line) JSONL output",
+        "Output file errors.jsonl contains exactly 2 lines (the two error entries)",
+        "Does not use grep to filter JSONL — uses jq's select() for format-aware filtering"
+      ]
+    },
+    {
+      "id": 10,
+      "title": "CSV read — parse CSV as JSON",
+      "prompt": "Read users.csv and tell me the city for the user named bob.",
+      "files": [
+        {
+          "path": "users.csv",
+          "content": "name,age,city\nalice,30,NYC\nbob,25,LA\ncharlie,35,Chicago\n"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "file": "transcript.md",
+          "pattern": "yq\\s+-p\\s+csv"
+        }
+      ],
+      "expectations": [
+        "Uses yq -p csv to parse the CSV file",
+        "Correctly identifies bob's city as LA",
+        "Does not use Read tool and manually parse CSV lines",
+        "Uses a yq select or filter expression to find the matching row"
+      ]
+    },
+    {
+      "id": 11,
+      "title": "XML read — extract a value from XML config",
+      "prompt": "What is the database host in config.xml?",
+      "files": [
+        {
+          "path": "config.xml",
+          "content": "<config><database><host>db.example.com</host><port>5432</port><name>mydb</name></database><cache><enabled>true</enabled></cache></config>"
+        }
+      ],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "file": "transcript.md",
+          "pattern": "yq\\s+-p\\s+xml"
+        }
+      ],
+      "expectations": [
+        "Uses yq -p xml to parse the XML file",
+        "Correctly reports the database host as db.example.com",
+        "Does not use Read tool followed by manual text parsing or grep to find the value",
+        "Uses a yq path expression like .config.database.host"
+      ]
     }
   ]
 }

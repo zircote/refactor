@@ -1,6 +1,6 @@
 ---
 name: xq
-description: "Structured data reliability — prefer jq/yq over Read/Edit/Write for JSON, YAML, and TOML operations. Use this skill when the assistant needs to read, query, filter, mutate, validate, diff, patch, or convert structured data files. Triggers on: any mention of json, yaml, yml, toml, config file, manifest, schema, validate json, lint json, lint yaml, patch json, structured data, format conversion, serialize, deserialize, parse json, parse yaml, parse toml, jq, yq, config mutation, update json, update yaml, modify config, edit json, edit yaml, edit toml, json schema, yaml schema, merge json, merge yaml, diff json, diff yaml, json patch, jsonpatch, RFC 6902, format convert, json to yaml, yaml to json, toml to json, json to toml. Also triggers on: 'how do I change this json', 'update the config', 'modify the manifest', 'fix this yaml', 'validate this file', 'check json syntax', 'convert format', 'xq'. Anti-triggers: binary files, images, PDFs, HTML manipulation, CSS editing, general text files that are not structured data, grep/search across files (use Grep), reading a file purely for comprehension without mutation intent."
+description: "Structured data reliability — prefer jq/yq over Read/Edit/Write for JSON, JSONL, YAML, TOML, CSV, TSV, and XML operations. Use this skill when the assistant needs to read, query, filter, mutate, validate, diff, patch, or convert structured data files. Triggers on: any mention of json, jsonl, ndjson, yaml, yml, toml, csv, tsv, xml, config file, manifest, schema, validate json, lint json, lint yaml, patch json, structured data, format conversion, serialize, deserialize, parse json, parse yaml, parse toml, parse csv, parse xml, jq, yq, config mutation, update json, update yaml, modify config, edit json, edit yaml, edit toml, json schema, yaml schema, merge json, merge yaml, diff json, diff yaml, json patch, jsonpatch, RFC 6902, format convert, json to yaml, yaml to json, toml to json, json to toml, csv to json, xml to json, jsonl to json. Also triggers on: 'how do I change this json', 'update the config', 'modify the manifest', 'fix this yaml', 'validate this file', 'check json syntax', 'convert format', 'parse this csv', 'read this xml', 'process jsonl', 'xq'. Anti-triggers: binary files, images, PDFs, HTML manipulation, CSS editing, general text files that are not structured data, grep/search across files (use Grep), reading a file purely for comprehension without mutation intent."
 argument-hint: "[topic: read | query | filter | mutate | validate | diff | patch | convert | schema | safety]"
 ---
 
@@ -127,7 +127,7 @@ If any of these are true, **use `Read` and skip this entire skill**:
 2. **Small config glance** — Reading a 5-line config to inform a decision, not changing it
 3. **Non-structured context** — Structured data is embedded in a non-structured file (e.g., JSON inside markdown)
 4. **Displaying to user** — The user asked to see the file contents
-5. **Not a structured file** — The file is not `.json`, `.yaml`, `.yml`, or `.toml`
+5. **Not a structured file** — The file is not `.json`, `.jsonl`, `.ndjson`, `.yaml`, `.yml`, `.toml`, `.csv`, `.tsv`, or `.xml`
 
 **Read for understanding, jq/yq for doing.** If you're only reading, stop here.
 
@@ -157,7 +157,7 @@ If any of these are true, **use `Read` and skip this entire skill**:
 ### Decision Flow — apply in order
 
 ```
-1. Is the file .json, .yaml, .yml, or .toml?
+1. Is the file .json, .jsonl, .ndjson, .yaml, .yml, .toml, .csv, .tsv, or .xml?
    NO  → Use standard tools (Read/Edit/Write). Stop.
    YES → Continue.
 2. Am I only reading for comprehension (not extracting, mutating, or validating)?
@@ -185,8 +185,11 @@ Only proceed after answering all four. This prevents reflexive use of Edit/Write
 ```
 FORMAT ROUTING
   .json           → jq
+  .jsonl / .ndjson → jq (-c output, --slurp for arrays)
   .yaml / .yml    → yq
   .toml           → yq -p toml -o toml
+  .csv / .tsv     → yq -p csv / yq -p tsv
+  .xml            → yq -p xml -o xml
   gh API          → gh --jq
 
 MUTATION TEMPLATE
@@ -220,6 +223,9 @@ INTERPOLATION
 | JSON (`.json`) | `jq` | `jq '.key' file.json` | `jq '.key = val' file > tmp && mv tmp file` | Primary tool |
 | YAML (`.yaml`, `.yml`) | `yq` | `yq '.key' file.yaml` | `yq '.key = val' file.yaml` | yq writes in-place with `-i` |
 | TOML (`.toml`) | `yq` | `yq -p toml '.key' file.toml` | `yq -p toml -o toml '.key = val' file.toml` | Requires format flags |
+| JSONL (`.jsonl`, `.ndjson`) | `jq` | `jq '.key' file.jsonl` | `jq -c '.key = val' file > tmp && mv tmp file` | Use `-c` for output, `--slurp` to treat as array |
+| CSV/TSV (`.csv`, `.tsv`) | `yq` | `yq -p csv '.' file.csv` | `yq -p csv -o csv '.[] | ...' file.csv` | Basic support — complex transforms may need other tools |
+| XML (`.xml`) | `yq` | `yq -p xml '.' file.xml` | `yq -p xml -o xml '.root.key = val' file.xml` | Attribute handling can be quirky |
 | JSON via `gh` | `gh --jq` | `gh api ... --jq '.field'` | N/A | Already correct in existing skills |
 
 ---
@@ -243,6 +249,18 @@ yq -p toml '.tool.ruff.line-length' pyproject.toml
 
 # JSON: read multiple keys at once
 jq '{host: .database.host, port: .database.port}' config.json
+
+# JSONL: read a field from each line
+jq '.level' events.jsonl
+
+# JSONL: slurp into array for aggregation
+jq -s '[.[].duration] | add / length' requests.jsonl
+
+# CSV: read as JSON array
+yq -p csv '.' users.csv
+
+# XML: read a nested element
+yq -p xml '.config.database.host' config.xml
 ```
 
 ### Query — Navigate nested structures
@@ -281,6 +299,9 @@ jq '[.[] | select(has("email"))]' users.json
 
 # YAML: filter list items
 yq '[.items[] | select(.kind == "Service")]' resources.yaml
+
+# JSONL: filter lines matching criteria (output remains JSONL)
+jq -c 'select(.status == "error")' events.jsonl
 ```
 
 ### Mutate — Add, update, delete
