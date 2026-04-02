@@ -57,6 +57,23 @@ Active via pre-commit framework (`.pre-commit-config.yaml`):
 
 ---
 
+## Structured Data (xq)
+
+**Prefer `jq`/`yq` over Read/Edit/Write for JSON, YAML, and TOML mutations and validation.** This is a reliability requirement, not a style preference — text-level editing of structured data causes silent corruption (trailing commas, broken nesting, lost encoding).
+
+| Format | Tool | Mutate | Validate |
+|--------|------|--------|----------|
+| `.json` | `jq` | `jq --arg k "$V" '.key = $k' f > tmp.$$ && mv tmp.$$ f` | `jq empty f` |
+| `.yaml`/`.yml` | `yq` | `yq -i '.key = "val"' f` | `yq '.' f > /dev/null` |
+| `.toml` | `yq` | `yq -i -p toml -o toml '.key = "val"' f` | `yq -p toml '.' f > /dev/null` |
+
+- **Always** use `--arg`/`--argjson` for variable interpolation (never shell variables in jq expressions)
+- **Never** redirect jq output to the same input file (`> f.json` truncates before read — use temp file + mv)
+- **Read** tool is fine for comprehension; `jq`/`yq` required for mutations, validation, and extraction
+- Run `/xq` for the full structured data reference
+
+---
+
 ## Project Structure
 
 ```
