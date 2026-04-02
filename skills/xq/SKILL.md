@@ -119,6 +119,20 @@ SEE ALSO
 
 ---
 
+## Early Exit — When This Skill Does Not Apply
+
+If any of these are true, **use `Read` and skip this entire skill**:
+
+1. **Comprehension only** — You need to understand the file's structure, not extract, mutate, or validate
+2. **Small config glance** — Reading a 5-line config to inform a decision, not changing it
+3. **Non-structured context** — Structured data is embedded in a non-structured file (e.g., JSON inside markdown)
+4. **Displaying to user** — The user asked to see the file contents
+5. **Not a structured file** — The file is not `.json`, `.yaml`, `.yml`, or `.toml`
+
+**Read for understanding, jq/yq for doing.** If you're only reading, stop here.
+
+---
+
 ## Core Rule
 
 **ALWAYS use `jq` for JSON and `yq` for YAML/TOML when:**
@@ -537,19 +551,6 @@ These patterns cause silent data corruption. **Never use them for structured dat
 | `> same_file` redirect with jq | Natural shell pattern | Truncates file before reading | `> tmp.$$ && mv tmp.$$ file` |
 | `sed` on JSON/YAML | Quick one-liner habit | Not format-aware, breaks on multiline values | `jq` / `yq` |
 | `grep` + `awk` to extract JSON values | Works on pretty-printed JSON | Fragile, breaks on reformatting or compact JSON | `jq '.path.to.key'` |
-
----
-
-## When to Use Read Instead
-
-The `Read` tool is still appropriate when:
-
-1. **Comprehension** — You need to understand the overall structure of a file to make decisions (not extract specific values)
-2. **Small configs** — Reading a 5-line config to understand what's there before deciding what to change
-3. **Non-structured context** — The file has structured data embedded in a larger non-structured context (e.g., markdown with JSON code blocks)
-4. **Displaying to user** — The user asked to see the file contents
-
-The rule is: **Read for understanding, jq/yq for doing.**
 
 ---
 
