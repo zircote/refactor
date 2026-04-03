@@ -144,14 +144,14 @@ Run the following **AskUserQuestion** prompts sequentially:
      - "No — CLI/API only" *(default)* → `enableUiOps: false`
      - "Yes — also manage views, ordering, and visual layout" → `enableUiOps: true`
 
-Merge the `projectPlan` section into `.claude/refactor.config.json` using `jq` (per /xq rules — never use Write for JSON mutations). Construct the projectPlan object inline with `--argjson` using the values from Q1–Q3:
+Merge the `projectPlan` section into `.claude/refactor.config.json` using `jq` (per /xq rules — never use Write for JSON mutations). Construct the projectPlan object inline using the values from Q1–Q3, matching the schema keys (`projectNumber`, `projectOwner`, `sprintLength`, `enableUiOps`):
 ```bash
-# Example with collected values (substitute actuals):
+# Example with collected values (substitute actuals from Q1–Q3):
 if [ -f .claude/refactor.config.json ]; then
-  jq '.projectPlan = {"board": "MyBoard", "sprintLength": 14, "enableUiOps": false}' \
+  jq '.projectPlan = {"projectNumber": 5, "projectOwner": "@me", "sprintLength": 14, "enableUiOps": false}' \
     .claude/refactor.config.json > tmp.$$ && mv tmp.$$ .claude/refactor.config.json
 else
-  jq -n '{"projectPlan": {"board": "MyBoard", "sprintLength": 14, "enableUiOps": false}}' \
+  jq -n '{"projectPlan": {"projectNumber": 5, "projectOwner": "@me", "sprintLength": 14, "enableUiOps": false}}' \
     > .claude/refactor.config.json
 fi
 ```
