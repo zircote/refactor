@@ -73,9 +73,18 @@ If snapshot branches have already been cleaned up, note this and skip the diff.
 
 ### Step 4: Analyze Score Breakdown
 
-1. Read the most recent iteration's evaluation files:
-   - `{workspace}/iteration-{best_version}/test-results.json` for test breakdown
-   - `{workspace}/iteration-{best_version}/review-scores.json` for quality/security breakdown
+1. Extract score data from evaluation files using `jq` (per /xq rules — use jq for JSON extraction, not Read):
+   ```bash
+   # Test breakdown
+   jq '.' "{workspace}/iteration-{best_version}/test-results.json"
+   # Quality/security breakdown
+   jq '.' "{workspace}/iteration-{best_version}/review-scores.json"
+   ```
+   Extract specific values as needed:
+   ```bash
+   jq -r '[.passed, .failed, .total, .pass_rate] | @tsv' "{workspace}/iteration-{best_version}/test-results.json"
+   jq -r '[.quality_score, .security_score, .blocking_findings] | @tsv' "{workspace}/iteration-{best_version}/review-scores.json"
+   ```
 2. Identify which score components are strong and which are dragging the composite down
 3. Categorize remaining weaknesses: test failures, quality issues, or security concerns
 

@@ -375,8 +375,23 @@ This mode is used during each iteration of the `--autonomous` convergence loop. 
 
 #### Output
 
-Write a JSON file to the path specified in the task description (typically `{workspace}/iteration-{N}/review-scores.json`):
+Produce the scoring output using `jq -n` via Bash (per /xq rules — never use Write for JSON). Use `--argjson` for numbers and booleans, `--arg` for strings:
 
+```bash
+jq -n \
+  --argjson qs 7.5 \
+  --argjson ss 8.0 \
+  --argjson qfc 2 \
+  --argjson sfc 0 \
+  --argjson bf false \
+  --arg sum "Code quality is good." \
+  '{quality_score: $qs, security_score: $ss, quality_findings_count: $qfc, security_findings_count: $sfc, blocking_findings: $bf, summary: $sum}' \
+  > "{workspace}/iteration-{N}/review-scores.json"
+```
+
+Substitute actual computed values for the literals above. Validate after writing: `jq empty "{workspace}/iteration-{N}/review-scores.json"`
+
+Expected schema:
 ```json
 {
   "quality_score": 7.5,

@@ -253,7 +253,7 @@ Update `session_count += 1` and `updated_at = now()`. Store as `manifest`.
 }
 ```
 
-Store as `manifest`. Write to `.claude/grind-progress.json`.
+Store as `manifest`. Persist to `.claude/grind-progress.json` using `jq -n` (per /xq rules — never use Write for JSON). Construct the full manifest object with `jq -n --arg`/`--argjson` and validate with `jq empty`.
 
 ### Manifest Schema
 
@@ -369,7 +369,7 @@ gh issue list --repo ${REPO} --state open \
 
 Items in the merge-ready list are processed **before** the main queue.
 
-**IMPORTANT**: Every exit from this path — success or failure — MUST write the manifest to `.claude/grind-progress.json` before moving to the next item. This ensures crash-safety: if the session is interrupted, the state of each processed item is persisted.
+**IMPORTANT**: Every exit from this path — success or failure — MUST persist the manifest to `.claude/grind-progress.json` using `jq` (per /xq rules — use `jq` for JSON mutations, temp file + mv for atomicity). This ensures crash-safety: if the session is interrupted, the state of each processed item is persisted.
 
 For each item:
 
@@ -1059,7 +1059,7 @@ Fields:
   }
   ```
 
-Write updated manifest to `.claude/grind-progress.json`.
+Persist updated manifest to `.claude/grind-progress.json` using `jq` (per /xq rules — use `jq` for JSON mutations, temp file + mv for atomicity).
 
 ### Step 5.3: Write Checkpoint
 

@@ -128,7 +128,7 @@ Run the following **AskUserQuestion** prompts sequentially:
      }
    }
    ```
-2. Use the **Write** tool to save to `.claude/refactor.config.json`
+2. Save to `.claude/refactor.config.json` using `jq -n` (per /xq rules — never use Write for JSON). Construct the JSON with `jq -n --arg`/`--argjson` from the collected values, then validate with `jq empty`.
 3. Store as `config`. Proceed to Phase 0.
 
 **Default config** (equivalent to zero-config behavior):
@@ -549,11 +549,11 @@ Use the same spawn template pattern as Phase 0.3 (Agent tool with `team_name: "r
    - Creates branch `autoresearch/v0` from current HEAD
 6. Score baseline:
    - Create `{workspace}/iteration-0/` directory
-   - **TaskCreate**: "Run the test suite and write results to {workspace}/iteration-0/test-results.json in autonomous mode format: {\"passed\": N, \"failed\": M, \"total\": T, \"pass_rate\": F}. Run tests ONLY — do not create or modify tests."
+   - **TaskCreate**: "Run the test suite and produce results at {workspace}/iteration-0/test-results.json using `jq -n --argjson` (per /xq rules). Schema: {\"passed\": N, \"failed\": M, \"total\": T, \"pass_rate\": F}. Run tests ONLY — do not create or modify tests."
      - **TaskUpdate**: assign owner to "refactor-test"
      - **SendMessage** to "refactor-test": "Task #{id} assigned: baseline test run for autonomous scoring. Start now."
      - Wait for completion
-   - **TaskCreate**: "Mode 5 autonomous scoring. Review [{scope}] and write scores to {workspace}/iteration-0/review-scores.json. Output format: {\"quality_score\": Q, \"security_score\": S, \"quality_findings_count\": N, \"security_findings_count\": M, \"blocking_findings\": bool, \"summary\": \"text\"}."
+   - **TaskCreate**: "Mode 5 autonomous scoring. Review [{scope}] and produce scores at {workspace}/iteration-0/review-scores.json using `jq -n --argjson` (per /xq rules). Schema: {\"quality_score\": Q, \"security_score\": S, \"quality_findings_count\": N, \"security_findings_count\": M, \"blocking_findings\": bool, \"summary\": \"text\"}."
      - **TaskUpdate**: assign owner to "code-reviewer"
      - **SendMessage** to "code-reviewer": "Task #{id} assigned: baseline autonomous scoring (Mode 5). Start now."
      - Wait for completion
@@ -594,11 +594,11 @@ Run the standard Phase 2 sub-steps (2.A through 2.G) with these constraints:
 After sub-steps complete:
 
 1. Create `{workspace}/iteration-{i}/` directory
-2. **TaskCreate**: "Run the test suite and write results to {workspace}/iteration-{i}/test-results.json in autonomous mode format. Run tests ONLY — tests are FROZEN."
+2. **TaskCreate**: "Run the test suite and produce results at {workspace}/iteration-{i}/test-results.json using `jq -n --argjson` (per /xq rules). Run tests ONLY — tests are FROZEN."
    - **TaskUpdate**: assign owner to "refactor-test"
    - **SendMessage** to "refactor-test": "Task #{id} assigned: iteration {i} test run for autonomous scoring. Start now."
    - Wait for completion
-3. **TaskCreate**: "Mode 5 autonomous scoring. Review all changes in [{scope}] and write scores to {workspace}/iteration-{i}/review-scores.json."
+3. **TaskCreate**: "Mode 5 autonomous scoring. Review all changes in [{scope}] and produce scores at {workspace}/iteration-{i}/review-scores.json using `jq -n --argjson` (per /xq rules)."
    - **TaskUpdate**: assign owner to "code-reviewer"
    - **SendMessage** to "code-reviewer": "Task #{id} assigned: iteration {i} autonomous scoring (Mode 5). Start now."
    - Wait for completion

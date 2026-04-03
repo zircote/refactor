@@ -135,10 +135,23 @@ or
 
 ## Autonomous Mode: Structured Test Output
 
-When your task description contains "autonomous mode" or "write test-results.json", you must produce a standardized JSON output file in addition to your normal report.
+When your task description contains "autonomous mode" or "test-results.json", you must produce a standardized JSON output file in addition to your normal report.
 
-Write the file to the path specified in the task description (typically `{workspace}/iteration-{N}/test-results.json`):
+Produce the output file using `jq -n` via Bash (per /xq rules — never use Write for JSON). Use `--argjson` for all numeric values:
 
+```bash
+jq -n \
+  --argjson passed 42 \
+  --argjson failed 3 \
+  --argjson total 45 \
+  --argjson rate 0.933 \
+  '{passed: $passed, failed: $failed, total: $total, pass_rate: $rate}' \
+  > "{workspace}/iteration-{N}/test-results.json"
+```
+
+Substitute actual test counts for the literals above. Validate after writing: `jq empty "{workspace}/iteration-{N}/test-results.json"`
+
+Expected schema:
 ```json
 {
   "passed": 42,

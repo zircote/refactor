@@ -475,11 +475,11 @@ SendMessage to "test-planner": "Task #{id} assigned: create test plan for chosen
 
 1. Create `{workspace}/iteration-0/` directory
 2. Generate test code from the test plan and run baseline tests:
-   - **TaskCreate**: "Baseline: Generate test code from the test plan for [{feature}]. Read test_plan from blackboard. Write test files following project conventions. Run the test suite. Write results to {workspace}/iteration-0/test-results.json. Write test_generation_report to blackboard."
+   - **TaskCreate**: "Baseline: Generate test code from the test plan for [{feature}]. Read test_plan from blackboard. Write test files following project conventions. Run the test suite. Produce results at {workspace}/iteration-0/test-results.json using `jq -n --argjson` (per /xq rules). Write test_generation_report to blackboard."
      - Assign to "test-writer", send message
      - Wait for completion
 3. Run Mode 5 scoring:
-   - **TaskCreate**: "Mode 5 autonomous scoring of [{scope}]. Write scores to {workspace}/iteration-0/review-scores.json."
+   - **TaskCreate**: "Mode 5 autonomous scoring of [{scope}]. Produce scores at {workspace}/iteration-0/review-scores.json using `jq -n --argjson` (per /xq rules)."
      - Assign to "code-reviewer", send message
      - Wait for completion
 4. Compute baseline: `bash scripts/score.sh {workspace} 0 {score_weights.tests} {score_weights.quality} {score_weights.security}`
@@ -506,7 +506,7 @@ Before each iteration, negotiate what "done" looks like:
 1. If iteration > 1: read blackboard key `iteration_{i-1}_weaknesses` and include `priority_for_next` as explicit targets for feature-code
 2. **TaskCreate**: "Iteration {i}: Implement the feature [{feature}] following the chosen architecture. Read codebase_context, chosen_architecture, clarifications, and feature_spec from blackboard. {If i > 1: 'Build on previous iteration. Focus on addressing weaknesses from prior scoring. Priority targets: {priority_for_next from iteration_{i-1}_weaknesses}.'} Write clean, well-integrated code."
    - Assign to "feature-code", send message, wait for completion
-3. **TaskCreate**: "Iteration {i}: Run the existing test suite against the updated implementation. The test plan is fixed (from Phase 4.5). Do NOT modify test logic — only verify pass/fail status. Write results to {workspace}/iteration-{i}/test-results.json."
+3. **TaskCreate**: "Iteration {i}: Run the existing test suite against the updated implementation. The test plan is fixed (from Phase 4.5). Do NOT modify test logic — only verify pass/fail status. Produce results at {workspace}/iteration-{i}/test-results.json using `jq -n --argjson` (per /xq rules)."
    - Assign to "test-writer", send message, wait for completion
 4. If test failures: coordinate fix with feature-code, re-test (max 3 attempts)
 5. Track `changelog` from agent reports
@@ -528,7 +528,7 @@ The code-reviewer acts as an independent evaluator — grading the iteration aga
 
 1. Create `{workspace}/iteration-{i}/` directory (if not already created by test agent)
 2. Ensure test-results.json exists in workspace
-3. **TaskCreate**: "Mode 5 autonomous scoring. Review all changes for [{feature}]. Write to {workspace}/iteration-{i}/review-scores.json."
+3. **TaskCreate**: "Mode 5 autonomous scoring. Review all changes for [{feature}]. Produce scores at {workspace}/iteration-{i}/review-scores.json using `jq -n --argjson` (per /xq rules)."
    - Assign to "code-reviewer", send message, wait for completion
 4. Compute: `bash scripts/score.sh {workspace} {i} {score_weights.tests} {score_weights.quality} {score_weights.security}`
 5. Store as `score_i`
