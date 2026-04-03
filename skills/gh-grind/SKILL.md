@@ -313,7 +313,8 @@ blackboard_read(scope="{blackboard_id}", key="grind:checkpoint")
 **If checkpoint exists and is valid** (non-null, parseable JSON):
 - Display: "Found checkpoint from prior session: {checkpoint.items_completed} items completed, last item #{checkpoint.last_item_number}."
 - Restore state: skip items already in `merged` or `skipped` state in the manifest.
-- Continue from the next `queued` item.
+- Recover `in-progress` items: if `checkpoint.last_item_number` matches an `in-progress` item AND `checkpoint.current_phase == "review"` AND `checkpoint.pr_number` is set, resume that item from Phase 3 (review pipeline) instead of restarting from Phase 2.1. Otherwise, reset the item to `queued` (Phase 2.1 Step 2.2 will detect any existing PR).
+- Continue from the next `queued` or recovered `in-progress` item.
 
 **If checkpoint does not exist or is empty**: Proceed normally (fresh session).
 
@@ -851,14 +852,17 @@ all_findings += adversarial_findings.map(f => {
 
 #### Deduplication Rules
 
+**SAFETY RULE: Never deduplicate across different source models.** Confidence scales are not comparable (Copilot infers from language strength, Sonnet scores 0-100 directly, Codex normalizes 0-1 to 0-100). Cross-model dedup risks a low-severity finding with inflated confidence suppressing a high-severity finding.
+
 | Condition | Action |
 |-----------|--------|
-| Same file, overlapping lines (±5), similar description | Keep higher-confidence finding |
-| Same file, overlapping lines, different concern | Keep both (different review dimensions) |
+| Same source, same file, overlapping lines (±5), similar description | Keep higher-confidence finding |
+| Same source, same file, overlapping lines, different concern | Keep both |
+| Different sources, same file, overlapping lines, similar description | Keep both (cross-model confidence is not comparable) |
 | Different files | No dedup possible |
 
 ```
-deduplicated = deduplicate(all_findings, by=[file, line_range, semantic_similarity])
+deduplicated = deduplicate(all_findings, by=[source, file, line_range, semantic_similarity])
 ```
 
 Write merged findings to blackboard:
@@ -869,7 +873,7 @@ blackboard_write(scope="{blackboard_id}", key="grind:merged_findings_{ISSUE_NUMB
 
 ### Step 3.5: Confidence-Based Triage
 
-Apply `--confidence` threshold uniformly across all layers:
+Apply `--confidence` threshold to Sonnet findings (calibrated 0-100 scale). For Copilot (inferred confidence) and Codex (normalized confidence), triage by priority alone — P0 and P1 findings are always actionable regardless of confidence score:
 
 Score each actionable comment:
 
