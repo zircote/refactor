@@ -14,7 +14,8 @@ Clean up local branches whose remote tracking branch is gone. Dry-run by default
 
 Parse `$ARGUMENTS` for the following:
 
-- `--force` — Actually delete stale branches instead of listing them. Without this flag, only a dry-run listing is produced.
+- `--dry-run` (DEFAULT) — Show which branches would be deleted without deleting them.
+- `--force` — Required to actually delete branches. Without `--force`, prune is always a dry run.
 - `--help` or `-h` — Print the help section below and stop.
 
 ## Help

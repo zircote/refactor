@@ -414,11 +414,13 @@ These are non-negotiable:
 
 5. **Hooks must have escape hatches** — always document `--no-verify`. Never create hooks that can't be bypassed in an emergency.
 
-6. **Hooks must fail clearly** — cryptic failures that make developers reach for `--no-verify` as a habit defeat the entire purpose. Every failure must explain the problem and the fix.
+6. `--dry-run` — For uninstall mode: show which hooks would be removed without removing them.
 
-7. **Respect the project** — in auto mode, every hook you install must use a tool that is already installed and configured in the project. Do not introduce new tools, even popular ones like detect-secrets or gitleaks, unless the project already uses them. In interactive mode, you may suggest new tools as Tier 2/3 recommendations, but the user decides whether to add them.
+7. **Hooks must fail clearly** — cryptic failures that make developers reach for `--no-verify` as a habit defeat the entire purpose. Every failure must explain the problem and the fix.
 
-8. **Always use `/version-guard` for versioned artifacts** — whenever selecting, recommending, or pinning a version (hook repo tags in `.pre-commit-config.yaml`, npm/pip package versions for hook managers, tool versions in `lefthook.yml`), invoke the `/version-guard` skill to verify the latest stable version. Never rely on training data for version numbers — they go stale. This applies in all modes (interactive, auto, dry-run).
+8. **Respect the project** — in auto mode, every hook you install must use a tool that is already installed and configured in the project. Do not introduce new tools, even popular ones like detect-secrets or gitleaks, unless the project already uses them. In interactive mode, you may suggest new tools as Tier 2/3 recommendations, but the user decides whether to add them.
+
+9. **Always use `/version-guard` for versioned artifacts** — whenever selecting, recommending, or pinning a version (hook repo tags in `.pre-commit-config.yaml`, npm/pip package versions for hook managers, tool versions in `lefthook.yml`), invoke the `/version-guard` skill to verify the latest stable version. Never rely on training data for version numbers — they go stale. This applies in all modes (interactive, auto, dry-run).
 
 ---
 
