@@ -25,6 +25,7 @@ The workflow uses parallel execution where possible and integrates with the Atla
 Parse `$ARGUMENTS` for the following **before** any other processing:
 
 - `--mode=<mode>` — Set the operating mode. Valid values: `full`, `plan`, `eval`, `coverage`. If not specified, default to `full`. Extract and remove from `$ARGUMENTS`.
+- `--dry-run` — Stop after Phase 1 (plan generation) without spawning test writers. Shows the test plan for review.
 
 After extracting flags, the remaining arguments are interpreted as:
 - If empty: detect project root and analyze entire project
@@ -113,6 +114,11 @@ You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with te
 Spawn agents using the **Agent tool** with `team_name: "test-architect-team"`. The `team_name` parameter is REQUIRED on every Agent call — it registers the agent as a persistent teammate rather than a fire-and-forget subagent. Launch all needed agents in parallel.
 
 **Verification**: After spawning, confirm each teammate is addressable by name via SendMessage before assigning tasks.
+
+### Resource Limits
+
+- Max simultaneous agents: 6 (1 planner + 1 writer + 1 rigor-reviewer + 1 coverage-analyst + 2 buffer)
+- Max task queue depth: 15
 
 Each teammate receives the task-discovery protocol and blackboard ID:
 

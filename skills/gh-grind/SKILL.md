@@ -1165,14 +1165,30 @@ Review Layer Statistics:
 
 If `--dry-run` was active, label the report "DRY RUN — no changes were made".
 
+### Session Metrics
+
+Append session metrics to `.refactor/session-metrics.jsonl` using `jq -n` (per /xq rules):
+
+```bash
+jq -n \
+  --arg sid "{blackboard_scope}" \
+  --arg skill "gh-grind" \
+  --arg outcome "{success|partial|failed}" \
+  --argjson spawned {agents_spawned} \
+  --argjson completed {agents_completed} \
+  --argjson failed {agents_failed} \
+  '{ts: now|todate, session: $sid, skill: $skill, outcome: $outcome, agents_spawned: $spawned, agents_completed: $completed, agents_failed: $failed}' \
+  >> .refactor/session-metrics.jsonl
+```
+
 ### Step 7.3: Shutdown Team + Cleanup
 
 **This step MUST execute regardless of success or failure in prior phases.** If any phase fails or the user interrupts, skip directly here. This is a **finally block**.
 
 1. Send **shutdown_request** to all spawned teammates via SendMessage.
 2. Wait up to **30 seconds** for shutdown confirmations. If any teammate does not respond within 30 seconds, proceed anyway.
-3. Use **TeamDelete** to clean up the team. This forcefully terminates any remaining agents.
-4. If TeamDelete fails, log the error and inform the user: "Team cleanup failed — run `TeamDelete` manually for team `grind-team`".
+3. Run TeamDelete. If TeamDelete does not complete within 60 seconds, log "TeamDelete timeout — team `grind-team` may require manual cleanup" and proceed. Do NOT block the session on TeamDelete failure.
+4. If TeamDelete fails or times out, log the error and inform the user: "Team cleanup failed — run `TeamDelete` manually for team `grind-team`".
 
 ---
 

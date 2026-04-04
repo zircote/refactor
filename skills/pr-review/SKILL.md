@@ -327,6 +327,11 @@ Scale the team:
 - `large` (500-1500 lines): 1 code-reviewer, 1 architect, 1 test-rigor-reviewer
 - `very_large` (1500+ lines): 2 code-reviewers (split file clusters), 1 architect, 1 test-rigor-reviewer
 
+### Resource Limits
+
+- Max parallel review agents: min(changed_file_count / 50, 5) — never more than 5 regardless of PR size.
+- Per-agent timeout: 5 minutes. If an agent exceeds the timeout, log the timeout and proceed without its findings.
+
 #### Step 2.3: Create Blackboard
 
 Create a blackboard with `task_id = "pr-review-{PR_NUMBER}"` for cross-agent findings. Write:

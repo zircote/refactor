@@ -150,6 +150,8 @@ SEE ALSO
 
 This phase activates when multiple PR numbers are provided, or when NO PR numbers are provided (which means "all open PRs").
 
+**Circuit breaker**: Max 100 comments per session. If the PR has more than 100 comments, process the first 100, report the remaining count, and stop. Use `--limit=N` to override.
+
 ### Step 0.1: Expand PR List
 
 1. Parse `$ARGUMENTS` for all positional numeric values and range expressions.

@@ -170,6 +170,8 @@ Using discovered spec locations from Phase 0, create a swarm team and spawn para
 TeamCreate: "project-audit"
 ```
 
+**Circuit breaker**: Max 4 spec agents. If category detection finds more than 4 categories, merge related categories before spawning.
+
 Spawn 2-4 spec agents depending on what was discovered (skip agents for categories with no spec files):
 
 **Spec-Core agent**: Read core specification documents — data model, lifecycle, state machines, primary operations. Extract every numbered or RFC-2119 requirement (MUST/SHOULD/MAY). Produce a requirements register with sequential IDs.

@@ -149,6 +149,23 @@ Run the following **AskUserQuestion** prompts sequentially:
 
 ## Phase 0: Initialize Team
 
+### Step 0.0.0: Git State Validation
+
+```bash
+# Verify clean working tree
+DIRTY=$(git status --porcelain)
+if [ -n "$DIRTY" ]; then
+  echo "WARNING: Working tree has uncommitted changes. Stash or commit before proceeding."
+fi
+
+# Verify not in detached HEAD
+HEAD=$(git rev-parse --abbrev-ref HEAD)
+if [ "$HEAD" = "HEAD" ]; then
+  echo "ERROR: Detached HEAD state. Checkout a branch first."
+  exit 1
+fi
+```
+
 ### Step 0.1: Understand Scope
 
 1. Parse $ARGUMENTS to determine refactoring scope (flags already extracted in Arguments section)
@@ -181,6 +198,12 @@ You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with te
    TeamCreate with team_name: "refactor-team"
    ```
    If TeamCreate fails, retry once. If it fails again, report the error and stop.
+
+### Resource Limits
+
+- Max simultaneous agents: 8
+- Max task queue depth: 20
+- If either limit is reached, wait for running agents to complete before spawning more.
 
 **Step 0.2.2**: Create a shared blackboard for cross-agent context:
    ```
@@ -406,6 +429,8 @@ Write `codebase_context` to the shared blackboard for cross-agent access:
   result = blackboard_read(scope="{blackboard_id}", key="codebase_context")
   ```
 If result is null or empty: retry the write once. If still failing, use the inline fallback.
+
+**Verify**: Read the key back immediately via `blackboard_read`. If empty or mismatched, retry the write once. If still failing, fall back to inline task context and log "Blackboard write failed for key: {key}".
 
 ### Step 0.5.4: Checkpoint
 
@@ -815,6 +840,8 @@ If refactor-test agent reported failures:
 4. Wait for completion
 5. If still failing, repeat Step 2.D (max 3 attempts, then ask user for guidance)
 
+Backoff: Attempt 1 immediate, Attempt 2 after 5-second pause, Attempt 3 after 15-second pause.
+
 ### Step 2.E: Code Review
 
 **Skip if "code-reviewer" not in active_agents.**
@@ -852,6 +879,8 @@ If code-reviewer reported **FAIL** (Critical/High severity findings or high-conf
    - **SendMessage** to "code-reviewer": "Task #{id} assigned: verify fixes for blocking findings. Start now."
 4. Wait for completion
 5. If still FAIL, repeat Step 2.E.1 (max 3 attempts, then ask user for guidance)
+
+Backoff: Attempt 1 immediate, Attempt 2 after 5-second pause, Attempt 3 after 15-second pause.
 
 ### Step 2.F: Simplify
 
@@ -1094,6 +1123,22 @@ Quality Scores:
 {if 'simplifier' in active_agents and is_focused: '- Simplification: W/10'}
 ```
 
+### Session Metrics
+
+Append session metrics to `.refactor/session-metrics.jsonl` using `jq -n` (per /xq rules):
+
+```bash
+jq -n \
+  --arg sid "{blackboard_scope}" \
+  --arg skill "refactor" \
+  --arg outcome "{success|partial|failed}" \
+  --argjson spawned {agents_spawned} \
+  --argjson completed {agents_completed} \
+  --argjson failed {agents_failed} \
+  '{ts: now|todate, session: $sid, skill: $skill, outcome: $outcome, agents_spawned: $spawned, agents_completed: $completed, agents_failed: $failed}' \
+  >> .refactor/session-metrics.jsonl
+```
+
 ### Step 4.3: Shutdown Team and Cleanup Working Directories
 
 **This step MUST execute regardless of success or failure in prior steps.** If any phase fails or the user interrupts, skip directly here. This is a **finally block**.
@@ -1102,8 +1147,8 @@ Quality Scores:
 2. **Verify no working directories remain**: Run via Bash: `ls -d ./*-autonomous/ ./*-workspace/ 2>/dev/null || true`. If any remain, warn user.
 3. Send **shutdown_request** to all spawned teammates (those in `active_agents`) via SendMessage
 4. Wait up to **30 seconds** for shutdown confirmations. If any teammate does not respond within 30 seconds, proceed anyway — do not block on unresponsive agents
-5. Use **TeamDelete** to clean up the team. This forcefully terminates any remaining agents
-6. If TeamDelete fails, log the error and inform the user: "Team cleanup failed — run `TeamDelete` manually for team `{team_name}`"
+5. Run TeamDelete. If TeamDelete does not complete within 60 seconds, log "TeamDelete timeout — team `{team_name}` may require manual cleanup" and proceed. Do NOT block the session on TeamDelete failure.
+6. If TeamDelete fails or times out, log the error and inform the user: "Team cleanup failed — run `TeamDelete` manually for team `{team_name}`"
 
 ## Orchestration Notes
 

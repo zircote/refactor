@@ -146,6 +146,8 @@ SEE ALSO
 
 This phase activates when multiple PR numbers are provided, or when NO PR numbers are provided (meaning "all open PRs").
 
+**Circuit breaker**: Max 50 PRs per sweep run. If more than 50 PRs are discovered, process the first 50 by priority, report remaining count, and stop. Use `--limit=N` to override.
+
 ### Step 0.1: Expand PR List
 
 1. Parse `$ARGUMENTS` for positional numbers and range expressions.

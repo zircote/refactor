@@ -113,6 +113,23 @@ After loading config, set: `ta_config = config.featureDev.testArchitect ?? { ena
    - Run via Bash: `rm -rf ./*-autonomous/ ./*-workspace/`
 3. Verify `.gitignore` contains `*-autonomous/` pattern: Run via Bash: `grep -q '\*-autonomous/' .gitignore 2>/dev/null || echo '*-autonomous/' >> .gitignore`
 
+### Step 0.0.0: Git State Validation
+
+```bash
+# Verify clean working tree
+DIRTY=$(git status --porcelain)
+if [ -n "$DIRTY" ]; then
+  echo "WARNING: Working tree has uncommitted changes. Stash or commit before proceeding."
+fi
+
+# Verify not in detached HEAD
+HEAD=$(git rev-parse --abbrev-ref HEAD)
+if [ "$HEAD" = "HEAD" ]; then
+  echo "ERROR: Detached HEAD state. Checkout a branch first."
+  exit 1
+fi
+```
+
 ## Phase 0.1: Initialize Team and Blackboard
 
 **MANDATORY SWARM ORCHESTRATION — DO NOT USE PLAIN AGENT SPAWNS**
@@ -124,6 +141,12 @@ You MUST use the full swarm pattern: TeamCreate → TaskCreate → Agent with te
    TeamCreate with team_name: "feature-dev-team"
    ```
    If TeamCreate fails, retry once. If it fails again, report the error and stop.
+
+### Resource Limits
+
+- Max simultaneous agents: 8
+- Max task queue depth: 20
+- If either limit is reached, wait for running agents to complete before spawning more.
 
 **Step 0.1.2**: Create a shared blackboard for cross-agent context. Derive `scope-slug` from the feature description: lowercase, replace spaces and special characters with hyphens, truncate to 40 characters (e.g., "add webhook support" → "add-webhook-support"):
    ```
@@ -296,6 +319,9 @@ SendMessage to "code-explorer-{i}": "Task #{id} assigned: codebase exploration. 
    ```
    blackboard_write(scope="{blackboard_id}", author="team-lead", key="codebase_context", value="{consolidated context}")
    ```
+
+**Verify**: Read the key back immediately via `blackboard_read`. If empty or mismatched, retry the write once. If still failing, fall back to inline task context and log "Blackboard write failed for key: {key}".
+
 6. Present comprehensive summary of findings and patterns to the user.
 
 **Context compaction**: Write phase summary to blackboard:
@@ -708,6 +734,9 @@ Inform user: "Evaluator: {PASS/FAIL}. Proceeding to tests..."
    - Wait for completion.
    - Re-run test verification (max 3 attempts).
 4. If still failing after 3 attempts: ask user for guidance.
+
+Backoff: Attempt 1 immediate, Attempt 2 after 5-second pause, Attempt 3 after 15-second pause.
+
 5. Record final test status as `test_run_status`.
 
 ## Phase 6: Quality Review
@@ -943,6 +972,22 @@ Suggested next steps:
 - {suggestion 2}
 ```
 
+### Session Metrics
+
+Append session metrics to `.refactor/session-metrics.jsonl` using `jq -n` (per /xq rules):
+
+```bash
+jq -n \
+  --arg sid "{blackboard_scope}" \
+  --arg skill "feature-dev" \
+  --arg outcome "{success|partial|failed}" \
+  --argjson spawned {agents_spawned} \
+  --argjson completed {agents_completed} \
+  --argjson failed {agents_failed} \
+  '{ts: now|todate, session: $sid, skill: $skill, outcome: $outcome, agents_spawned: $spawned, agents_completed: $completed, agents_failed: $failed}' \
+  >> .refactor/session-metrics.jsonl
+```
+
 ### Step 7.4: Shutdown Team and Cleanup Working Directories
 
 **This step MUST execute regardless of success or failure in prior steps.** If any phase fails or the user interrupts, skip directly here. This is a **finally block**.
@@ -951,8 +996,8 @@ Suggested next steps:
 2. **Verify no working directories remain**: Run via Bash: `ls -d ./*-autonomous/ ./*-workspace/ 2>/dev/null || true`. If any remain, warn user.
 3. Send **shutdown_request** to all spawned teammates via SendMessage
 4. Wait up to **30 seconds** for shutdown confirmations. If any teammate does not respond within 30 seconds, proceed anyway — do not block on unresponsive agents
-5. Use **TeamDelete** to clean up the team. This forcefully terminates any remaining agents
-6. If TeamDelete fails, log the error and inform the user: "Team cleanup failed — run `TeamDelete` manually for team `{team_name}`"
+5. Run TeamDelete. If TeamDelete does not complete within 60 seconds, log "TeamDelete timeout — team `{team_name}` may require manual cleanup" and proceed. Do NOT block the session on TeamDelete failure.
+6. If TeamDelete fails or times out, log the error and inform the user: "Team cleanup failed — run `TeamDelete` manually for team `{team_name}`"
 
 ## Orchestration Notes
 

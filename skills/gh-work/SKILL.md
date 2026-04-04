@@ -341,6 +341,8 @@ Synthesize multiple operations into a coherent workplan:
 
 ## Phase 3: Execution
 
+**Circuit breaker**: Max 30 operations per batch. If the operation list exceeds 30, execute the first 30, checkpoint state, and report remaining. Re-run to continue.
+
 For every mutation (create, update, close, label, assign, etc.):
 
 1. **Use `gh` CLI and GitHub MCP tools** — prefer MCP tools (`mcp__github__issue_write`, `mcp__github__add_issue_comment`, etc.) when available. Fall back to `gh` CLI. Never construct raw API calls when a tool exists.
