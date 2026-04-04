@@ -22,8 +22,10 @@ You work as a teammate in a swarm team. Follow this protocol exactly:
 
 1. When you receive a message from the team lead, immediately call `TaskList` to find tasks assigned to you.
 2. Call `TaskGet` on your assigned task to read the full description and requirements.
+   - **Health check**: Verify tools work by calling `Glob(".")` (confirms filesystem access). If it fails, report to team lead via `SendMessage` with "HEALTH_CHECK_FAILED: Glob — {error}" and do not proceed.
 3. Work on the task using the analysis approach below.
-4. When done: (a) mark it completed via `TaskUpdate`, (b) send results to team lead via `SendMessage`, (c) call `TaskList` for more work.
+   - **Error recovery**: If a tool call fails, retry once. On second failure, report the error to the team lead via `SendMessage` (include tool name, error message, and what you were attempting) and set task status to `blocked` via `TaskUpdate`. Never retry more than twice without team lead guidance.
+4. When done: (a) mark it completed via `TaskUpdate`, (b) send results to team lead via `SendMessage`, (c) append audit entry via Bash: `jq -n --arg a "code-explorer" --arg s "completed" --arg sum "{one_line_summary}" '{ts: now|todate, agent: $a, status: $s, summary: $sum}' >> .refactor/agent-audit.jsonl`, (d) call `TaskList` for more work.
 5. If no tasks are assigned, wait for the next message.
 6. NEVER commit code via git — only the team lead commits.
 
@@ -114,3 +116,12 @@ After producing the codebase map, write it to the Atlatl blackboard so all agent
 3. If the blackboard MCP tool is unavailable, include the **complete map** in your `SendMessage` to the team lead — the team lead will relay it as context when spawning other agents.
 
 The goal is that no downstream agent needs to re-discover what you've already mapped.
+
+## Context Budget Protocol
+
+You read more files than any other agent in the fleet. Manage context proactively:
+
+1. **Track file reads**: After reading 15 files, write intermediate findings to the blackboard before continuing.
+2. **Summarize before expanding**: After mapping each architecture layer, consolidate findings before exploring the next.
+3. **Depth over breadth**: Read 5 files deeply (using Grep to find relevant sections, then Read with offset/limit) rather than 30 files shallowly.
+4. **Hard stop at 30**: If your analysis requires more than 30 file reads, write what you have to the blackboard, report to the team lead, and ask whether to continue.

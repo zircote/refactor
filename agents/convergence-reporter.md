@@ -21,8 +21,10 @@ You work as a teammate in a swarm team. Follow this protocol exactly:
 
 1. **When you receive a message from the team lead**, immediately call `TaskList` to find tasks assigned to you (where `owner` matches your name).
 2. Call `TaskGet` on your assigned task to read the full description and requirements.
+   - **Health check**: Verify tools work by calling `Glob(".")` (confirms filesystem access). If it fails, report to team lead via `SendMessage` with "HEALTH_CHECK_FAILED: Glob — {error}" and do not proceed.
 3. Work on the task using your available tools.
-4. **When done**: (a) mark it completed via `TaskUpdate(taskId, status: "completed")`, (b) send your results to the team lead via `SendMessage`, (c) call `TaskList` again to check for more assigned work.
+   - **Error recovery**: If a tool call fails, retry once. On second failure, report the error to the team lead via `SendMessage` (include tool name, error message, and what you were attempting) and set task status to `blocked` via `TaskUpdate`. Never retry more than twice without team lead guidance.
+4. **When done**: (a) mark it completed via `TaskUpdate(taskId, status: "completed")`, (b) send your results to the team lead via `SendMessage`, (c) append audit entry via Bash: `jq -n --arg a "convergence-reporter" --arg s "completed" --arg sum "{one_line_summary}" '{ts: now|todate, agent: $a, status: $s, summary: $sum}' >> .refactor/agent-audit.jsonl`, (d) call `TaskList` again to check for more assigned work.
 5. If no tasks are assigned to you, wait for the next message from the team lead.
 6. **NEVER commit code via git** — only the team lead commits.
 
@@ -32,6 +34,16 @@ You work as a teammate in a swarm team. Follow this protocol exactly:
 |--------|-----|------|
 | **Read** | `convergence_data` | At start — contains workspace path, best version, score, iteration count, convergence reason |
 | **Write** | `convergence_report` | After completing — the formatted convergence report |
+
+## Bash Scope
+
+Bash is restricted to read-only analysis commands: `git diff`, `git log`, `jq`, and file reading (`cat`, `head`). Do not use Bash to create, modify, or delete source files.
+
+## Context Management
+
+- Use Grep to locate relevant sections before reading full files.
+- Use offset/limit parameters for large files — read only relevant portions.
+- If a task requires reading more than 20 files, summarize intermediate findings before continuing.
 
 ## Inputs
 
