@@ -186,7 +186,14 @@ Use Glob/Bash to list packages, crates, workspace members, or service boundaries
 
 ### Step 0.5: Test Infrastructure
 
-Use Glob to find test directories, test config files, and coverage config. **Always searches from the project root** — test config is project-level even when reviewing a subdirectory.
+Use Glob to find test directories, test config files, and coverage config. **Test config** (pytest.ini, jest.config, coverage settings) is always searched from the **project root** — it is project-level.
+
+**When scoped**: After finding project-level test config, also determine whether the scope has relevant tests. Check for:
+- Test files within `{scope_path}` itself (e.g., `{scope_path}/**/test_*.py`)
+- Test files in a parallel test directory that correspond to the scope (e.g., if scope is `src/auth/`, check `tests/test_auth/` or `tests/**/test_auth*`)
+- Integration tests that import or reference modules within the scope
+
+Set `has_scoped_tests` in the manifest based on this check. When scoped, Phase 1 uses `has_scoped_tests` (not project-level `has_tests`) to decide whether to spawn `test-rigor-reviewer` and `coverage-analyst`. This prevents spawning test agents for a subtree that has no corresponding tests.
 
 ### Step 0.6: CI/CD Detection
 
@@ -219,6 +226,7 @@ Build the `project_manifest` JSON from the gathered data:
   "api_specs": [],
   "security_patterns": ["bandit configured"],
   "has_tests": true,
+  "has_scoped_tests": true,
   "has_ci": true,
   "has_docs": true
 }
@@ -249,7 +257,7 @@ Classify by `source_file_count`:
 
 ### Agent Roster by Tier
 
-**Constraints**: If `--focus` is set, only spawn agents for focused domains. If `has_tests` is false in the manifest, do not spawn `test-rigor-reviewer` or `coverage-analyst`.
+**Constraints**: If `--focus` is set, only spawn agents for focused domains. For test-related agents (`test-rigor-reviewer`, `coverage-analyst`): if the review is scoped (manifest has `"scoped": true`), use `has_scoped_tests` to decide whether to spawn them; otherwise use `has_tests`. Do not spawn test agents when the relevant test flag is false.
 
 #### Tiny (< 20 source files) — 4 agents
 
@@ -306,7 +314,7 @@ You MUST use the full swarm pattern: TeamCreate → blackboard_create → Agent 
 **Step 1.3**: Build the agent roster:
 - Start with the tier's full roster from the tables above.
 - Apply `--focus` filter: only include agents whose domains intersect the focus set.
-- Apply `has_tests` filter: exclude `test-rigor-reviewer` and `coverage-analyst` if no tests.
+- Apply test filter: if scoped, use `has_scoped_tests`; otherwise use `has_tests`. Exclude `test-rigor-reviewer` and `coverage-analyst` when the relevant flag is false.
 
 **Step 1.4**: Call `TeamCreate` with team name `"project-review"`.
 
