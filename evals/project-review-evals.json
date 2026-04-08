@@ -1,0 +1,302 @@
+{
+  "skill_name": "project-review",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/project-review --help",
+      "expected_output": "Prints the PROJECT-REVIEW(1) man page showing NAME, SYNOPSIS, DESCRIPTION, OPTIONS (--discovery-only, --focus, --min-score), EXAMPLES, and SEE ALSO sections. Does not run any review phases.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "pattern": "PROJECT-REVIEW\\(1\\)",
+          "name": "Man page header present"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "--discovery-only",
+          "name": "Documents --discovery-only flag"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "--focus=<domain",
+          "name": "Documents --focus flag"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "--min-score=N",
+          "name": "Documents --min-score flag"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "SEE ALSO",
+          "name": "Contains SEE ALSO section"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "EXAMPLES",
+          "name": "Contains EXAMPLES section"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "SYNOPSIS",
+          "name": "Contains SYNOPSIS section"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "/project-audit",
+          "name": "SEE ALSO references project-audit"
+        }
+      ],
+      "expectations": [
+        "Output contains the full man page format with PROJECT-REVIEW(1) header",
+        "Lists all three options: --discovery-only, --focus, --min-score",
+        "Includes EXAMPLES section with at least 3 usage examples",
+        "Includes SEE ALSO referencing /project-audit, /refactor, /cog-assess, /pr-review",
+        "Does NOT proceed to Phase 0 discovery or any review work"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "/project-review --discovery-only",
+      "expected_output": "Runs Phase 0 discovery only. Produces a project_manifest JSON with project_name, languages, build_tool, source_file_count, modules, test_dirs, ci_workflows, doc_files, has_tests, has_ci, has_docs. Stops before Phase 1 team assembly.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "pattern": "source_file_count",
+          "name": "Manifest contains source_file_count"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "languages",
+          "name": "Manifest contains languages field"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "has_tests",
+          "name": "Manifest contains has_tests field"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "has_ci",
+          "name": "Manifest contains has_ci field"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "has_docs",
+          "name": "Manifest contains has_docs field"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "modules",
+          "name": "Manifest contains modules field"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "build_tool",
+          "name": "Manifest contains build_tool field"
+        }
+      ],
+      "expectations": [
+        "Phase 0 runs all discovery steps (0.1 through 0.8)",
+        "The manifest identifies Python as the primary language (detects pyproject.toml)",
+        "The manifest reports source_file_count as an integer",
+        "The manifest lists modules including scripts/ and tests/",
+        "The manifest identifies CI workflows in .github/workflows/",
+        "Does NOT spawn any team or agents (no TeamCreate call)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "/project-review --focus=security,architecture",
+      "expected_output": "Runs full review but only for Security and Architecture domains. Team roster is filtered to include only agents covering those two domains. Report contains only Security and Architecture domain sections with scores. Other domains marked as excluded by --focus.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "pattern": "(?i)security",
+          "name": "Security domain present in output"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "(?i)architecture",
+          "name": "Architecture domain present in output"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "(?i)(not assessed|excluded|not reviewed)",
+          "name": "Non-focused domains marked as excluded"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "(?i)composite score",
+          "name": "Report contains composite score"
+        }
+      ],
+      "expectations": [
+        "Phase 0 discovery runs fully to determine project size",
+        "Only agents for Security and Architecture domains are spawned",
+        "The simplifier-review agent is NOT spawned (Simplicity not in focus)",
+        "The explorer agent for Documentation is NOT spawned (not in focus)",
+        "The report contains scored sections for Security and Architecture only",
+        "Simplicity, Data, Documentation, and SDLC are marked as not assessed or excluded"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "/project-review --focus=invalid_domain",
+      "expected_output": "Reports an error that 'invalid_domain' is not a valid domain. Lists the valid domains: simplicity, security, data, architecture, documentation, sdlc. Does not proceed to any review phase.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "pattern": "(?i)invalid",
+          "name": "Error mentions invalid domain"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "simplicity.*security.*data.*architecture.*documentation.*sdlc",
+          "name": "Lists all valid domain names"
+        }
+      ],
+      "expectations": [
+        "An error message is displayed indicating the domain name is invalid",
+        "All six valid domain names are listed for reference",
+        "No Phase 0 discovery is attempted",
+        "No team is created"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "/project-review --min-score=7",
+      "expected_output": "Runs a full 6-domain review. The final report includes a composite score. If the composite score is below 7, a prominent WARNING line appears stating the score is below the minimum threshold of 7.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "pattern": "Composite Score.*\\d+\\.\\d+.*\\/.*10",
+          "name": "Report contains composite score out of 10"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "(?i)(simplicity|security|data|architecture|documentation|sdlc).*\\d+\\/10",
+          "name": "At least one domain score in X/10 format"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "(?i)# Project Quality Review",
+          "name": "Report has correct heading"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "(?i)domain.*score.*rating",
+          "name": "Report contains domain score table headers"
+        }
+      ],
+      "expectations": [
+        "Phase 0 discovery produces a project manifest",
+        "Phase 1 sizes the team based on source_file_count and spawns agents",
+        "Phase 2 runs all 6 domain reviews in parallel",
+        "Phase 3 computes the composite score as arithmetic mean of domain scores",
+        "The report includes the score table with all 6 domains",
+        "If composite < 7, a WARNING line states the score is below the threshold of 7"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "give me a quality review of this project, score it across all dimensions",
+      "expected_output": "Interprets the natural language request as a full project-review invocation. Runs all 4 phases: discovery, team assembly with dynamic sizing, parallel domain reviews, and synthesis. Produces the full markdown report with composite score, domain table, per-domain reports, top recommendations, and methodology section.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "pattern": "# Project Quality Review",
+          "name": "Report has correct top-level heading"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "(?i)composite score",
+          "name": "Report contains composite score"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "(?i)top recommendations",
+          "name": "Report contains recommendations section"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "(?i)methodology",
+          "name": "Report contains methodology section"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "(?i)simplicity.*\\d+",
+          "name": "Simplicity domain scored"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "(?i)security.*\\d+",
+          "name": "Security domain scored"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "(?i)(tiny|small|medium|large)",
+          "name": "Size tier mentioned in report"
+        }
+      ],
+      "expectations": [
+        "The skill triggers on natural language quality review request",
+        "Phase 0 discovers the project structure empirically",
+        "Phase 1 selects the correct tier based on source file count and spawns the appropriate agent roster",
+        "Phase 2 runs domain reviews in parallel using swarm orchestration (TeamCreate, Agent with team_name, TaskCreate, SendMessage)",
+        "The final report follows the prescribed markdown format with all sections",
+        "All 6 domains appear in the score table with individual scores"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "/project-review --discovery-only --focus=security",
+      "expected_output": "Runs Phase 0 discovery only and stops. The --focus flag is noted but has no effect since discovery-only does not proceed to team assembly or domain reviews. The manifest is produced normally.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "pattern": "source_file_count",
+          "name": "Manifest contains source_file_count"
+        },
+        {
+          "type": "regex_match",
+          "pattern": "(?i)(python|javascript|rust|go|java)",
+          "name": "Manifest identifies at least one language"
+        }
+      ],
+      "expectations": [
+        "Phase 0 discovery runs all steps and produces the full manifest",
+        "The --focus=security flag is acknowledged but does not alter discovery output",
+        "No team is created and no agents are spawned",
+        "The manifest includes all standard fields (languages, source_file_count, modules, has_tests, has_ci, has_docs)"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "/project-review crates/core/",
+      "expected_output": "Scopes the review to the crates/core/ subdirectory (or reports that the path does not exist in this project). If the path does not exist, reports the error gracefully. If it exists, discovery is constrained to that subtree and the team is sized based on source files within that scope.",
+      "files": [],
+      "deterministic_checks": [
+        {
+          "type": "regex_match",
+          "pattern": "(?i)(scope|path|crates/core|not found|does not exist|no such)",
+          "name": "Output references the scoped path or reports its absence"
+        }
+      ],
+      "expectations": [
+        "The skill parses the positional argument as a path scope",
+        "Phase 0 discovery is either scoped to the given path or reports the path does not exist",
+        "If the path does not exist, the skill reports the error gracefully without crashing",
+        "If the path exists, source_file_count reflects only files within that subtree",
+        "Team sizing uses the scoped file count, not the full project count"
+      ]
+    }
+  ]
+}
