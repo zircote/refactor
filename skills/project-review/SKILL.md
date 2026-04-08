@@ -225,7 +225,7 @@ In this tier, `explorer-review` still handles both Documentation and SDLC. `arch
 | `security-review` | `code-reviewer` | Security | Mode 1 Security Baseline — full OWASP + dependency audit |
 | `test-reviewer` | `test-rigor-reviewer` | SDLC (test quality) | Test rigor scoring. *(Only if `has_tests`)* |
 
-#### Large (500+ source files) — 9-11 agents
+#### Large (500+ source files) — 8-10 agents
 
 | Agent Name | Type | Domains | Task |
 |------------|------|---------|------|
@@ -234,8 +234,7 @@ In this tier, `explorer-review` still handles both Documentation and SDLC. `arch
 | `architect-arch` | `architect` | Architecture | Full SOLID + pattern analysis across module boundaries |
 | `architect-data` | `architect` | Data | Data flow, queries, serialization, state, caching, privacy across all modules |
 | `simplifier-review` | `simplifier` | Simplicity | **READ-ONLY analysis.** Full codebase simplicity analysis |
-| `security-review` | `code-reviewer` | Security | Mode 1 Security Baseline — full scope |
-| `security-deep` | `code-reviewer` | Security (deep) | Module-by-module security deep-dive for high-risk areas identified by security-review |
+| `security-review` | `code-reviewer` | Security | Mode 1 Security Baseline — module-by-module structured pass. For each module in the manifest, review: input validation, auth, secrets, OWASP, dependency audit. Produces a single consolidated security score and per-module findings. |
 | `test-reviewer` | `test-rigor-reviewer` | SDLC (test quality) | Test rigor scoring *(Only if `has_tests`)* |
 | `coverage-review` | `coverage-analyst` | SDLC (coverage) | Run coverage tools (read-only), identify untested paths *(Only if `has_tests`)* |
 
@@ -261,7 +260,7 @@ You MUST use the full swarm pattern: TeamCreate → blackboard_create → Agent 
 {"tier": "small", "source_files": 42, "agent_count": 5, "domains": ["simplicity", "security", "data", "architecture", "documentation", "sdlc"]}
 ```
 
-**Step 1.7 — Spawn teammates**: For each agent in the roster, spawn it using the **Agent tool** with `team_name: "project-review"`. Launch **all** agents in a **single parallel batch** (one message, multiple Agent tool calls). The maximum roster size is 11 (Large tier) which is within the platform's parallel spawn limit — do not cap or defer any spawns.
+**Step 1.7 — Spawn teammates**: For each agent in the roster, spawn it using the **Agent tool** with `team_name: "project-review"`. Launch **all** agents in a **single parallel batch** (one message, multiple Agent tool calls). The maximum roster size is 10 (Large tier with tests) which is within the platform's parallel spawn limit — do not cap or defer any spawns. All agents in the roster are independent — no agent's task depends on another agent's output.
 
 Each teammate spawn prompt must include the read-only contract and task discovery protocol:
 
