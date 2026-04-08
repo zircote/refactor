@@ -83,10 +83,59 @@ Parse before any processing:
 
 - `--discovery-only` — Run Phase 0 only, print manifest, stop.
 - `--focus=<domain,...>` — Comma-separated domain subset. Validate each against: `{simplicity, security, data, architecture, documentation, sdlc}`. If invalid, report error and stop.
-- `--min-score=N` — Minimum composite score threshold (1-10). Default: none.
+- `--min-score=N` — Minimum composite score threshold (1-10). Default: none. **This is a report annotation, not a mode switch.** When set, all phases (0 through 4) execute normally — discovery, team assembly, parallel domain reviews, and synthesis all run exactly as they would without this flag. The only effect is in Phase 4: if the composite score falls below N, a prominent WARNING line is added to the report. Do NOT skip or simulate any phases when --min-score is set.
 - `--help`, `-h` — Print help and stop.
 
 Remaining text is the review scope (path or description). Default: entire project.
+
+### Path Scope Handling
+
+When the remaining text is a filesystem path (contains `/` or looks like a directory name):
+
+1. **Existence check**: Before Phase 0, verify the path exists relative to the project root using `ls` or `test -d`. If the path does NOT exist, report the error gracefully and stop:
+   ```
+   Error: Scope path '{path}' does not exist in this project.
+   Searched from: {project_root}
+   ```
+   Do not proceed to Phase 0 or any subsequent phases.
+
+2. **Selective re-rooting**: Only **source-code discovery** steps are re-rooted to the scoped path. **Project-level metadata** steps always search from the project root because those artifacts (manifests, CI, docs) live at the root, not inside subdirectories.
+
+   **Re-rooted to `{path}`** (source code):
+   - Step 0.1 (File Tree Scan): `find {path}` instead of `find .`
+   - Step 0.3 (Source File Count): counts only files within `{path}`
+   - Step 0.4 (Module Enumeration): constrained to the subtree
+
+   **Always project root** (metadata):
+   - Step 0.2 (Language Detection): manifests (`Cargo.toml`, `pyproject.toml`, etc.) live at the project root
+   - Step 0.5 (Test Infrastructure): test config is project-level
+   - Step 0.6 (CI/CD Detection): `.github/workflows/` is at the project root
+   - Step 0.7 (Documentation Inventory): README, CONTRIBUTING, ADRs are project-level
+   - Step 0.8 (API Surface): OpenAPI specs, protobuf defs are project-level
+
+3. **Manifest annotation**: The `project_manifest` must include the scope:
+   ```json
+   {"scope": "crates/core/", "scoped": true, ...}
+   ```
+
+4. **Team sizing**: Uses the scoped `source_file_count` (files within the subtree only), NOT the full project file count. This ensures a subdirectory with 15 files gets a Tiny-tier team, not a Medium-tier team because the full project has 300 files.
+
+---
+
+## End-to-End Flow by Invocation Type
+
+Every invocation follows this phase sequence. **No flags skip intermediate phases** — flags only modify behavior within phases or add annotations to the report.
+
+| Invocation | Phase 0 | Phase 1 | Phase 2 | Phase 3 | Phase 4 |
+|---|---|---|---|---|---|
+| `--help` | skip | skip | skip | skip | Print man page |
+| `--discovery-only` | **RUN** | skip | skip | skip | Print manifest |
+| `--focus=...` | **RUN** | **RUN** (filtered roster) | **RUN** (focused domains only) | **RUN** (mean of assessed) | **RUN** (excluded domains noted) |
+| `--min-score=N` | **RUN** | **RUN** | **RUN** | **RUN** | **RUN** + WARNING if below |
+| `path scope` | **RUN** (re-rooted) | **RUN** (scoped sizing) | **RUN** | **RUN** | **RUN** |
+| *(no flags)* | **RUN** | **RUN** | **RUN** | **RUN** | **RUN** |
+
+**Critical**: `--min-score` is a **report annotation only**. It does NOT change which phases run or how scores are computed. Phases 0, 1, 2, and 3 execute identically with or without `--min-score`. The only difference is in Phase 4, where a WARNING line is conditionally added.
 
 ---
 
@@ -94,11 +143,15 @@ Remaining text is the review scope (path or description). Default: entire projec
 
 The lead performs discovery directly — no agents are spawned yet. This runs before TeamCreate so the sizing algorithm has data to work with.
 
+**Path scope pre-check**: If a path scope was parsed from `$ARGUMENTS`, verify the path exists BEFORE running any discovery steps. If it does not exist, report the error (see "Path Scope Handling" above) and stop — do not continue to Phase 1 or beyond. If the path exists, substitute it for `.` in **source-code discovery steps only** (Steps 0.1, 0.3, 0.4). Steps 0.2, 0.5-0.8 always search from the project root — see "Path Scope Handling" for the full re-rooting rules.
+
+**Important**: This phase runs for ALL invocations that are not `--help` or `--discovery-only`-then-stop. The `--min-score` and `--focus` flags do NOT skip this phase — they only affect Phase 1 (agent roster filtering) and Phase 4 (report annotations).
+
 ### Step 0.1: File Tree Scan
 
-Map config, manifest, and source files (3 levels deep):
+Map config, manifest, and source files (3 levels deep). Use `{scope_path}` (defaults to `.` if no path scope given):
 ```bash
-find . -maxdepth 3 -type f \( -name "*.toml" -o -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.md" -o -name "*.lock" -o -name "Makefile" -o -name "Dockerfile" \) | sort | head -200
+find {scope_path} -maxdepth 3 -type f \( -name "*.toml" -o -name "*.yaml" -o -name "*.yml" -o -name "*.json" -o -name "*.md" -o -name "*.lock" -o -name "Makefile" -o -name "Dockerfile" \) | sort | head -200
 ```
 
 ### Step 0.2: Language Detection
@@ -113,37 +166,39 @@ Identify primary and secondary languages by checking for manifests:
 | `go.mod` | Go |
 | `pom.xml` / `build.gradle` | Java/Kotlin |
 
-Use Glob to check which manifests exist at the project root.
+Use Glob to check which manifests exist at the **project root** (not the scope path — manifests are always project-level).
 
 ### Step 0.3: Source File Count
 
-Count source files excluding vendored/generated directories:
+Count source files excluding vendored/generated directories. Use `{scope_path}` (defaults to `.`):
 ```bash
-find . -type f \( -name "*.rs" -o -name "*.py" -o -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.go" -o -name "*.java" -o -name "*.kt" -o -name "*.rb" -o -name "*.c" -o -name "*.cpp" -o -name "*.h" \) \
+find {scope_path} -type f \( -name "*.rs" -o -name "*.py" -o -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.go" -o -name "*.java" -o -name "*.kt" -o -name "*.rb" -o -name "*.c" -o -name "*.cpp" -o -name "*.h" \) \
   -not -path "*/node_modules/*" -not -path "*/.venv/*" -not -path "*/vendor/*" \
   -not -path "*/target/*" -not -path "*/__pycache__/*" -not -path "*/dist/*" \
   -not -path "*/.git/*" -not -path "*/generated/*" | wc -l
 ```
 
+**When scoped**: This count reflects only files within the scoped subtree. This scoped count is what determines team sizing in Phase 1.
+
 ### Step 0.4: Module Enumeration
 
-Use Glob/Bash to list packages, crates, workspace members, or service boundaries.
+Use Glob/Bash to list packages, crates, workspace members, or service boundaries. **When scoped**: constrain to the subtree at `{scope_path}`.
 
 ### Step 0.5: Test Infrastructure
 
-Use Glob to find test directories, test config files, and coverage config.
+Use Glob to find test directories, test config files, and coverage config. **Always searches from the project root** — test config is project-level even when reviewing a subdirectory.
 
 ### Step 0.6: CI/CD Detection
 
-Use Glob to find `.github/workflows/`, `.gitlab-ci.yml`, `Jenkinsfile`, `Dockerfile`, `docker-compose.yml`.
+Use Glob to find `.github/workflows/`, `.gitlab-ci.yml`, `Jenkinsfile`, `Dockerfile`, `docker-compose.yml`. **Always searches from the project root** — CI lives at the repo root.
 
 ### Step 0.7: Documentation Inventory
 
-Use Glob to find README, CONTRIBUTING, CHANGELOG, ADRs, API docs, doc comment config.
+Use Glob to find README, CONTRIBUTING, CHANGELOG, ADRs, API docs, doc comment config. **Always searches from the project root** — project documentation is repo-level.
 
 ### Step 0.8: API Surface
 
-Use Glob to find OpenAPI/AsyncAPI specs, GraphQL schemas, protobuf definitions, CLI entry points.
+Use Glob to find OpenAPI/AsyncAPI specs, GraphQL schemas, protobuf definitions, CLI entry points. **Always searches from the project root**.
 
 ### Discovery Output
 
@@ -176,6 +231,8 @@ Store `project_manifest` in memory — it will be written to the blackboard in P
 ---
 
 ## Phase 1: Sizing and Team Assembly
+
+**This phase always runs after Phase 0** for any invocation that is not `--help` or `--discovery-only`. The `--min-score` flag does NOT skip this phase.
 
 Read `project_manifest` from the blackboard. Determine the project size tier and assemble the review team.
 
@@ -352,6 +409,8 @@ When an agent covers multiple domains (Tiny/Small tiers), the task includes both
 ---
 
 ## Phase 2: Parallel Domain Reviews
+
+**This phase always runs after Phase 1** for any invocation that is not `--help` or `--discovery-only`. The `--min-score` flag does NOT skip this phase — domain reviews must execute to produce real scores.
 
 After all tasks are created (Step 1.8), send a kickoff `SendMessage` to each spawned teammate:
 
