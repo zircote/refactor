@@ -65,7 +65,7 @@ Active via pre-commit framework (`.pre-commit-config.yaml`):
 |--------|------|--------|----------|
 | `.json` | `jq` | `jq --arg k "$V" '.key = $k' f > tmp.$$ && mv tmp.$$ f` | `jq empty f` |
 | `.yaml`/`.yml` | `yq` | `yq -i '.key = "val"' f` | `yq '.' f > /dev/null` |
-| `.toml` | `yq` | `yq -i -p toml -o toml '.key = "val"' f` | `yq -p toml '.' f > /dev/null` |
+| `.toml` | `yq` (read) / `Edit` (write) | Read: `yq -p toml '.key' f` — Write: use `Edit` tool (yq write is lossy on nested tables; see `/xq` TOML Caveat) | `yq -p toml '.' f > /dev/null` |
 
 - **Always** use `--arg`/`--argjson` for variable interpolation (never shell variables in jq expressions)
 - **Never** redirect jq output to the same input file (`> f.json` truncates before read — use temp file + mv)

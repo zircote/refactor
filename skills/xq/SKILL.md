@@ -187,7 +187,8 @@ FORMAT ROUTING
   .json           → jq
   .jsonl / .ndjson → jq (-c output, --slurp for arrays)
   .yaml / .yml    → yq
-  .toml           → yq -p toml -o toml
+  .toml (read)    → yq -p toml '.key' f.toml
+  .toml (write)   → SEE TOML CAVEAT — yq write is lossy on nested tables
   .csv / .tsv     → yq -p csv / yq -p tsv
   .xml            → yq -p xml -o xml
   gh API          → gh --jq
@@ -195,7 +196,7 @@ FORMAT ROUTING
 MUTATION TEMPLATE
   jq --arg k "$VAL" '.key = $k' f.json > tmp.$$ && mv tmp.$$ f.json
   yq -i '.key = "val"' f.yaml
-  yq -i -p toml -o toml '.key = "val"' f.toml
+  # TOML: yq write is lossy — see TOML Caveat section below
 
 VALIDATION
   jq empty f.json                    # exits non-zero if invalid
@@ -222,7 +223,7 @@ INTERPOLATION
 |--------|------|------|-------|-------|
 | JSON (`.json`) | `jq` | `jq '.key' file.json` | `jq '.key = val' file > tmp && mv tmp file` | Primary tool |
 | YAML (`.yaml`, `.yml`) | `yq` | `yq '.key' file.yaml` | `yq '.key = val' file.yaml` | yq writes in-place with `-i` |
-| TOML (`.toml`) | `yq` | `yq -p toml '.key' file.toml` | `yq -p toml -o toml '.key = val' file.toml` | Requires format flags |
+| TOML (`.toml`) | `yq` | `yq -p toml '.key' file.toml` | See TOML caveat below | Read is safe; **write is lossy** on nested tables |
 | JSONL (`.jsonl`, `.ndjson`) | `jq` | `jq '.key' file.jsonl` | `jq -c '.key = val' file > tmp && mv tmp file` | Use `-c` for output, `--slurp` to treat as array |
 | CSV/TSV (`.csv`, `.tsv`) | `yq` | `yq -p csv '.' file.csv` | `yq -p csv -o csv '.[] | ...' file.csv` | Basic support — complex transforms may need other tools |
 | XML (`.xml`) | `yq` | `yq -p xml '.' file.xml` | `yq -p xml -o xml '.root.key = val' file.xml` | Attribute handling can be quirky |
@@ -340,8 +341,11 @@ DEPLOY_TAG="v2.4.1" yq -i '.spec.template.spec.containers[0].image = "myregistry
 # YAML: delete a key
 yq -i 'del(.spec.template.metadata.annotations)' deployment.yaml
 
-# TOML: update a value
-yq -i -p toml -o toml '.tool.ruff.line-length = 120' pyproject.toml
+# TOML: read a value (safe — yq read works fine)
+yq -p toml '.tool.ruff.line-length' pyproject.toml
+
+# TOML: write — DO NOT use yq -i for files with nested tables
+# See TOML Caveat section. Use jq via JSON round-trip or Edit tool instead.
 ```
 
 ### Validate — Check syntax and structure
@@ -364,7 +368,7 @@ done
 # YAML: syntax validation
 yq '.' config.yaml > /dev/null 2>&1 || echo "INVALID YAML"
 
-# TOML: syntax validation
+# TOML: syntax validation (read-only — safe)
 yq -p toml '.' pyproject.toml > /dev/null 2>&1 || echo "INVALID TOML"
 ```
 
@@ -486,6 +490,54 @@ jq -e '
 # YAML: same patterns via yq
 yq -e 'has("apiVersion") and has("kind") and has("metadata")' resource.yaml > /dev/null \
   || echo "Missing required Kubernetes fields"
+```
+
+---
+
+## TOML Caveat — yq Write Is Lossy on Nested Tables
+
+**yq (mikefarah/yq v4.x) silently drops nested TOML table sections during round-trip writes.** This is a confirmed bug in yq's TOML serializer — not a usage error.
+
+**Affected:** Any TOML file with two or more levels of dotted tables, e.g.:
+```toml
+[tool.ruff]           # level 1 — survives
+line-length = 100
+
+[tool.ruff.lint]      # level 2 — SILENTLY DROPPED by yq write
+select = ["E", "F"]
+```
+
+**Safe operations:**
+- `yq -p toml '.key' file.toml` — **reading** works correctly
+- `yq -p toml -o json '.' file.toml` — **converting to JSON** works correctly
+- `yq -p toml '.' file.toml > /dev/null` — **validation** works correctly
+
+**Unsafe operations:**
+- `yq -i -p toml -o toml '.key = "val"' file.toml` — **LOSES nested tables**
+- Any `yq` command that writes TOML back to TOML with `-o toml`
+
+**Safe alternatives for TOML mutation:**
+```bash
+# Option 1: Round-trip through JSON (preserves all structure)
+jq --arg v "4.2.0" '.project.version = $v' <(yq -p toml -o json '.' f.toml) > tmp.$$ \
+  && yq -p json -o toml '.' tmp.$$ > f.toml && rm tmp.$$
+
+# Option 2: Use the Edit tool for simple value changes (preferred)
+# Edit tool does exact string replacement — safe for any file format
+
+# Option 3: Python one-liner for programmatic TOML mutation
+python3 -c "
+import tomllib, pathlib
+p = pathlib.Path('pyproject.toml')
+d = tomllib.loads(p.read_text())
+d['project']['version'] = '4.2.0'
+# tomllib is read-only; use tomli-w for writing if available
+"
+```
+
+**Always validate after any TOML mutation:**
+```bash
+diff <(git show HEAD:file.toml) file.toml  # catch structural loss immediately
 ```
 
 ---
