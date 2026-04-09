@@ -10,42 +10,50 @@
         {
           "type": "regex_match",
           "pattern": "PROJECT-REVIEW\\(1\\)",
-          "name": "Man page header present"
+          "name": "Man page header present",
+          "file": "help-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "--discovery-only",
-          "name": "Documents --discovery-only flag"
+          "name": "Documents --discovery-only flag",
+          "file": "help-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "--focus=<domain",
-          "name": "Documents --focus flag"
+          "name": "Documents --focus flag",
+          "file": "help-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "--min-score=N",
-          "name": "Documents --min-score flag"
+          "name": "Documents --min-score flag",
+          "file": "help-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "SEE ALSO",
-          "name": "Contains SEE ALSO section"
+          "name": "Contains SEE ALSO section",
+          "file": "help-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "EXAMPLES",
-          "name": "Contains EXAMPLES section"
+          "name": "Contains EXAMPLES section",
+          "file": "help-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "SYNOPSIS",
-          "name": "Contains SYNOPSIS section"
+          "name": "Contains SYNOPSIS section",
+          "file": "help-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "/project-audit",
-          "name": "SEE ALSO references project-audit"
+          "name": "SEE ALSO references project-audit",
+          "file": "help-output.txt"
         }
       ],
       "expectations": [
@@ -65,37 +73,44 @@
         {
           "type": "regex_match",
           "pattern": "source_file_count",
-          "name": "Manifest contains source_file_count"
+          "name": "Manifest contains source_file_count",
+          "file": "manifest.json"
         },
         {
           "type": "regex_match",
           "pattern": "languages",
-          "name": "Manifest contains languages field"
+          "name": "Manifest contains languages field",
+          "file": "manifest.json"
         },
         {
           "type": "regex_match",
           "pattern": "has_tests",
-          "name": "Manifest contains has_tests field"
+          "name": "Manifest contains has_tests field",
+          "file": "manifest.json"
         },
         {
           "type": "regex_match",
           "pattern": "has_ci",
-          "name": "Manifest contains has_ci field"
+          "name": "Manifest contains has_ci field",
+          "file": "manifest.json"
         },
         {
           "type": "regex_match",
           "pattern": "has_docs",
-          "name": "Manifest contains has_docs field"
+          "name": "Manifest contains has_docs field",
+          "file": "manifest.json"
         },
         {
           "type": "regex_match",
           "pattern": "modules",
-          "name": "Manifest contains modules field"
+          "name": "Manifest contains modules field",
+          "file": "manifest.json"
         },
         {
           "type": "regex_match",
           "pattern": "build_tool",
-          "name": "Manifest contains build_tool field"
+          "name": "Manifest contains build_tool field",
+          "file": "manifest.json"
         }
       ],
       "expectations": [
@@ -116,22 +131,26 @@
         {
           "type": "regex_match",
           "pattern": "(?i)security",
-          "name": "Security domain present in output"
+          "name": "Security domain present in output",
+          "file": "focus-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "(?i)architecture",
-          "name": "Architecture domain present in output"
+          "name": "Architecture domain present in output",
+          "file": "focus-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "(?i)(not assessed|excluded|not reviewed)",
-          "name": "Non-focused domains marked as excluded"
+          "name": "Non-focused domains marked as excluded",
+          "file": "focus-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "(?i)composite score",
-          "name": "Report contains composite score"
+          "name": "Report contains composite score",
+          "file": "focus-output.txt"
         }
       ],
       "expectations": [
@@ -152,12 +171,14 @@
         {
           "type": "regex_match",
           "pattern": "(?i)invalid",
-          "name": "Error mentions invalid domain"
+          "name": "Error mentions invalid domain",
+          "file": "error-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "simplicity.*security.*data.*architecture.*documentation.*sdlc",
-          "name": "Lists all valid domain names"
+          "name": "Lists all valid domain names",
+          "file": "error-output.txt"
         }
       ],
       "expectations": [
@@ -176,22 +197,26 @@
         {
           "type": "regex_match",
           "pattern": "Composite Score.*\\d+\\.\\d+.*\\/.*10",
-          "name": "Report contains composite score out of 10"
+          "name": "Report contains composite score out of 10",
+          "file": "minscore-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "(?i)(simplicity|security|data|architecture|documentation|sdlc).*\\d+\\/10",
-          "name": "At least one domain score in X/10 format"
+          "name": "At least one domain score in X/10 format",
+          "file": "minscore-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "(?i)# Project Quality Review",
-          "name": "Report has correct heading"
+          "name": "Report has correct heading",
+          "file": "minscore-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "(?i)domain.*score.*rating",
-          "name": "Report contains domain score table headers"
+          "name": "Report contains domain score table headers",
+          "file": "minscore-output.txt"
         }
       ],
       "expectations": [
@@ -212,37 +237,44 @@
         {
           "type": "regex_match",
           "pattern": "# Project Quality Review",
-          "name": "Report has correct top-level heading"
+          "name": "Report has correct top-level heading",
+          "file": "report-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "(?i)composite score",
-          "name": "Report contains composite score"
+          "name": "Report contains composite score",
+          "file": "report-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "(?i)top recommendations",
-          "name": "Report contains recommendations section"
+          "name": "Report contains recommendations section",
+          "file": "report-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "(?i)methodology",
-          "name": "Report contains methodology section"
+          "name": "Report contains methodology section",
+          "file": "report-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "(?i)simplicity.*\\d+",
-          "name": "Simplicity domain scored"
+          "name": "Simplicity domain scored",
+          "file": "report-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "(?i)security.*\\d+",
-          "name": "Security domain scored"
+          "name": "Security domain scored",
+          "file": "report-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "(?i)(tiny|small|medium|large)",
-          "name": "Size tier mentioned in report"
+          "name": "Size tier mentioned in report",
+          "file": "report-output.txt"
         }
       ],
       "expectations": [
@@ -263,12 +295,14 @@
         {
           "type": "regex_match",
           "pattern": "source_file_count",
-          "name": "Manifest contains source_file_count"
+          "name": "Manifest contains source_file_count",
+          "file": "combined-output.txt"
         },
         {
           "type": "regex_match",
           "pattern": "(?i)(python|javascript|rust|go|java)",
-          "name": "Manifest identifies at least one language"
+          "name": "Manifest identifies at least one language",
+          "file": "combined-output.txt"
         }
       ],
       "expectations": [
@@ -287,7 +321,8 @@
         {
           "type": "regex_match",
           "pattern": "(?i)(scope|path|crates/core|not found|does not exist|no such)",
-          "name": "Output references the scoped path or reports its absence"
+          "name": "Output references the scoped path or reports its absence",
+          "file": "scoped-output.txt"
         }
       ],
       "expectations": [
