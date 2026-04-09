@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "refactor/schemas/architect-output.json",
+  "title": "Architect Output",
+  "description": "Architecture analysis and optimization plan from the architect agent.",
+  "type": "object",
+  "properties": {
+    "plan": {
+      "type": "string",
+      "description": "High-level architecture plan describing the proposed changes and rationale"
+    },
+    "optimizations": {
+      "type": "array",
+      "description": "Ordered list of optimization proposals for the codebase",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this optimization (e.g. OPT-001)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed description of the optimization"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"],
+            "description": "Priority level indicating urgency and impact"
+          },
+          "estimated_complexity": {
+            "type": "string",
+            "enum": ["trivial", "small", "medium", "large"],
+            "description": "Estimated implementation complexity"
+          }
+        },
+        "required": ["id", "description", "priority", "estimated_complexity"]
+      }
+    },
+    "risk_assessment": {
+      "type": "object",
+      "description": "Overall risk assessment for the proposed architecture changes",
+      "properties": {
+        "overall_risk": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Aggregate risk level across all identified risks"
+        },
+        "risks": {
+          "type": "array",
+          "description": "Individual risk items identified during analysis",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "description": "Risk category (e.g. performance, security, maintainability)"
+              },
+              "description": {
+                "type": "string",
+                "description": "Detailed description of the risk"
+              },
+              "mitigation": {
+                "type": "string",
+                "description": "Recommended mitigation strategy"
+              }
+            },
+            "required": ["category", "description", "mitigation"]
+          }
+        }
+      },
+      "required": ["overall_risk", "risks"]
+    }
+  },
+  "required": ["plan", "optimizations", "risk_assessment"]
+}

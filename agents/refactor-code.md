@@ -14,6 +14,9 @@ allowed-tools:
 - TaskGet
 - TaskUpdate
 - SendMessage
+model: opus
+maxTurns: 60
+effort: high
 ---
 
 You are an expert software engineer specializing in safe, clean code refactoring.

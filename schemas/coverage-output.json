@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "refactor/schemas/coverage-output.json",
+  "title": "Coverage Analysis Output",
+  "description": "Coverage analysis results from the coverage-analyst agent.",
+  "type": "object",
+  "properties": {
+    "line_coverage": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Percentage of source lines exercised by the test suite"
+    },
+    "branch_coverage": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Percentage of branches (if/else, switch) exercised by the test suite"
+    },
+    "uncovered_paths": {
+      "type": "array",
+      "description": "Files and line ranges not covered by tests, with explanations",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "Relative path to the source file with uncovered lines"
+          },
+          "lines": {
+            "type": "array",
+            "description": "Line numbers not covered by any test",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "A single uncovered line number"
+            }
+          },
+          "reason": {
+            "type": "string",
+            "description": "Explanation of why these lines are uncovered (e.g. error path, dead code)"
+          }
+        },
+        "required": ["file", "lines", "reason"]
+      }
+    }
+  },
+  "required": ["line_coverage", "branch_coverage", "uncovered_paths"]
+}

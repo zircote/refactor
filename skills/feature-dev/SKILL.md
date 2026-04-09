@@ -516,6 +516,66 @@ SendMessage to "test-planner": "Task #{id} assigned: create test plan for chosen
 
 For `i = 1` to `max_iterations`:
 
+### Agent Health Monitoring
+
+At the start of each iteration, check agent health before assigning work:
+
+1. Read `health_status` from the blackboard (if it exists):
+   ```bash
+   HEALTH=$(blackboard_read key="health_status" 2>/dev/null || echo '{}')
+   ```
+
+2. Count unhealthy agents:
+   ```bash
+   TOTAL_AGENTS=$(echo "$HEALTH" | jq 'length')
+   UNHEALTHY=$(echo "$HEALTH" | jq '[.[] | select(.status != "healthy")] | length')
+   ```
+
+3. **Abort threshold**: If >40% of agents are unhealthy, abort the iteration:
+   ```bash
+   if python3 -c "exit(0 if $UNHEALTHY / max($TOTAL_AGENTS, 1) > 0.4 else 1)"; then
+     echo "ABORT: $UNHEALTHY/$TOTAL_AGENTS agents unhealthy (>40%)"
+     # Skip to convergence check with current scores
+   fi
+   ```
+
+4. **Graceful degradation**: Non-critical agents (simplifier, convergence-reporter) failing health → skip them silently. Critical agents (feature-code, test-writer) failing → abort iteration.
+
+### Per-Iteration Timeout
+
+Each iteration has a maximum wall-clock time (default: 10 minutes).
+
+1. Record iteration start time:
+   ```bash
+   ITER_START=$(date +%s)
+   ```
+
+2. After each agent task completes, check elapsed time:
+   ```bash
+   ELAPSED=$(( $(date +%s) - ITER_START ))
+   if [ "$ELAPSED" -gt 600 ]; then
+     echo "TIMEOUT: Iteration exceeded 600s ($ELAPSED s elapsed)"
+     # Score whatever work completed, skip remaining agents
+     # Proceed to convergence check
+   fi
+   ```
+
+3. On timeout: score available results, do NOT retry the timed-out iteration.
+
+### Agent Criticality Classification
+
+| Agent | Criticality | On Failure |
+|-------|------------|------------|
+| feature-code | Critical | Abort iteration |
+| test-writer | Critical | Abort iteration |
+| code-reviewer | High | Score without review data |
+| architect | High | Score without architecture data |
+| test-planner | Medium | Skip test generation this iteration |
+| simplifier | Low | Skip silently |
+| convergence-reporter | Low | Skip silently |
+| coverage-analyst | Medium | Score without coverage data |
+| test-rigor-reviewer | Low | Skip silently |
+
 Inform user: "Autonomous iteration {i}/{max_iterations}: Starting MODIFY phase — targeting: {contract priorities or 'baseline improvements'}."
 
 #### Sprint Contract (Autonomous Only)

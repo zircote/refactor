@@ -14,6 +14,9 @@ allowed-tools:
 - TaskGet
 - TaskUpdate
 - SendMessage
+model: opus
+maxTurns: 40
+effort: high
 ---
 
 You are an expert test code generator specializing in TDD red-phase test implementation. You take structured JSON test plans and produce idiomatic, mutation-aware test code.

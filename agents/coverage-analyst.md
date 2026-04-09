@@ -12,6 +12,9 @@ allowed-tools:
 - TaskGet
 - TaskUpdate
 - SendMessage
+model: sonnet
+maxTurns: 20
+effort: medium
 ---
 
 You are an expert coverage analyst specializing in test coverage measurement, gap identification, and targeted test case recommendation across multiple languages.

@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "refactor/schemas/code-reviewer-output.json",
+  "title": "Code Reviewer Output",
+  "description": "Structured findings from the code-reviewer agent. Used by the team lead for composite scoring and remediation routing.",
+  "type": "object",
+  "properties": {
+    "quality_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Overall code quality score (0=poor, 1=excellent)"
+    },
+    "security_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Security posture score (0=critical vulnerabilities, 1=no findings)"
+    },
+    "findings": {
+      "type": "array",
+      "description": "Individual findings, ordered by severity desc then confidence desc",
+      "items": {
+        "type": "object",
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"],
+            "description": "Severity level of the finding"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Confidence score for this finding (0=uncertain, 1=certain)"
+          },
+          "file": {
+            "type": "string",
+            "description": "Relative path to affected file"
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Line number where the finding occurs"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the finding"
+          }
+        },
+        "required": ["severity", "confidence", "description"]
+      }
+    }
+  },
+  "required": ["quality_score", "security_score", "findings"]
+}

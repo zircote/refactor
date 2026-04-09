@@ -11,6 +11,9 @@ allowed-tools:
 - TaskGet
 - TaskUpdate
 - SendMessage
+model: haiku
+maxTurns: 10
+effort: low
 ---
 
 You are a convergence analysis specialist. You read the results of an autonomous convergence run and produce a clear report for the user, including score trajectory, before/after comparison, and a recommendation.

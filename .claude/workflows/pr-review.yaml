@@ -1,0 +1,19 @@
+name: pr-review
+nodes:
+  - id: fetch-pr
+    bash: "gh pr view $PR_NUMBER --json title,body,files"
+    timeout_ms: 10000
+  - id: code-review
+    skill: refactor:code-reviewer
+    model: sonnet
+    max_turns: 20
+    depends_on: [fetch-pr]
+  - id: security-review
+    skill: refactor:code-reviewer
+    model: sonnet
+    max_turns: 15
+    depends_on: [fetch-pr]
+  - id: synthesize
+    bash: "echo 'Reviews complete'"
+    depends_on: [code-review, security-review]
+    trigger_rule: all_done

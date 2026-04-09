@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "refactor/schemas/convergence-report.json",
+  "title": "Convergence Report",
+  "description": "Summary report from the convergence-reporter agent after an autonomous run.",
+  "type": "object",
+  "properties": {
+    "iteration": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Current iteration number in the autonomous run"
+    },
+    "composite_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Weighted composite quality score across all domains (0=worst, 1=perfect)"
+    },
+    "trajectory": {
+      "type": "array",
+      "description": "Score history across iterations, used to detect convergence or stalls",
+      "items": {
+        "type": "object",
+        "properties": {
+          "iteration": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Iteration number for this data point"
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Composite score at this iteration"
+          },
+          "delta": {
+            "type": "number",
+            "description": "Change in score from the previous iteration (positive=improvement)"
+          }
+        },
+        "required": ["iteration", "score", "delta"]
+      }
+    },
+    "recommendation": {
+      "type": "string",
+      "description": "Human-readable recommendation for next steps based on trajectory analysis"
+    },
+    "termination_reason": {
+      "type": "string",
+      "enum": ["perfect", "stuck", "plateau", "max_iterations", "manual"],
+      "description": "Reason the autonomous run terminated"
+    }
+  },
+  "required": ["iteration", "composite_score", "trajectory", "recommendation", "termination_reason"]
+}

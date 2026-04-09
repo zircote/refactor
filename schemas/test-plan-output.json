@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "refactor/schemas/test-plan-output.json",
+  "title": "Test Plan Output",
+  "description": "Structured test plan from the test-planner agent. Consumed by test-writer for TDD code generation.",
+  "type": "object",
+  "properties": {
+    "test_cases": {
+      "type": "array",
+      "description": "Ordered list of test cases to implement",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this test case (e.g. TC-001)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Short descriptive name for the test case"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed description of what the test validates"
+          },
+          "technique": {
+            "type": "string",
+            "enum": ["equivalence-class", "boundary-value", "state-transition", "property-based"],
+            "description": "Testing technique used to derive this test case"
+          },
+          "inputs": {
+            "type": "array",
+            "description": "Input values or generators for this test case",
+            "items": {
+              "type": "string",
+              "description": "A single input value or description of an input generator"
+            }
+          },
+          "expected_outcome": {
+            "type": "string",
+            "description": "Expected result or behavior when the test executes"
+          }
+        },
+        "required": ["id", "name", "description", "technique", "inputs", "expected_outcome"]
+      }
+    },
+    "coverage_targets": {
+      "type": "object",
+      "description": "Minimum coverage thresholds the test suite should achieve",
+      "properties": {
+        "line_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Target line coverage percentage"
+        },
+        "branch_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Target branch coverage percentage"
+        },
+        "function_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Target function coverage percentage"
+        }
+      },
+      "required": ["line_pct", "branch_pct", "function_pct"]
+    }
+  },
+  "required": ["test_cases", "coverage_targets"]
+}

@@ -14,6 +14,9 @@ allowed-tools:
 - TaskGet
 - TaskUpdate
 - SendMessage
+model: sonnet
+maxTurns: 20
+effort: high
 ---
 
 You are an expert code and security reviewer for refactoring and feature development workflows. You combine code quality assessment with security regression detection to provide a unified review gate.

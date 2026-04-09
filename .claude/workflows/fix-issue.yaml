@@ -1,0 +1,28 @@
+name: fix-github-issue
+nodes:
+  - id: fetch-issue
+    bash: "gh issue view $ISSUE_NUMBER --json title,body,labels"
+    timeout_ms: 10000
+  - id: investigate
+    skill: refactor:code-explorer
+    model: sonnet
+    max_turns: 20
+    denied_tools: [Edit, Write]
+    depends_on: [fetch-issue]
+  - id: implement
+    skill: refactor:refactor-code
+    model: opus
+    max_turns: 50
+    depends_on: [investigate]
+  - id: validate
+    bash: "python -m pytest && python -m ruff check . && python -m mypy ."
+    depends_on: [implement]
+    timeout_ms: 120000
+    retry:
+      max_attempts: 2
+      delay_ms: 5000
+  - id: create-pr
+    skill: refactor:pr
+    model: sonnet
+    max_turns: 10
+    depends_on: [validate]

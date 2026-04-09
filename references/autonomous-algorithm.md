@@ -77,6 +77,54 @@ FUNCTION evaluate(workspace, iteration):
   RETURN score
 ```
 
+## Agent Health Monitoring
+
+Before executing each iteration, the orchestrator checks agent health to avoid wasting cycles on a degraded team.
+
+### Health Check Procedure
+
+```
+FOR i IN 1..max_iterations:
+
+  # ─── HEALTH CHECK ────────────────────────────────────────
+  HEALTH = blackboard_read(key="health_status") or {}
+  TOTAL_AGENTS = len(HEALTH)
+  UNHEALTHY = count(agent for agent in HEALTH if agent.status != "healthy")
+
+  IF UNHEALTHY / max(TOTAL_AGENTS, 1) > 0.4:
+    LOG "ABORT: {UNHEALTHY}/{TOTAL_AGENTS} agents unhealthy (>40%)"
+    SKIP to CONVERGENCE CHECK with current scores
+```
+
+### Per-Iteration Timeout
+
+Each iteration enforces a 600-second (10 minute) wall-clock timeout. On timeout, score whatever work completed and proceed to convergence check. Do NOT retry the timed-out iteration.
+
+```
+  ITER_START = now()
+
+  # After each agent task:
+  IF elapsed(ITER_START) > 600:
+    LOG "TIMEOUT: Iteration exceeded 600s"
+    SKIP remaining agents, proceed to EVALUATE
+```
+
+### Agent Criticality Classification
+
+| Agent | Criticality | On Failure |
+|-------|------------|------------|
+| refactor-code / feature-code | Critical | Abort iteration |
+| test-writer | Critical | Abort iteration |
+| code-reviewer | High | Score without review data |
+| architect | High | Score without architecture data |
+| test-planner | Medium | Skip test generation this iteration |
+| simplifier | Low | Skip silently |
+| convergence-reporter | Low | Skip silently |
+| coverage-analyst | Medium | Score without coverage data |
+| test-rigor-reviewer | Low | Skip silently |
+
+Non-critical agent failures trigger graceful degradation (skip silently or score without their data). Critical agent failures abort the current iteration immediately, proceeding to the convergence check with the most recent valid scores.
+
 ## Main Loop
 
 ```

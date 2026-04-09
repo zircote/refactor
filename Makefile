@@ -1,4 +1,4 @@
-.PHONY: help setup lint format typecheck test test-quick coverage security check clean
+.PHONY: help setup lint format typecheck test test-quick coverage security check validate clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -28,6 +28,9 @@ coverage: ## Run tests and generate coverage report
 security: ## Run security scans (bandit + pip-audit)
 	uv run pip-audit
 	uv run bandit -r scripts/ -c pyproject.toml
+
+validate: ## Validate plugin structure
+	uv run python -c "from scripts.validate_plugin import main; raise SystemExit(main())"
 
 check: lint typecheck test security ## Run all checks (lint + typecheck + test + security)
 

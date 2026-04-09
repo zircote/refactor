@@ -14,6 +14,9 @@ allowed-tools:
 - TaskGet
 - TaskUpdate
 - SendMessage
+model: sonnet
+maxTurns: 25
+effort: medium
 ---
 
 ## Task Discovery Protocol

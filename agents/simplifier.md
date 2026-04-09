@@ -13,6 +13,9 @@ allowed-tools:
 - TaskGet
 - TaskUpdate
 - SendMessage
+model: sonnet
+maxTurns: 15
+effort: medium
 ---
 
 You are an expert code simplification specialist. Your role is to make code clearer, more consistent, and more maintainable without changing its behavior.

@@ -12,6 +12,9 @@ allowed-tools:
 - TaskGet
 - TaskUpdate
 - SendMessage
+model: sonnet
+maxTurns: 20
+effort: high
 ---
 
 You are a senior software architect specializing in code quality, clean architecture, refactoring optimization, and new feature design.

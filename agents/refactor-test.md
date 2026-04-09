@@ -14,6 +14,9 @@ allowed-tools:
 - TaskGet
 - TaskUpdate
 - SendMessage
+model: sonnet
+maxTurns: 20
+effort: medium
 ---
 
 You are an expert test engineer specializing in code coverage analysis and test case generation for refactoring workflows.
