@@ -91,19 +91,23 @@ def _validate_structure(data: dict[str, Any], path: str) -> WorkflowDefinition:
         if "model" in node_raw:
             node_def["model"] = str(node_raw["model"])
         if "max_turns" in node_raw:
-            node_def["max_turns"] = int(node_raw["max_turns"])
+            try:
+                node_def["max_turns"] = int(node_raw["max_turns"])
+            except (ValueError, TypeError):
+                issues.append(f"node '{node_id}': max_turns must be an integer")
         if "denied_tools" in node_raw:
             node_def["denied_tools"] = list(node_raw["denied_tools"])
         if "depends_on" in node_raw:
             node_def["depends_on"] = list(node_raw["depends_on"])
         if "timeout_ms" in node_raw:
-            node_def["timeout_ms"] = int(node_raw["timeout_ms"])
+            try:
+                node_def["timeout_ms"] = int(node_raw["timeout_ms"])
+            except (ValueError, TypeError):
+                issues.append(f"node '{node_id}': timeout_ms must be an integer")
         if "retry" in node_raw:
             node_def["retry"] = node_raw["retry"]
         if "trigger_rule" in node_raw:
             node_def["trigger_rule"] = str(node_raw["trigger_rule"])
-        if "when" in node_raw:
-            node_def["when"] = str(node_raw["when"])
         nodes.append(node_def)
 
     if issues:

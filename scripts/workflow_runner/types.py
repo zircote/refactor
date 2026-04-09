@@ -49,7 +49,6 @@ class NodeDefinition(TypedDict, total=False):
     timeout_ms: int
     retry: RetryConfig
     trigger_rule: str
-    when: str
 
 
 class WorkflowDefinition(TypedDict):

@@ -592,32 +592,30 @@ Use the same spawn template pattern as Phase 0.3 (Agent tool with `team_name: "r
 
 For `i = 1` to `max_iterations`:
 
-### Agent Health Monitoring
+#### Iteration Guards
 
-At the start of each iteration, check agent health before assigning work:
+These checks run at the start of **every** iteration, before any agent work.
+
+##### Agent Health Monitoring
 
 1. Read `health_status` from the blackboard (if it exists):
    ```bash
    HEALTH=$(blackboard_read key="health_status" 2>/dev/null || echo '{}')
    ```
 
-2. Count unhealthy agents:
+2. Count unhealthy agents and check abort threshold (>40%):
    ```bash
    TOTAL_AGENTS=$(echo "$HEALTH" | jq 'length')
    UNHEALTHY=$(echo "$HEALTH" | jq '[.[] | select(.status != "healthy")] | length')
-   ```
-
-3. **Abort threshold**: If >40% of agents are unhealthy, abort the iteration:
-   ```bash
-   if python3 -c "exit(0 if $UNHEALTHY / max($TOTAL_AGENTS, 1) > 0.4 else 1)"; then
+   if [ "$TOTAL_AGENTS" -gt 0 ] && [ $((UNHEALTHY * 10)) -gt $((TOTAL_AGENTS * 4)) ]; then
      echo "ABORT: $UNHEALTHY/$TOTAL_AGENTS agents unhealthy (>40%)"
      # Skip to convergence check with current scores
    fi
    ```
 
-4. **Graceful degradation**: Non-critical agents (simplifier, convergence-reporter) failing health → skip them silently. Critical agents (refactor-code, test-writer) failing → abort iteration.
+3. **Graceful degradation**: Non-critical agents (simplifier, convergence-reporter) failing health → skip them silently. Critical agents (refactor-code, test-writer) failing → abort iteration.
 
-### Per-Iteration Timeout
+##### Per-Iteration Timeout
 
 Each iteration has a maximum wall-clock time (default: 10 minutes).
 
@@ -638,7 +636,7 @@ Each iteration has a maximum wall-clock time (default: 10 minutes).
 
 3. On timeout: score available results, do NOT retry the timed-out iteration.
 
-### Agent Criticality Classification
+##### Agent Criticality Classification
 
 | Agent | Criticality | On Failure |
 |-------|------------|------------|

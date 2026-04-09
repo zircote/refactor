@@ -237,6 +237,35 @@ class TestWorkflowExecutor:
         assert results["slow"].status == StepStatus.FAILED
         assert "timeout" in results["slow"].error
 
+    def test_max_attempts_zero_still_runs(self) -> None:
+        """max_attempts=0 should be clamped to 1, not silently skip."""
+        nodes: list[NodeDefinition] = [
+            {
+                "node_id": "zero",
+                "bash": "echo ran",
+                "retry": {"max_attempts": 0, "delay_ms": 0},
+            },
+        ]
+        dag = WorkflowDAG(nodes, workflow_name="test")
+        executor = WorkflowExecutor(dag)
+        results = executor.run()
+        # Should have actually executed, not stayed PENDING
+        assert results["zero"].status == StepStatus.COMPLETED
+        assert results["zero"].attempt == 1
+
+    def test_negative_max_attempts_still_runs(self) -> None:
+        nodes: list[NodeDefinition] = [
+            {
+                "node_id": "neg",
+                "bash": "echo ran",
+                "retry": {"max_attempts": -5, "delay_ms": -100},
+            },
+        ]
+        dag = WorkflowDAG(nodes, workflow_name="test")
+        executor = WorkflowExecutor(dag)
+        results = executor.run()
+        assert results["neg"].status == StepStatus.COMPLETED
+
 
 # ---------------------------------------------------------------------------
 # Checkpoint
@@ -247,102 +276,104 @@ class TestCheckpointStore:
     """Tests for SQLite checkpoint persistence."""
 
     def test_create_and_load(self) -> None:
-        store = CheckpointStore()
-        run_id = store.create_run("test-workflow")
-        assert isinstance(run_id, str)
-        assert len(run_id) == 12
+        with CheckpointStore() as store:
+            run_id = store.create_run("test-workflow")
+            assert isinstance(run_id, str)
+            assert len(run_id) == 12
 
     def test_save_and_load_steps(self) -> None:
         from scripts.workflow_runner.types import StepState
 
-        store = CheckpointStore()
-        run_id = store.create_run("test")
-        state = StepState(step_id="step1", status=StepStatus.COMPLETED, output="ok", exit_code=0)
-        store.save_step(run_id, state)
+        with CheckpointStore() as store:
+            run_id = store.create_run("test")
+            state = StepState(
+                step_id="step1", status=StepStatus.COMPLETED, output="ok", exit_code=0
+            )
+            store.save_step(run_id, state)
 
-        loaded = store.load_steps(run_id)
-        assert "step1" in loaded
-        assert loaded["step1"].status == StepStatus.COMPLETED
-        assert loaded["step1"].output == "ok"
+            loaded = store.load_steps(run_id)
+            assert "step1" in loaded
+            assert loaded["step1"].status == StepStatus.COMPLETED
+            assert loaded["step1"].output == "ok"
 
     def test_upsert_step(self) -> None:
         from scripts.workflow_runner.types import StepState
 
-        store = CheckpointStore()
-        run_id = store.create_run("test")
-        state = StepState(step_id="s", status=StepStatus.RUNNING)
-        store.save_step(run_id, state)
+        with CheckpointStore() as store:
+            run_id = store.create_run("test")
+            state = StepState(step_id="s", status=StepStatus.RUNNING)
+            store.save_step(run_id, state)
 
-        state.status = StepStatus.COMPLETED
-        state.output = "done"
-        store.save_step(run_id, state)
+            state.status = StepStatus.COMPLETED
+            state.output = "done"
+            store.save_step(run_id, state)
 
-        loaded = store.load_steps(run_id)
-        assert loaded["s"].status == StepStatus.COMPLETED
+            loaded = store.load_steps(run_id)
+            assert loaded["s"].status == StepStatus.COMPLETED
 
     def test_get_incomplete_run(self) -> None:
-        store = CheckpointStore()
-        run_id = store.create_run("wf")
-        assert store.get_incomplete_run("wf") == run_id
-        store.mark_completed(run_id)
-        assert store.get_incomplete_run("wf") is None
+        with CheckpointStore() as store:
+            run_id = store.create_run("wf")
+            assert store.get_incomplete_run("wf") == run_id
+            store.mark_completed(run_id)
+            assert store.get_incomplete_run("wf") is None
 
     def test_export_run(self) -> None:
         from scripts.workflow_runner.types import StepState
 
-        store = CheckpointStore()
-        run_id = store.create_run("wf")
-        store.save_step(run_id, StepState(step_id="a", status=StepStatus.COMPLETED))
-        exported = json.loads(store.export_run(run_id))
-        assert "a" in exported
-        assert exported["a"]["status"] == "completed"
+        with CheckpointStore() as store:
+            run_id = store.create_run("wf")
+            store.save_step(run_id, StepState(step_id="a", status=StepStatus.COMPLETED))
+            exported = json.loads(store.export_run(run_id))
+            assert "a" in exported
+            assert exported["a"]["status"] == "completed"
 
     def test_resume_execution(self) -> None:
         """Simulate crash recovery: run 2 of 3 steps, then resume."""
+        from scripts.workflow_runner.types import StepState
+
         nodes: list[NodeDefinition] = [
             {"node_id": "a", "bash": "echo a"},
             {"node_id": "b", "bash": "echo b", "depends_on": ["a"]},
             {"node_id": "c", "bash": "echo c", "depends_on": ["b"]},
         ]
-        store = CheckpointStore()
-        dag = WorkflowDAG(nodes, workflow_name="resume-test")
+        with CheckpointStore() as store:
+            dag = WorkflowDAG(nodes, workflow_name="resume-test")
+            run_id = store.create_run("resume-test")
 
-        # Simulate partial run: a completed, b completed, c pending
-        run_id = store.create_run("resume-test")
-        from scripts.workflow_runner.types import StepState
+            store.save_step(
+                run_id,
+                StepState(step_id="a", status=StepStatus.COMPLETED, output="a-out", exit_code=0),
+            )
+            store.save_step(
+                run_id,
+                StepState(step_id="b", status=StepStatus.COMPLETED, output="b-out", exit_code=0),
+            )
+            store.save_step(
+                run_id,
+                StepState(step_id="c", status=StepStatus.PENDING),
+            )
 
-        store.save_step(
-            run_id,
-            StepState(step_id="a", status=StepStatus.COMPLETED, output="a-out", exit_code=0),
-        )
-        store.save_step(
-            run_id,
-            StepState(step_id="b", status=StepStatus.COMPLETED, output="b-out", exit_code=0),
-        )
-        store.save_step(
-            run_id,
-            StepState(step_id="c", status=StepStatus.PENDING),
-        )
+            executor = WorkflowExecutor(dag, store=store)
+            results = executor.run(resume_run_id=run_id)
 
-        # Resume
-        executor = WorkflowExecutor(dag, store=store)
-        results = executor.run(resume_run_id=run_id)
-
-        # a and b kept their original output, c got executed
-        assert results["a"].output == "a-out"
-        assert results["b"].output == "b-out"
-        assert results["c"].status == StepStatus.COMPLETED
-        assert "c" in results["c"].output
+            assert results["a"].output == "a-out"
+            assert results["b"].output == "b-out"
+            assert results["c"].status == StepStatus.COMPLETED
+            assert "c" in results["c"].output
 
     def test_file_based_store(self, tmp_path: Path) -> None:
         db_path = tmp_path / "test.db"
-        store = CheckpointStore(db_path)
-        run_id = store.create_run("file-test")
-        store.close()
+        with CheckpointStore(db_path) as store:
+            run_id = store.create_run("file-test")
 
-        store2 = CheckpointStore(db_path)
-        assert store2.get_incomplete_run("file-test") == run_id
-        store2.close()
+        with CheckpointStore(db_path) as store2:
+            assert store2.get_incomplete_run("file-test") == run_id
+
+    def test_context_manager(self) -> None:
+        with CheckpointStore() as store:
+            store.create_run("ctx-test")
+        # Connection should be closed after exiting context
 
 
 # ---------------------------------------------------------------------------
@@ -415,6 +446,24 @@ class TestLoader:
         path = tmp_path / "test.toml"
         path.write_text("")
         with pytest.raises(WorkflowValidationError, match="unsupported"):
+            load_workflow(path)
+
+    def test_load_invalid_timeout_ms(self, tmp_path: Path) -> None:
+        path = tmp_path / "bad-int.json"
+        path.write_text(
+            json.dumps(
+                {"name": "t", "nodes": [{"id": "a", "bash": "echo", "timeout_ms": "not-a-number"}]}
+            )
+        )
+        with pytest.raises(WorkflowValidationError, match="timeout_ms must be an integer"):
+            load_workflow(path)
+
+    def test_load_invalid_max_turns(self, tmp_path: Path) -> None:
+        path = tmp_path / "bad-turns.json"
+        path.write_text(
+            json.dumps({"name": "t", "nodes": [{"id": "a", "skill": "x", "max_turns": "abc"}]})
+        )
+        with pytest.raises(WorkflowValidationError, match="max_turns must be an integer"):
             load_workflow(path)
 
 

@@ -19,8 +19,6 @@ from .types import StepState, StepStatus, TriggerRule
 
 if TYPE_CHECKING:
     from .dag import WorkflowDAG
-
-if TYPE_CHECKING:
     from .types import NodeDefinition
 
 
@@ -51,7 +49,12 @@ def _should_run(
         return True
 
     rule = _get_trigger_rule(node)
-    states = [dep_states[d] for d in deps if d in dep_states]
+
+    # Missing dependencies are treated as unsatisfied — never silently skip them
+    if any(d not in dep_states for d in deps):
+        return False
+
+    states = [dep_states[d] for d in deps]
 
     if rule == TriggerRule.ALL_SUCCESS:
         return all(s.status == StepStatus.COMPLETED for s in states)
@@ -61,7 +64,7 @@ def _should_run(
     if rule == TriggerRule.ONE_SUCCESS:
         return any(s.status == StepStatus.COMPLETED for s in states)
 
-    return False  # pragma: no cover
+    return False
 
 
 def _resolve_bash() -> str:
@@ -170,8 +173,8 @@ class WorkflowExecutor:
     ) -> None:
         """Execute a single step with retry support."""
         retry = node.get("retry", {})
-        max_attempts = retry.get("max_attempts", 1)
-        delay_ms = retry.get("delay_ms", 0)
+        max_attempts = max(retry.get("max_attempts", 1), 1)
+        delay_ms = max(retry.get("delay_ms", 0), 0)
         timeout_ms = _default_timeout(node)
 
         for attempt in range(1, max_attempts + 1):

@@ -135,6 +135,12 @@ class CheckpointStore:
             indent=2,
         )
 
+    def __enter__(self) -> CheckpointStore:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
+
     def close(self) -> None:
         """Close the database connection."""
         self._conn.close()

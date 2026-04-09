@@ -14,6 +14,7 @@ from scripts.validate_plugin import (
     _parse_frontmatter,
     _suggest,
     validate_agents,
+    validate_cross_references,
     validate_plugin,
     validate_schemas,
     validate_workflows,
@@ -49,6 +50,27 @@ class TestParseFrontmatter:
         assert fm is not None
         assert fm["maxTurns"] == 20
 
+    def test_parse_multiline_description(self, tmp_path: Path) -> None:
+        """Multi-line YAML values must be preserved, not silently truncated."""
+        path = tmp_path / "test.md"
+        path.write_text(
+            "---\nname: test\ndescription: >-\n"
+            "  This is a long description that\n"
+            "  spans multiple lines\n---\n"
+        )
+        fm = _parse_frontmatter(path)
+        assert fm is not None
+        assert "spans multiple lines" in fm["description"]
+
+    def test_parse_quoted_string(self, tmp_path: Path) -> None:
+        """Quoted strings should not include the quotes in the value."""
+        path = tmp_path / "test.md"
+        path.write_text('---\nname: "quoted-value"\n---\n')
+        fm = _parse_frontmatter(path)
+        assert fm is not None
+        assert fm["name"] == "quoted-value"
+        assert '"' not in fm["name"]
+
     def test_no_frontmatter(self, tmp_path: Path) -> None:
         path = tmp_path / "test.md"
         path.write_text("# Just a heading\n\nSome content.")
@@ -57,6 +79,11 @@ class TestParseFrontmatter:
     def test_unclosed_frontmatter(self, tmp_path: Path) -> None:
         path = tmp_path / "test.md"
         path.write_text("---\nname: test\nNo closing marker")
+        assert _parse_frontmatter(path) is None
+
+    def test_invalid_yaml(self, tmp_path: Path) -> None:
+        path = tmp_path / "test.md"
+        path.write_text("---\n: :\n  - [invalid\n---\n")
         assert _parse_frontmatter(path) is None
 
 
@@ -71,6 +98,11 @@ class TestSuggestions:
     def test_suggest_close_match(self) -> None:
         result = _suggest("modle", {"model", "maxTurns", "name"})
         assert "model" in result
+
+    def test_suggest_case_insensitive(self) -> None:
+        """'bash' should suggest 'Bash' despite case difference."""
+        result = _suggest("bash", {"Bash", "Glob", "Grep"})
+        assert "Bash" in result
 
     def test_suggest_no_match(self) -> None:
         result = _suggest("zzzzz", {"model", "name"})
@@ -103,6 +135,12 @@ class TestValidateAgents:
         results = validate_agents(tmp_path)
         failures = [r for r in results if not r.passed]
         assert failures == [], [f.to_dict() for f in failures]
+        # Verify the validator actually checked the fields it should have
+        check_names = {r.name for r in results}
+        assert "agent:test-agent:name" in check_names
+        assert "agent:test-agent:description" in check_names
+        assert "agent:test-agent:model" in check_names
+        assert "agent:test-agent:maxTurns" in check_names
 
     def test_missing_required_fields(self, tmp_path: Path) -> None:
         self._make_agent(tmp_path, "bad", "---\ncolor: red\n---\n")
@@ -111,16 +149,18 @@ class TestValidateAgents:
         assert "agent:bad:name" in failed_names
         assert "agent:bad:description" in failed_names
 
-    def test_missing_recommended_fields(self, tmp_path: Path) -> None:
+    def test_recommended_fields_are_warnings_not_failures(self, tmp_path: Path) -> None:
+        """Missing model/maxTurns should pass with a warning, not fail."""
         self._make_agent(
             tmp_path,
             "minimal",
             "---\nname: minimal\ndescription: Test\n---\n",
         )
         results = validate_agents(tmp_path)
-        failed_names = {r.name for r in results if not r.passed}
-        assert "agent:minimal:model" in failed_names
-        assert "agent:minimal:maxTurns" in failed_names
+        model_checks = [r for r in results if r.name == "agent:minimal:model"]
+        assert len(model_checks) == 1
+        assert model_checks[0].passed is True
+        assert "warning" in model_checks[0].message
 
     def test_invalid_model(self, tmp_path: Path) -> None:
         self._make_agent(
@@ -144,6 +184,18 @@ class TestValidateAgents:
         tool_checks = [r for r in results if "tool:FakeTool" in r.name]
         assert len(tool_checks) == 1
         assert not tool_checks[0].passed
+
+    def test_tools_as_string_not_list(self, tmp_path: Path) -> None:
+        """allowed-tools as a bare string should fail, not silently pass."""
+        self._make_agent(
+            tmp_path,
+            "str-tool",
+            "---\nname: x\ndescription: x\nallowed-tools: Bash\n---\n",
+        )
+        results = validate_agents(tmp_path)
+        format_checks = [r for r in results if "allowed-tools_format" in r.name]
+        assert len(format_checks) == 1
+        assert not format_checks[0].passed
 
     def test_typo_suggestion(self, tmp_path: Path) -> None:
         self._make_agent(
@@ -188,6 +240,11 @@ class TestValidateSchemas:
         results = validate_schemas(tmp_path)
         failures = [r for r in results if not r.passed]
         assert failures == []
+        # Verify specific checks ran
+        check_names = {r.name for r in results}
+        assert "schema:test:valid_json" in check_names
+        assert "schema:test:has_schema" in check_names
+        assert "schema:test:has_title" in check_names
 
     def test_invalid_json(self, tmp_path: Path) -> None:
         schemas_dir = tmp_path / "schemas"
@@ -231,6 +288,10 @@ class TestValidateWorkflows:
         results = validate_workflows(tmp_path)
         failures = [r for r in results if not r.passed]
         assert failures == [], [f.to_dict() for f in failures]
+        # Verify a specific workflow check ran with node count
+        wf_checks = [r for r in results if "workflow:test:valid" in r.name]
+        assert len(wf_checks) == 1
+        assert "1 node" in wf_checks[0].message
 
     def test_cyclic_workflow(self, tmp_path: Path) -> None:
         wf_dir = tmp_path / "workflows"
@@ -251,6 +312,54 @@ class TestValidateWorkflows:
     def test_no_workflows_dir(self, tmp_path: Path) -> None:
         results = validate_workflows(tmp_path)
         assert not results[0].passed
+
+
+# ---------------------------------------------------------------------------
+# Cross-reference validation
+# ---------------------------------------------------------------------------
+
+
+class TestValidateCrossReferences:
+    """Tests for cross-reference validation between agents and workflows."""
+
+    def test_valid_cross_reference(self, tmp_path: Path) -> None:
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        (agents_dir / "code-reviewer.md").write_text(
+            "---\nname: code-reviewer\ndescription: Test\n---\n"
+        )
+        wf_dir = tmp_path / "workflows"
+        wf_dir.mkdir()
+        wf = {
+            "name": "test",
+            "nodes": [{"id": "a", "skill": "refactor:code-reviewer"}],
+        }
+        (wf_dir / "test.json").write_text(json.dumps(wf))
+        results = validate_cross_references(tmp_path)
+        failures = [r for r in results if not r.passed]
+        assert failures == []
+
+    def test_invalid_cross_reference(self, tmp_path: Path) -> None:
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        (agents_dir / "code-reviewer.md").write_text(
+            "---\nname: code-reviewer\ndescription: Test\n---\n"
+        )
+        wf_dir = tmp_path / "workflows"
+        wf_dir.mkdir()
+        wf = {
+            "name": "test",
+            "nodes": [{"id": "a", "skill": "refactor:nonexistent-agent"}],
+        }
+        (wf_dir / "test.json").write_text(json.dumps(wf))
+        results = validate_cross_references(tmp_path)
+        failures = [r for r in results if not r.passed]
+        assert len(failures) == 1
+        assert "nonexistent-agent" in failures[0].message
+
+    def test_no_agents_returns_empty(self, tmp_path: Path) -> None:
+        results = validate_cross_references(tmp_path)
+        assert results == []
 
 
 # ---------------------------------------------------------------------------
@@ -289,6 +398,11 @@ class TestValidatePlugin:
         report = validate_plugin(tmp_path)
         assert report["status"] == "pass"
         assert report["failed"] == 0
+        # Verify the report contains checks from all validation phases
+        check_names = {c["name"] for c in report["checks"]}
+        assert any("agent:" in n for n in check_names)
+        assert any("schema:" in n for n in check_names)
+        assert any("workflow:" in n for n in check_names)
 
 
 # ---------------------------------------------------------------------------
