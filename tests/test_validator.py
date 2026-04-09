@@ -221,7 +221,7 @@ class TestValidateWorkflows:
     """Tests for workflow file validation."""
 
     def test_valid_workflow(self, tmp_path: Path) -> None:
-        wf_dir = tmp_path / ".claude" / "workflows"
+        wf_dir = tmp_path / "workflows"
         wf_dir.mkdir(parents=True)
         wf = {
             "name": "test",
@@ -233,7 +233,7 @@ class TestValidateWorkflows:
         assert failures == [], [f.to_dict() for f in failures]
 
     def test_cyclic_workflow(self, tmp_path: Path) -> None:
-        wf_dir = tmp_path / ".claude" / "workflows"
+        wf_dir = tmp_path / "workflows"
         wf_dir.mkdir(parents=True)
         wf = {
             "name": "cyclic",
@@ -280,7 +280,7 @@ class TestValidatePlugin:
             json.dumps({"$schema": "http://json-schema.org/draft-07/schema#", "title": "T"})
         )
 
-        wf_dir = tmp_path / ".claude" / "workflows"
+        wf_dir = tmp_path / "workflows"
         wf_dir.mkdir(parents=True)
         (wf_dir / "test.json").write_text(
             json.dumps({"name": "t", "nodes": [{"id": "a", "bash": "echo"}]})

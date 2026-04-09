@@ -259,10 +259,10 @@ def validate_schemas(root: Path) -> list[CheckResult]:
 def validate_workflows(root: Path) -> list[CheckResult]:
     """Validate workflow YAML/JSON files."""
     results: list[CheckResult] = []
-    workflows_dir = root / ".claude" / "workflows"
+    workflows_dir = root / "workflows"
 
     if not workflows_dir.is_dir():
-        results.append(CheckResult("workflows_dir_exists", False, ".claude/workflows/ not found"))
+        results.append(CheckResult("workflows_dir_exists", False, "workflows/ directory not found"))
         return results
 
     results.append(CheckResult("workflows_dir_exists", True))
