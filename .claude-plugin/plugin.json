@@ -1,5 +1,5 @@
 {
   "name": "refactor",
-  "version": "4.2.1",
+  "version": "4.3.0",
   "description": "Swarm-orchestrated code refactoring, feature development, and test architecture with specialist agents. Supports autonomous convergence mode (--autonomous), multi-instance parallel agent spawning, blackboard context sharing, interactive development gates, and scientifically grounded test suite generation using equivalence class partitioning, boundary value analysis, and property-based testing."
 }
