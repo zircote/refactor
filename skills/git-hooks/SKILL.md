@@ -435,10 +435,11 @@ done < <(find "$tmpdir/.github/workflows" -name '*.yml' -type f 2>/dev/null)
 orphaned=()
 
 # Build the set of .yml paths that compile produced (these are the CURRENT managed set)
-declare -A compiled_set
+# Uses a newline-delimited string instead of associative arrays for bash 3.2 compatibility
+compiled_set=""
 while IFS= read -r compiled_yml; do
   rel_path="${compiled_yml#$tmpdir/}"
-  compiled_set["$rel_path"]=1
+  compiled_set="${compiled_set}${rel_path}"$'\n'
 done < <(find "$tmpdir/.github/workflows" -name '*.yml' -type f 2>/dev/null)
 
 # Check for .md files deleted in the push range whose .yml counterpart still exists
@@ -452,7 +453,7 @@ while IFS= read -r deleted_md; do
   yml_counterpart="${deleted_md%.md}.yml"
   # Only flag if the .yml is still committed AND was not re-produced by compile
   # (handles rename: old.md deleted + new.md created → old.yml orphaned, new.yml managed)
-  if git cat-file -e "HEAD:$yml_counterpart" 2>/dev/null && [ -z "${compiled_set[$yml_counterpart]+x}" ]; then
+  if git cat-file -e "HEAD:$yml_counterpart" 2>/dev/null && ! echo "$compiled_set" | grep -Fxq "$yml_counterpart"; then
     orphaned+=("$yml_counterpart (source ${deleted_md} was deleted)")
   fi
 done < <(git diff --name-only --diff-filter=D "$push_base"..HEAD -- '.github/workflows/*.md' '.github/workflows/**/*.md' 2>/dev/null)
