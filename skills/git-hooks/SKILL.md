@@ -97,6 +97,17 @@ Examine the project root and build a mental model:
    - `terraform/`, `*.tf` (infrastructure)
    - `.claude/`, `CLAUDE.md` (Claude Code project)
    - `*.proto` (protobuf APIs)
+   - `.github/workflows/**/*.md` (GitHub Agentic Workflows — `gh aw` workflow definitions)
+
+4. **GitHub Agentic Workflows detection** — check for `.md` files in `.github/workflows/` (including subdirectories). These are `gh aw` agentic workflow definition files that must be compiled to YAML before push:
+   ```bash
+   find .github/workflows -name '*.md' -type f 2>/dev/null | head -20
+   ```
+   If any `.md` files are found, verify that `gh aw` is installed:
+   ```bash
+   gh aw --version 2>/dev/null || echo "gh-aw not installed"
+   ```
+   Record both the presence of `.md` workflow files and whether `gh aw` is available.
 
 Record everything you find. This informs which hooks are relevant.
 
@@ -216,8 +227,9 @@ Organize into tiers:
 - Secrets detection (only if a secrets scanner is already configured in the project, e.g., detect-secrets, gitleaks, trufflehog — do not introduce a new tool the project doesn't use)
 - Large file prevention (if no LFS is configured)
 - Commit message validation (if project uses conventional commits)
+- **`gh aw compile` sync check on push** (if `.github/workflows/**/*.md` agentic workflow files are detected AND `gh aw` is installed) — on every push, verify that committed `.yml` files match what `gh aw compile` would produce from the `.md` sources. Compiles into a temp directory (never the working tree) and diffs against committed state. Catches stale `.yml` regardless of whether `.md` files are in the current changeset. Also detects orphaned `.yml` files whose `.md` source was deleted.
 
-> **Note on Tier 1 in auto mode**: Even Tier 1 hooks must satisfy Constraint 7 — every hook must use tooling already present in the project. A secrets scanner hook is Tier 1 only if the project already has one configured. If it doesn't, secrets detection moves to Tier 2 (recommended suggestion) in interactive mode and is skipped entirely in auto mode.
+> **Note on Tier 1 in auto mode**: Even Tier 1 hooks must satisfy Constraint 7 — every hook must use tooling already present in the project. A secrets scanner hook is Tier 1 only if the project already has one configured. If it doesn't, secrets detection moves to Tier 2 (recommended suggestion) in interactive mode and is skipped entirely in auto mode. Similarly, the `gh aw compile` hook is Tier 1 only when both `.github/workflows/**/*.md` files exist AND `gh aw` is installed.
 
 **Tier 2 — Recommended based on project signals:**
 - Type checking staged files (if type checker is configured and fast)
@@ -240,7 +252,7 @@ Organize into tiers:
 - If the project has a `Makefile` with a `check` or `lint` target, hook into it
 - If the project has custom validation scripts, incorporate them
 - If the project uses database migrations, check for missing migration files alongside model changes
-- If the project has generated files (protobuf, GraphQL codegen), check they're up to date
+- If the project has generated files (protobuf, GraphQL codegen, **`gh aw` compiled workflows**), check they're up to date
 
 ### Step 2.3: Present Findings and Elicit User Choice
 
@@ -341,7 +353,191 @@ Write the configuration in the appropriate format for the detected/chosen manage
 - Create a `scripts/install-hooks.sh` for team setup
 - Document in README or CONTRIBUTING.md
 
-### Step 3.4: Write and Verify
+### Step 3.4: GitHub Agentic Workflows (`gh aw compile`) Hook
+
+If Phase 1 detected `.github/workflows/**/*.md` files and `gh aw` is installed, implement a pre-push hook that ensures compiled YAML is in sync with source markdown.
+
+#### Design principles — avoid these traps:
+
+1. **Never scope the hook to only run when `.md` files changed.** A stale `.yml` can exist because:
+   - The `.md` was edited in a prior unpushed commit that the current push includes.
+   - `gh aw` itself was upgraded and compiles differently.
+   - Someone hand-edited a `.yml` file instead of the `.md` source.
+   The hook must run on **every push** (gated only on whether `.md` workflow files exist in the repo at all), not just when the diff includes `.md` changes.
+
+2. **Never compile into the working tree.** `gh aw compile` overwrites `.yml` files in place. If the developer has unstaged or work-in-progress changes to `.yml` files, the hook would silently destroy them. Instead, compile into a temp directory and compare the output against the committed `.yml` files.
+
+3. **Use `find` or `git ls-files` for recursive file discovery**, not bash globs. `*.yml` does not recurse into subdirectories, and `**/*.yml` requires `shopt -s globstar` which is not portable across bash versions or POSIX sh.
+
+4. **Detect orphaned compiled `.yml` files.** When a `.md` source is deleted, its compiled `.yml` counterpart becomes orphaned — it no longer has a source but still runs as a GitHub Actions workflow. Use the compile output as the authoritative set of managed files — do not rely on generation-marker comments in `.yml` headers, which may be absent. Check for `.md` files deleted in the push range whose `.yml` counterpart is still committed but was NOT in the compile output. That's an orphan requiring `git rm`.
+
+#### Hook logic (all managers use this same algorithm):
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 1. Fast exit: skip if no .md workflow definitions exist in the repo
+md_count=$(git ls-files -- '.github/workflows/*.md' '.github/workflows/**/*.md' 2>/dev/null | wc -l)
+if [ "$md_count" -eq 0 ]; then exit 0; fi
+
+# 2. Verify gh aw is available
+if ! command -v gh >/dev/null 2>&1 || ! gh aw --version >/dev/null 2>&1; then
+  echo "WARNING: gh-aw extension not installed — skipping workflow compile check."
+  echo "Install: gh extension install github/gh-aw"
+  exit 0
+fi
+
+# 3. Compile into a temp directory to avoid working-tree pollution
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+
+# Copy committed .md sources into temp so gh aw compile has them
+while IFS= read -r f; do
+  mkdir -p "$tmpdir/$(dirname "$f")"
+  # Use the committed version, not the working-tree version
+  git show "HEAD:$f" > "$tmpdir/$f"
+done < <(git ls-files -- '.github/workflows/*.md' '.github/workflows/**/*.md')
+
+# Run compile in the temp directory
+(cd "$tmpdir" && gh aw compile) || {
+  echo "ERROR: gh aw compile failed. Fix the workflow .md definitions and retry."
+  exit 1
+}
+
+# 4. Compare each compiled .yml against the committed version
+stale=()
+while IFS= read -r compiled_yml; do
+  rel_path="${compiled_yml#$tmpdir/}"
+  # Get the committed version of this .yml (empty string if file is new)
+  committed=$(git show "HEAD:$rel_path" 2>/dev/null || true)
+  freshly_compiled=$(cat "$compiled_yml")
+  if [ "$committed" != "$freshly_compiled" ]; then
+    if [ -z "$committed" ]; then
+      stale+=("$rel_path (new — not yet committed)")
+    else
+      stale+=("$rel_path")
+    fi
+  fi
+done < <(find "$tmpdir/.github/workflows" -name '*.yml' -type f 2>/dev/null)
+
+# 5. Detect orphaned .yml files — compiled workflows whose .md source was deleted
+#    The compile output from step 3 is the authoritative set of gh-aw-managed .yml
+#    files. Build that set, then check: any committed .yml whose stem matches a
+#    known gh-aw pattern (had a .md source at some point) but is NOT in the current
+#    compile output is orphaned.
+#
+#    How we know a .yml is gh-aw-managed (not hand-authored):
+#      - Its path appears in the compile output (current .md exists → managed), OR
+#      - A .md with the same stem was deleted in the push range (was managed → now orphaned)
+#    Hand-authored .yml files (ci.yml, release.yml, etc.) never had a .md counterpart
+#    and are never flagged.
+orphaned=()
+
+# Build the set of .yml paths that compile produced (these are the CURRENT managed set)
+declare -A compiled_set
+while IFS= read -r compiled_yml; do
+  rel_path="${compiled_yml#$tmpdir/}"
+  compiled_set["$rel_path"]=1
+done < <(find "$tmpdir/.github/workflows" -name '*.yml' -type f 2>/dev/null)
+
+# Check for .md files deleted in the push range whose .yml counterpart still exists
+# but is NOT in the current compile output (i.e., it's now orphaned)
+push_base=$(git rev-parse --verify @{push} 2>/dev/null \
+  || git rev-parse --verify "origin/$(git branch --show-current)" 2>/dev/null \
+  || git rev-parse --verify origin/HEAD 2>/dev/null \
+  || echo "origin/main")
+while IFS= read -r deleted_md; do
+  [ -z "$deleted_md" ] && continue
+  yml_counterpart="${deleted_md%.md}.yml"
+  # Only flag if the .yml is still committed AND was not re-produced by compile
+  # (handles rename: old.md deleted + new.md created → old.yml orphaned, new.yml managed)
+  if git cat-file -e "HEAD:$yml_counterpart" 2>/dev/null && [ -z "${compiled_set[$yml_counterpart]+x}" ]; then
+    orphaned+=("$yml_counterpart (source ${deleted_md} was deleted)")
+  fi
+done < <(git diff --name-only --diff-filter=D "$push_base"..HEAD -- '.github/workflows/*.md' '.github/workflows/**/*.md' 2>/dev/null)
+
+# 6. Report all issues
+issues=("${stale[@]+"${stale[@]}"}" "${orphaned[@]+"${orphaned[@]}"}")
+if [ ${#issues[@]} -gt 0 ]; then
+  echo ""
+  echo "ERROR: Compiled workflow .yml files are out of sync with .md sources."
+  echo ""
+  if [ ${#stale[@]} -gt 0 ]; then
+    echo "Stale (recompilation needed):"
+    for f in "${stale[@]}"; do
+      echo "  - $f"
+    done
+  fi
+  if [ ${#orphaned[@]} -gt 0 ]; then
+    echo "Orphaned (source .md deleted but compiled .yml remains):"
+    for f in "${orphaned[@]}"; do
+      echo "  - $f"
+    done
+  fi
+  echo ""
+  echo "Fix:"
+  echo "  gh aw compile                        # recompile from current .md sources"
+  echo "  git rm <orphaned .yml files>          # remove orphaned compiled files"
+  echo "  git add .github/workflows/"
+  echo "  git commit -m 'chore: sync gh-aw compiled workflows'"
+  echo "  git push"
+  exit 1
+fi
+```
+
+#### Integration by hook manager:
+
+**For pre-commit framework** (`.pre-commit-config.yaml`):
+
+Add a `local` hook at the `pre-push` stage. Note: `always_run: true` and no `files` filter — the hook self-gates on whether `.md` files exist in the repo.
+```yaml
+- repo: local
+  hooks:
+    - id: gh-aw-compile-check
+      name: Check gh-aw workflow .yml files are in sync
+      entry: bash -c '<paste the hook logic above, or reference a script file>'
+      language: system
+      stages: [pre-push]
+      always_run: true
+      pass_filenames: false
+```
+
+Or better — save the hook logic to a script file (e.g., `scripts/check-aw-compile.sh`, `chmod +x`) and reference it:
+```yaml
+- repo: local
+  hooks:
+    - id: gh-aw-compile-check
+      name: Check gh-aw workflow .yml files are in sync
+      entry: scripts/check-aw-compile.sh
+      language: script
+      stages: [pre-push]
+      always_run: true
+      pass_filenames: false
+```
+
+**For Lefthook** (`lefthook.yml`):
+```yaml
+pre-push:
+  commands:
+    gh-aw-compile-check:
+      run: scripts/check-aw-compile.sh
+      fail_text: "Workflow .yml files are out of sync with .md sources. Run 'gh aw compile' and commit."
+```
+
+No `glob` filter — the script handles its own gating.
+
+**For Husky** (`.husky/pre-push`):
+```bash
+#!/usr/bin/env bash
+# gh-aw compile sync check
+scripts/check-aw-compile.sh
+```
+
+**For raw shell scripts** (`.git/hooks/pre-push`):
+Use the hook logic directly as the pre-push script, with `chmod +x`.
+
+### Step 3.5: Write and Verify
 
 1. **Before writing anything**, show the user exactly what will be created/modified (even in `--auto` mode, log what was written).
 
