@@ -313,6 +313,36 @@ refs/heads/main --jq '.object.sha')"
    - Apply labels from triage to the PR
    - Request reviewers from CODEOWNERS
    - Add to project board if configured
+   - **Review gate** — do NOT report the PR as
+     "done" until reviews are clean:
+     a. Mark the PR ready for review:
+        ```bash
+        gh pr ready NUMBER --repo REPO
+        ```
+     b. Wait for automated reviews (Copilot, CI
+        checks) to complete. Use Monitor or poll:
+        ```bash
+        # Poll until all checks complete
+        until gh pr checks NUMBER --repo REPO \
+          --fail-fast 2>/dev/null; do
+          sleep 30
+        done
+        ```
+     c. Read review comments:
+        ```bash
+        gh api repos/OWNER/REPO/pulls/NUMBER/\
+reviews --jq '.[] | select(.state != \
+"APPROVED") | {user: .user.login, state: \
+.state, body: .body}'
+        gh api repos/OWNER/REPO/pulls/NUMBER/\
+comments --jq '.[] | {path: .path, line: \
+.line, body: .body}'
+        ```
+     d. If changes are requested: fix the issues,
+        commit, push, and re-request review.
+        Repeat until all reviews are resolved.
+     e. Only after reviews pass AND checks pass,
+        report the PR as ready for merge.
    - Report the PR URL to the user
 
 2. **If `type/docs`**:
@@ -901,21 +931,92 @@ While the swarm is running, the leader:
      TaskList check
    - If genuinely blocked, mark `needs-human`
 
-### Step 6 — Shutdown
+### Step 5.5 — Review Phase
 
-When all tasks are completed or --limit is reached:
+After all worker tasks are complete and PRs are
+created, the leader runs a review phase before
+any merges. PRs are NOT "done" when created —
+they are drafts awaiting review.
 
-```
-# Send shutdown to all workers
-for worker in workers:
-  SendMessage({
-    type: "shutdown_request",
-    recipient: worker.name,
-    content: "Sweep complete, shutting down"
-  })
-# Wait for approvals, then cleanup
-TeamDelete()
-```
+1. **Mark all PRs ready**:
+   ```bash
+   for PR in $PR_NUMBERS; do
+     gh pr ready "$PR" --repo REPO
+   done
+   ```
+
+2. **Wait for reviews to complete**: Use Monitor
+   to watch all PRs for review completion:
+   ```bash
+   # Poll all PRs until checks + reviews settle
+   for PR in $PR_NUMBERS; do
+     until gh pr checks "$PR" --repo REPO \
+       --fail-fast 2>/dev/null; do
+       sleep 30
+     done
+   done
+   ```
+   Or use Monitor for streaming:
+   ```bash
+   Monitor({
+     description: "Watching PRs for review completion",
+     command: "for PR in $PR_NUMBERS; do ..."
+   })
+   ```
+
+3. **Read review feedback**: For each PR, fetch
+   review comments and changes-requested reviews:
+   ```bash
+   gh api repos/OWNER/REPO/pulls/PR/reviews \
+     --jq '.[] | select(.state ==
+     "CHANGES_REQUESTED") | {user: .user.login,
+     body: .body}'
+   gh api repos/OWNER/REPO/pulls/PR/comments \
+     --jq '.[] | {path: .path, line: .line,
+     body: .body}'
+   ```
+
+4. **Fix review feedback**: For each PR with
+   changes requested:
+   - Checkout the PR branch (in a worktree)
+   - Address the review comments
+   - Commit and push
+   - Re-request review
+   - Wait for the re-review to complete
+
+5. **Merge gate**: Only after ALL PRs have:
+   - All CI checks passing
+   - All reviews approved (or no changes requested)
+   - No unresolved review comments
+   proceed to Step 6 (merge confirmation).
+
+### Step 6 — Merge and Shutdown
+
+When all PRs are reviewed, approved, and checks pass:
+
+1. **Merge PRs** — present the merge list to the
+   user for confirmation, then merge:
+   ```bash
+   for PR in $APPROVED_PRS; do
+     gh pr merge "$PR" --repo REPO \
+       --squash --delete-branch
+   done
+   ```
+
+2. **Shutdown workers**:
+   ```
+   for worker in workers:
+     SendMessage({
+       type: "shutdown_request",
+       recipient: worker.name,
+       content: "Sweep complete, shutting down"
+     })
+   ```
+
+3. **Cleanup**: Wait for shutdown approvals, then:
+   ```
+   TeamDelete()
+   ```
 
 ### Swarm Dry Run
 
@@ -1061,7 +1162,13 @@ Resolves {owner}/{repo}#{issue_number}
 These actions require user confirmation before
 execution (unless `--dry-run` skips all mutations):
 
-- **Merging a PR** — always confirm
+- **Merging a PR** — requires ALL of:
+  1. All CI checks passing
+  2. All reviews resolved (no pending
+     changes-requested)
+  3. User confirmation
+  Never merge a PR that has not been reviewed.
+  Passing CI is not a substitute for review.
 - **Closing an issue** — confirm with reason
 - **Posting a comment** — show draft, confirm
 - **Creating a PR** — show branch name and title,
