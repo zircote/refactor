@@ -98,6 +98,7 @@ Examine the project root and build a mental model:
    - `.claude/`, `CLAUDE.md` (Claude Code project)
    - `*.proto` (protobuf APIs)
    - `.github/workflows/**/*.md` (GitHub Agentic Workflows — `gh aw` workflow definitions)
+   - AI-assistant config: `.github/copilot-instructions.md`, `AGENTS.md`, `.cursorrules`, `.codex/`, `.opencode/`, `.gemini/` (used by Step 3.6 to pick the creep vendor flag)
 
 4. **GitHub Agentic Workflows detection** — check for `.md` files in `.github/workflows/` (including subdirectories). These are `gh aw` agentic workflow definition files that must be compiled to YAML before push:
    ```bash
@@ -144,11 +145,13 @@ Check all of these:
    - `.lintstagedrc*`, `package.json` `lint-staged` key → lint-staged (usually paired with husky)
    - `package.json` `simple-git-hooks` key → simple-git-hooks
 
-2. **Raw hooks** — check `.git/hooks/` for any non-sample scripts (files without `.sample` extension that are executable)
+2. **Raw hooks** — check `.git/hooks/` for any non-sample scripts (files without `.sample` extension that are executable). If a script contains a `creep` marker (`# creep:` or `git creep hook`), it's owned by creep — don't overwrite it.
 
-3. **Hook-adjacent configs** — `.commitlintrc*`, `commitlint.config.*`, `.czrc`, `.cz.toml` (conventional commits tooling)
+3. **creep (AI authorship trailers)** — separate from the hook managers above; it owns `prepare-commit-msg` + `post-commit` and coexists with any other manager. Detect: `.creep/` directory, `git-creep` on `PATH`, or `creep.*` git config keys. Also note `.creep/disabled` (project opt-out).
 
-4. **Activation status** — a config file existing does NOT mean hooks are active. Verify activation:
+4. **Hook-adjacent configs** — `.commitlintrc*`, `commitlint.config.*`, `.czrc`, `.cz.toml` (conventional commits tooling)
+
+5. **Activation status** — a config file existing does NOT mean hooks are active. Verify activation:
    - For pre-commit: check if `.git/hooks/pre-commit` exists and is not a sample file (run `ls -la .git/hooks/pre-commit 2>/dev/null`). If `.pre-commit-config.yaml` exists but hooks aren't installed, this is a critical finding — the user has configured hooks but never activated them.
    - For Husky: check if `.husky/_/husky.sh` exists and `.git/hooks/` contains the husky shim
    - For Lefthook: check if `.git/hooks/` contains lefthook shims
@@ -237,6 +240,7 @@ Organize into tiers:
 - Branch naming validation (if conventions detected)
 - WIP commit detection on push (prevent pushing "wip" or "fixup" commits)
 - Dependency lock file consistency (if lock files exist)
+- **AI authorship trailers (`creep` / `git-creep`)** — if `git-creep` is on `PATH` and `.creep/disabled` is absent, recommend `git creep install` (see Step 3.6). Stamps every commit with an `AI-Tool` / `AI-Model` / `AI-Session-Id` trailer block via `prepare-commit-msg` + `post-commit` hooks. Idempotent; coexists with any primary hook manager.
 
 **Tier 3 — Available but situational:**
 - Build verification on push
@@ -275,7 +279,7 @@ If you cannot use AskUserQuestion (e.g., in a non-interactive environment), pres
 
 #### Auto Mode (`--auto` flag)
 
-Install all tier 1 hooks and tier 2 hooks **where the underlying tool is already installed and configured in the project**. Skip tier 3 unless tooling is already configured for them. Do NOT add new tools the project doesn't already use — this means if the project has no secrets scanner configured, do not add one in auto mode (see Constraint 7).
+Install all tier 1 hooks and tier 2 hooks **where the underlying tool is already installed and configured in the project**. Skip tier 3 unless tooling is already configured for them. Do NOT add new tools the project doesn't already use — this means if the project has no secrets scanner configured, do not add one in auto mode (see Constraint 7). For creep, "installed" means `git-creep` is on `PATH` (operator-installed, not project-installed).
 
 #### Dry-run Mode (`--dry-run` flag)
 
@@ -561,6 +565,47 @@ Use the hook logic directly as the pre-push script, with `chmod +x`.
 
 5. **Report results** — what was installed, what each hook does, and how to bypass (`--no-verify`).
 
+### Step 3.6: Install `creep` (AI Authorship Trailers)
+
+`creep` stamps every commit with an AI-authorship trailer block via its own `prepare-commit-msg` + `post-commit` hooks. Idempotent; coexists with any primary hook manager.
+
+**Run only when** `git-creep` is on `PATH` and `.creep/disabled` is absent. If `git-creep` is not on `PATH`, skip and surface build instructions instead — never run `cargo build` from this skill. If `.creep/disabled` is present, skip (the project has opted out).
+
+Pick the vendor flag from detected AI-assistant config:
+
+| Signal | Flag |
+|---|---|
+| `CLAUDE.md` or `.claude/` | `--claude-code` |
+| `.codex/` or `AGENTS.md` (Codex) | `--openai-codex` |
+| `.github/copilot-instructions.md` | `--copilot-cli` |
+| `.opencode/` | `--opencode` |
+| `.gemini/` | `--gemini` |
+
+No matching signal → `git creep install` with no flag (sidecar-fallback covers Cursor, Windsurf, JetBrains AI, Aider, gh-aw, etc.; plain commits stamp `AI-Tool: none`).
+
+Run:
+
+```sh
+git creep install --claude-code        # one call per detected vendor; idempotent
+git creep lint HEAD 2>/dev/null || true # smoke-test trailer schema (skips on empty repo)
+```
+
+In the final report, document the kill switch (`touch .creep/disabled`) and removal (`git creep uninstall [--purge]`).
+
+If an existing hook already occupies either slot creep owns (`prepare-commit-msg` or `post-commit`), chain through to creep rather than overwriting. Pass git's hook arguments correctly per manager:
+
+- **`.git/hooks/` or `.husky/` script** — `$@` works as expected; append `git creep hook prepare-commit-msg "$@"` (or `post-commit "$@"`) to the existing script.
+- **Lefthook** — `run:` strings do NOT forward args via `$@`; use lefthook's `{1} {2} {3}` template placeholders, or (safer) point `run:` at a script file that internally calls `git creep hook prepare-commit-msg "$@"`. `post-commit` takes no args, so `run: git creep hook post-commit` is fine on its own.
+
+Show the user the chain edits before writing.
+
+**Build instructions** (surface when `git-creep` is not on `PATH`; operator runs these manually):
+
+```sh
+cargo build --release      # Rust 1.95+ stable, edition 2024
+make install               # installs creep + git-creep
+```
+
 ---
 
 ## Phase 4: Summary and Guidance
@@ -582,6 +627,11 @@ Hooks configured:
     - {hook}: {what it does}
   pre-push:
     - {hook}: {what it does} ({estimated time})
+
+Companion installers:
+  - creep ({vendor flags, e.g. --claude-code}): stamps AI-authorship trailers on every commit
+    Kill switch: touch .creep/disabled
+    Remove: git creep uninstall [--purge]
 
 Files created/modified:
   - {file}: {what changed}
@@ -615,9 +665,11 @@ These are non-negotiable:
 
 7. **Hooks must fail clearly** — cryptic failures that make developers reach for `--no-verify` as a habit defeat the entire purpose. Every failure must explain the problem and the fix.
 
-8. **Respect the project** — in auto mode, every hook you install must use a tool that is already installed and configured in the project. Do not introduce new tools, even popular ones like detect-secrets or gitleaks, unless the project already uses them. In interactive mode, you may suggest new tools as Tier 2/3 recommendations, but the user decides whether to add them.
+8. **Respect the project** — in auto mode, every hook you install must use a tool that is already installed and configured in the project. Do not introduce new tools, even popular ones like detect-secrets or gitleaks, unless the project already uses them. In interactive mode, you may suggest new tools as Tier 2/3 recommendations, but the user decides whether to add them. (For `creep`, "installed" means `git-creep` is on `PATH` — it's operator-scoped, not project-scoped.)
 
 9. **Always use `/version-guard` for versioned artifacts** — whenever selecting, recommending, or pinning a version (hook repo tags in `.pre-commit-config.yaml`, npm/pip package versions for hook managers, tool versions in `lefthook.yml`), invoke the `/version-guard` skill to verify the latest stable version. Never rely on training data for version numbers — they go stale. This applies in all modes (interactive, auto, dry-run).
+
+10. **Never build `creep` (or any other tool) from source.** If `git-creep` is not on `PATH`, surface the build instructions and stop — `cargo build` / `make install` are operator choices this skill is not permitted to run.
 
 ---
 
